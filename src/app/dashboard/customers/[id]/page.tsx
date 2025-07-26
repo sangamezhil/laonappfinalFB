@@ -27,7 +27,7 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
         setCustomer(null);
       }
     }
-  }, [params.id]);
+  }, [params]);
 
   if (customer === undefined) {
     return (
@@ -97,7 +97,7 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
             </Avatar>
             <div>
               <CardTitle className="text-3xl font-headline">{customer.name}</CardTitle>
-              <CardDescription>{customer.email} &bull; {customer.phone}</CardDescription>
+              <CardDescription>{customer.email} • {customer.phone}</CardDescription>
             </div>
           </div>
         </CardHeader>
