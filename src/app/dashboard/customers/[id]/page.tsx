@@ -17,13 +17,15 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
   
   useEffect(() => {
     const customerId = params.id;
-    const cust = getCustomerById(customerId);
-    if (cust) {
-      setCustomer(cust);
-      const customerLoans = getLoansByCustomerId(customerId);
-      setLoans(customerLoans);
-    } else {
-      setCustomer(null);
+    if (customerId) {
+      const cust = getCustomerById(customerId);
+      if (cust) {
+        setCustomer(cust);
+        const customerLoans = getLoansByCustomerId(customerId);
+        setLoans(customerLoans);
+      } else {
+        setCustomer(null);
+      }
     }
   }, [params.id]);
 
