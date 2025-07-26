@@ -40,10 +40,10 @@ const initialCustomers: Customer[] = [
 ];
 
 const initialLoans: Loan[] = [
-  { id: 'LOAN001', customerId: 'CUST001', customerName: 'Ravi Kumar', loanType: 'Personal', amount: 50000, interestRate: 12, term: 10, status: 'Active', disbursalDate: '2023-05-01', weeklyRepayment: 5600, totalPaid: 22400, outstandingAmount: 33600, collectionFrequency: 'Weekly' },
-  { id: 'LOAN002', customerId: 'CUST002', customerName: 'Priya Sharma', loanType: 'Personal', amount: 25000, interestRate: 20, term: 70, status: 'Overdue', disbursalDate: '2023-06-15', weeklyRepayment: 428.57, totalPaid: 11250, outstandingAmount: 18750, collectionFrequency: 'Daily' },
-  { id: 'LOAN003', customerId: 'CUST001', customerName: 'Ravi Kumar', loanType: 'Personal', amount: 100000, interestRate: 12, term: 10, status: 'Closed', disbursalDate: '2022-01-20', weeklyRepayment: 11200, totalPaid: 112000, outstandingAmount: 0, collectionFrequency: 'Weekly' },
-  { id: 'LOAN004', customerId: 'GRP001', customerName: 'Suresh Patel (Leader)', groupName: 'Sahara Group', loanType: 'Group', amount: 200000, interestRate: 18, term: 40, status: 'Active', disbursalDate: '2023-07-01', weeklyRepayment: 6800, totalPaid: 81600, outstandingAmount: 180400 },
+  { id: 'LOAN001', customerId: 'CUST001', customerName: 'Ravi Kumar', loanType: 'Personal', amount: 50000, interestRate: 12, term: 10, status: 'Active', disbursalDate: '2023-05-01', weeklyRepayment: 5000, totalPaid: 20000, outstandingAmount: 30000, collectionFrequency: 'Weekly' },
+  { id: 'LOAN002', customerId: 'CUST002', customerName: 'Priya Sharma', loanType: 'Personal', amount: 25000, interestRate: 20, term: 70, status: 'Overdue', disbursalDate: '2023-06-15', weeklyRepayment: 357.14, totalPaid: 10000, outstandingAmount: 15000, collectionFrequency: 'Daily' },
+  { id: 'LOAN003', customerId: 'CUST001', customerName: 'Ravi Kumar', loanType: 'Personal', amount: 100000, interestRate: 12, term: 10, status: 'Closed', disbursalDate: '2022-01-20', weeklyRepayment: 10000, totalPaid: 100000, outstandingAmount: 0, collectionFrequency: 'Weekly' },
+  { id: 'LOAN004', customerId: 'GRP001', customerName: 'Suresh Patel (Leader)', groupName: 'Sahara Group', loanType: 'Group', amount: 200000, interestRate: 18, term: 40, status: 'Active', disbursalDate: '2023-07-01', weeklyRepayment: 5000, totalPaid: 60000, outstandingAmount: 140000 },
 ];
 
 const getCustomersFromStorage = (): Customer[] => {

@@ -122,7 +122,7 @@ export default function NewLoanPage() {
         return;
     }
 
-    const totalLoanValue = data.loanAmount + (data.loanAmount * data.interestRate / 100);
+    const totalLoanValue = data.loanAmount;
     const repaymentAmount = totalLoanValue / data.repaymentTerm;
 
     addLoan({
@@ -157,7 +157,7 @@ export default function NewLoanPage() {
         disbursalDate: new Date().toISOString().split('T')[0],
         weeklyRepayment: weeklyRepayment,
         totalPaid: 0,
-        outstandingAmount: data.loanAmount + (data.loanAmount * data.interestRate / 100)
+        outstandingAmount: data.loanAmount
     });
     toast({ title: "Group Loan Submitted", description: `Loan for ${data.groupName} is now pending approval.` });
     router.push('/dashboard/loans');
@@ -284,5 +284,7 @@ export default function NewLoanPage() {
     </Card>
   )
 }
+
+    
 
     
