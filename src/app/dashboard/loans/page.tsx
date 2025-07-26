@@ -68,9 +68,9 @@ export default function LoansPage() {
               <TableHead>Loan ID</TableHead>
               <TableHead>Customer / Group</TableHead>
               <TableHead>Type</TableHead>
-              <TableHead>Amount</TableHead>
+              <TableHead>Amount (₹)</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Outstanding</TableHead>
+              <TableHead>Outstanding (₹)</TableHead>
               <TableHead>
                 <span className="sr-only">Actions</span>
               </TableHead>

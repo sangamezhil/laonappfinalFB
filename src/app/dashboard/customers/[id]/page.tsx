@@ -147,7 +147,7 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
                   <TableRow key={loan.id}>
                     <TableCell className="font-medium">{loan.id}</TableCell>
                     <TableCell>{loan.loanType}</TableCell>
-                    <TableCell>{loan.amount.toLocaleString('en-IN')}</TableCell>
+                    <TableCell>₹{loan.amount.toLocaleString('en-IN')}</TableCell>
                     <TableCell>{loan.disbursalDate}</TableCell>
                     <TableCell>
                       <Badge variant={
