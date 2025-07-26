@@ -14,9 +14,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function CustomerProfilePage({ params }: { params: { id: string } }) {
   const [customer, setCustomer] = useState<Customer | null | undefined>(undefined);
   const [loans, setLoans] = useState<Loan[]>([]);
+  const { id: customerId } = params;
 
   useEffect(() => {
-    const customerId = params.id;
     const cust = getCustomerById(customerId);
     if (cust) {
       setCustomer(cust);
@@ -25,7 +25,7 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
     } else {
       setCustomer(null);
     }
-  }, [params.id]);
+  }, [customerId]);
 
   if (customer === undefined) {
     return (
