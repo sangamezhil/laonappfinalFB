@@ -1,3 +1,4 @@
+
 'use client'
 
 import React, { useState } from 'react'
@@ -13,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/use-toast'
-import { mockCustomers } from '@/lib/data'
+import { useCustomers } from '@/lib/data'
 
 const personalLoanSchema = z.object({
   customerId: z.string().nonempty({ message: 'Please select a customer.' }),
@@ -75,6 +76,7 @@ const DisbursalCalculator = ({ control, loanType }: { control: any, loanType: 'p
 export default function NewLoanPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { customers } = useCustomers();
 
   const personalForm = useForm<z.infer<typeof personalLoanSchema>>({ resolver: zodResolver(personalLoanSchema) });
   const groupForm = useForm<z.infer<typeof groupLoanSchema>>({ resolver: zodResolver(groupLoanSchema) });
@@ -111,7 +113,7 @@ export default function NewLoanPage() {
                       <FormLabel>Customer</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Select a registered customer" /></SelectTrigger></FormControl>
-                        <SelectContent>{mockCustomers.map(c => <SelectItem key={c.id} value={c.id}>{c.name} - {c.id}</SelectItem>)}</SelectContent>
+                        <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name} - {c.id}</SelectItem>)}</SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>

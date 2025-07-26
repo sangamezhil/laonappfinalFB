@@ -1,3 +1,6 @@
+
+'use client';
+
 import Link from 'next/link'
 import { PlusCircle, MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -24,9 +27,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { mockCustomers } from '@/lib/data'
+import { useCustomers } from '@/lib/data'
 
 export default function CustomersPage() {
+  const { customers } = useCustomers();
   return (
     <Card>
       <CardHeader>
@@ -58,7 +62,7 @@ export default function CustomersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {mockCustomers.map((customer) => (
+            {customers.map((customer) => (
               <TableRow key={customer.id}>
                 <TableCell>
                   <div className="flex items-center gap-3">

@@ -1,10 +1,14 @@
+
+'use client';
+import { useState, useEffect } from 'react';
+
 export type Customer = {
   id: string;
   name: string;
   email: string;
   phone: string;
   address: string;
-  idType: 'Aadhaar' | 'PAN' | 'Voter ID' | 'Ration Card' | 'Bank Passbook' | 'Gas Book';
+  idType: 'Aadhaar Card' | 'PAN Card' | 'Ration Card' | 'Voter ID' | 'Bank Passbook' | 'Gas Book';
   idNumber: string;
   occupation: string;
   monthlyIncome: number;
@@ -28,11 +32,44 @@ export type Loan = {
   outstandingAmount: number;
 };
 
-export const mockCustomers: Customer[] = [
-  { id: 'CUST001', name: 'Ravi Kumar', email: 'ravi.kumar@example.com', phone: '9876543210', address: '123, MG Road, Bangalore', idType: 'Aadhaar', idNumber: '1234 5678 9012', occupation: 'Software Engineer', monthlyIncome: 80000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-01-15' },
-  { id: 'CUST002', name: 'Priya Sharma', email: 'priya.sharma@example.com', phone: '8765432109', address: '456, Main Street, Mumbai', idType: 'PAN', idNumber: 'ABCDE1234F', occupation: 'Graphic Designer', monthlyIncome: 65000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-02-20' },
+const initialCustomers: Customer[] = [
+  { id: 'CUST001', name: 'Ravi Kumar', email: 'ravi.kumar@example.com', phone: '9876543210', address: '123, MG Road, Bangalore', idType: 'Aadhaar Card', idNumber: '1234 5678 9012', occupation: 'Software Engineer', monthlyIncome: 80000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-01-15' },
+  { id: 'CUST002', name: 'Priya Sharma', email: 'priya.sharma@example.com', phone: '8765432109', address: '456, Main Street, Mumbai', idType: 'PAN Card', idNumber: 'ABCDE1234F', occupation: 'Graphic Designer', monthlyIncome: 65000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-02-20' },
   { id: 'CUST003', name: 'Amit Singh', email: 'amit.singh@example.com', phone: '7654321098', address: '789, Park Avenue, Delhi', idType: 'Voter ID', idNumber: 'XYZ1234567', occupation: 'Marketing Manager', monthlyIncome: 95000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-03-10' },
 ];
+
+let mockCustomers: Customer[] = [...initialCustomers];
+
+export const useCustomers = () => {
+    const [customers, setCustomers] = useState<Customer[]>([]);
+
+    useEffect(() => {
+        const storedCustomers = localStorage.getItem('customers');
+        if (storedCustomers) {
+            mockCustomers = JSON.parse(storedCustomers);
+        } else {
+            localStorage.setItem('customers', JSON.stringify(initialCustomers));
+            mockCustomers = [...initialCustomers];
+        }
+        setCustomers(mockCustomers);
+    }, []);
+
+    const addCustomer = (customer: Omit<Customer, 'id' | 'registrationDate' | 'profilePicture'>) => {
+        const newIdNumber = mockCustomers.length + 1;
+        const newCustomer: Customer = {
+            ...customer,
+            id: `CUST${String(newIdNumber).padStart(3, '0')}`,
+            registrationDate: new Date().toISOString().split('T')[0],
+            profilePicture: 'https://placehold.co/100x100',
+        };
+        const updatedCustomers = [...mockCustomers, newCustomer];
+        localStorage.setItem('customers', JSON.stringify(updatedCustomers));
+        mockCustomers = updatedCustomers;
+        setCustomers(updatedCustomers);
+    };
+
+    return { customers, addCustomer };
+};
 
 export const mockLoans: Loan[] = [
   { id: 'LOAN001', customerId: 'CUST001', customerName: 'Ravi Kumar', loanType: 'Personal', amount: 50000, interestRate: 12, term: 50, status: 'Active', disbursalDate: '2023-05-01', weeklyRepayment: 1120, totalPaid: 22400, outstandingAmount: 33600 },
