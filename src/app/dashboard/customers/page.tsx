@@ -1,6 +1,7 @@
 
 'use client';
 
+import React from 'react';
 import Link from 'next/link'
 import { PlusCircle, MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -26,13 +27,53 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { useCustomers } from '@/lib/data'
+import { useCustomers, useLoans, Customer } from '@/lib/data'
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 export default function CustomersPage() {
-  const { customers, isLoaded } = useCustomers();
+  const { customers, deleteCustomer, isLoaded } = useCustomers();
+  const { loans } = useLoans();
+  const { toast } = useToast();
+  const [customerToDelete, setCustomerToDelete] = React.useState<Customer | null>(null);
+
+  const handleDeleteClick = (customer: Customer) => {
+    const customerLoans = loans.filter(loan => loan.customerId === customer.id);
+    if (customerLoans.length > 0) {
+      toast({
+        variant: "destructive",
+        title: "Deletion Not Allowed",
+        description: `${customer.name} has existing loans and cannot be deleted.`,
+      });
+    } else {
+      setCustomerToDelete(customer);
+    }
+  };
+
+  const confirmDelete = () => {
+    if (customerToDelete) {
+      deleteCustomer(customerToDelete.id);
+      toast({
+        title: 'Customer Deleted',
+        description: `${customerToDelete.name} has been successfully deleted.`,
+      });
+      setCustomerToDelete(null);
+    }
+  };
+  
   return (
+    <>
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
@@ -116,8 +157,10 @@ export default function CustomersPage() {
                         <DropdownMenuItem asChild>
                           <Link href={`/dashboard/customers/${customer.id}`}>View Details</Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem>Edit</DropdownMenuItem>
-                        <DropdownMenuItem>Delete</DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                           <Link href={`/dashboard/customers/${customer.id}/edit`}>Edit</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleDeleteClick(customer)} className="text-destructive">Delete</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -128,5 +171,21 @@ export default function CustomersPage() {
         </Table>
       </CardContent>
     </Card>
+
+    <AlertDialog open={!!customerToDelete} onOpenChange={(open) => !open && setCustomerToDelete(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the customer account for <span className="font-bold">{customerToDelete?.name}</span>.
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    </>
   )
 }

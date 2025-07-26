@@ -97,7 +97,14 @@ export const useCustomers = () => {
         setCustomers(updatedCustomers);
     };
 
-    return { customers, addCustomer, isLoaded };
+    const deleteCustomer = (customerId: string) => {
+        const currentCustomers = getCustomersFromStorage();
+        const updatedCustomers = currentCustomers.filter(c => c.id !== customerId);
+        localStorage.setItem('customers', JSON.stringify(updatedCustomers));
+        setCustomers(updatedCustomers);
+    };
+
+    return { customers, addCustomer, deleteCustomer, isLoaded };
 };
 
 export const useLoans = () => {
