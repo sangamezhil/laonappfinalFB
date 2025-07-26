@@ -55,10 +55,13 @@ function CollectionsPageContent() {
 
   useEffect(() => {
     const loanIdFromQuery = searchParams.get('loanId');
-    if (loanIdFromQuery) {
-      form.setValue('loanId', loanIdFromQuery);
+    if (loanIdFromQuery && loans.length > 0) {
+        const loanExists = loans.some(l => l.id === loanIdFromQuery);
+        if(loanExists) {
+            form.setValue('loanId', loanIdFromQuery, { shouldValidate: true, shouldDirty: true });
+        }
     }
-  }, [searchParams, form]);
+  }, [searchParams, form, loans]);
 
 
   useEffect(() => {
