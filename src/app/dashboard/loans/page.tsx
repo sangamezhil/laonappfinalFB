@@ -29,9 +29,20 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { useLoans } from '@/lib/data'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useToast } from '@/hooks/use-toast'
 
 export default function LoansPage() {
-  const { loans, isLoaded } = useLoans();
+  const { loans, isLoaded, updateLoanStatus } = useLoans();
+  const { toast } = useToast();
+
+  const handleApprove = (loanId: string) => {
+    updateLoanStatus(loanId, 'Active');
+    toast({
+      title: 'Loan Approved',
+      description: `Loan ${loanId} has been activated.`,
+    });
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -111,6 +122,11 @@ export default function LoansPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        {loan.status === 'Pending' && (
+                          <DropdownMenuItem onSelect={() => handleApprove(loan.id)}>
+                            Approve Loan
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem>View Details</DropdownMenuItem>
                         <DropdownMenuItem>Record Payment</DropdownMenuItem>
                       </DropdownMenuContent>

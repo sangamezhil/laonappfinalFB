@@ -63,16 +63,16 @@ export const useCustomers = () => {
 
     useEffect(() => {
         const data = getCustomersFromStorage();
-        if (!isLoaded) {
+        if (!localStorage.getItem('customers')) {
             localStorage.setItem('customers', JSON.stringify(data));
         }
         setCustomers(data);
         setIsLoaded(true);
-    }, [isLoaded]);
+    }, []);
 
     const addCustomer = (customer: Omit<Customer, 'id' | 'registrationDate' | 'profilePicture'>) => {
         const currentCustomers = getCustomersFromStorage();
-        const newIdNumber = currentCustomers.length + 1;
+        const newIdNumber = (currentCustomers.length > 0 ? Math.max(...currentCustomers.map(c => parseInt(c.id.replace('CUST','')))) : 0) + 1;
         const newCustomer: Customer = {
             ...customer,
             id: `CUST${String(newIdNumber).padStart(3, '0')}`,
@@ -93,16 +93,16 @@ export const useLoans = () => {
 
      useEffect(() => {
         const data = getLoansFromStorage();
-        if(!isLoaded) {
+        if(!localStorage.getItem('loans')) {
             localStorage.setItem('loans', JSON.stringify(data));
         }
         setLoans(data);
         setIsLoaded(true);
-    }, [isLoaded]);
+    }, []);
 
     const addLoan = (loan: Omit<Loan, 'id'>) => {
         const currentLoans = getLoansFromStorage();
-        const newIdNumber = currentLoans.length + 1;
+        const newIdNumber = (currentLoans.length > 0 ? Math.max(...currentLoans.map(c => parseInt(c.id.replace('LOAN','')))) : 0) + 1;
         const newLoan: Loan = {
             ...loan,
             id: `LOAN${String(newIdNumber).padStart(3, '0')}`,
@@ -111,8 +111,17 @@ export const useLoans = () => {
         localStorage.setItem('loans', JSON.stringify(updatedLoans));
         setLoans(updatedLoans);
     };
+    
+    const updateLoanStatus = (loanId: string, status: Loan['status']) => {
+        const currentLoans = getLoansFromStorage();
+        const updatedLoans = currentLoans.map(loan => 
+            loan.id === loanId ? { ...loan, status: status } : loan
+        );
+        localStorage.setItem('loans', JSON.stringify(updatedLoans));
+        setLoans(updatedLoans);
+    };
 
-    return { loans, addLoan, isLoaded };
+    return { loans, addLoan, isLoaded, updateLoanStatus };
 }
 
 
