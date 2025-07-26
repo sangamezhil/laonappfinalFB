@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState } from 'react'
@@ -37,29 +38,27 @@ export default function LoginPage() {
 
     // Mock authentication that checks localStorage
     setTimeout(() => {
-      let storedUsers: User[] = [];
+      let userToLogin: User | null = null;
       if (typeof window !== 'undefined') {
           const stored = localStorage.getItem('users');
-          if (stored) {
-              storedUsers = JSON.parse(stored);
+          const storedUsers: User[] = stored ? JSON.parse(stored) : [];
+          
+          const foundUser = storedUsers.find(user => user.username === username);
+
+          // Note: We are not checking password for this mock implementation.
+          if (foundUser) {
+            userToLogin = foundUser;
+          } else if (username === 'admin' && password === 'admin' && storedUsers.length === 0) {
+            // Fallback for initial login if no users exist
+            userToLogin = { id: 'USR000', username: 'admin', role: 'Admin', lastLogin: new Date().toISOString() };
           }
       }
       
-      const foundUser = storedUsers.find(user => user.username === username);
-
-      // Note: We are not checking password for this mock implementation.
-      // In a real app, you would send credentials to a server for validation.
-      if (foundUser) {
+      if (userToLogin) {
+        localStorage.setItem('loggedInUser', JSON.stringify(userToLogin));
         toast({
           title: "Login Successful",
-          description: `Welcome back, ${foundUser.username}!`,
-        })
-        router.push('/dashboard')
-      } else if (username === 'admin' && password === 'admin' && storedUsers.length === 0) {
-        // Fallback for initial login if no users exist
-        toast({
-          title: "Login Successful",
-          description: "Welcome back, Admin!",
+          description: `Welcome back, ${userToLogin.username}!`,
         })
         router.push('/dashboard')
       }

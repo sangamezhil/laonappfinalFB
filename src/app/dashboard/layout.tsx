@@ -1,8 +1,9 @@
+
 'use client'
 
 import * as React from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard,
   Users,
@@ -37,13 +38,18 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Logo } from '@/components/logo'
 
-const menuItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/dashboard/customers', label: 'Customers', icon: Users },
-  { href: '/dashboard/loans', label: 'Loans', icon: Landmark },
-  { href: '/dashboard/collections', label: 'Collections', icon: ClipboardCheck },
-  { href: '/dashboard/users', label: 'Users', icon: UserCog },
+const allMenuItems = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Admin', 'Collection Agent', 'Auditor'] },
+  { href: '/dashboard/customers', label: 'Customers', icon: Users, roles: ['Admin', 'Collection Agent', 'Auditor'] },
+  { href: '/dashboard/loans', label: 'Loans', icon: Landmark, roles: ['Admin', 'Collection Agent', 'Auditor'] },
+  { href: '/dashboard/collections', label: 'Collections', icon: ClipboardCheck, roles: ['Admin', 'Collection Agent'] },
+  { href: '/dashboard/users', label: 'Users', icon: UserCog, roles: ['Admin'] },
 ]
+
+type User = {
+  username: string;
+  role: string;
+}
 
 export default function DashboardLayout({
   children,
@@ -51,6 +57,37 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const router = useRouter();
+  const [user, setUser] = React.useState<User | null>(null);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedUser = localStorage.getItem('loggedInUser');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      } else {
+        router.push('/login');
+      }
+    }
+  }, [router]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('loggedInUser');
+    router.push('/login');
+  };
+
+  const menuItems = React.useMemo(() => {
+    if (!user) return [];
+    return allMenuItems.filter(item => item.roles.includes(user.role));
+  }, [user]);
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div>Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <SidebarProvider>
@@ -80,11 +117,9 @@ export default function DashboardLayout({
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
-          <SidebarMenuButton asChild>
-            <Link href="/login">
-              <LogOut />
-              <span>Logout</span>
-            </Link>
+          <SidebarMenuButton onClick={handleLogout}>
+            <LogOut />
+            <span>Logout</span>
           </SidebarMenuButton>
         </SidebarFooter>
       </Sidebar>
@@ -95,10 +130,10 @@ export default function DashboardLayout({
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-2">
                 <Avatar className="w-8 h-8">
-                  <AvatarImage src="https://placehold.co/100x100" alt="Admin" data-ai-hint="person avatar" />
-                  <AvatarFallback>A</AvatarFallback>
+                  <AvatarImage src="https://placehold.co/100x100" alt={user.username} data-ai-hint="person avatar" />
+                  <AvatarFallback>{user.username.charAt(0).toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <span className="hidden md:inline">Admin</span>
+                <span className="hidden md:inline">{user.username}</span>
                 <ChevronDown className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -108,11 +143,9 @@ export default function DashboardLayout({
               <DropdownMenuItem>Profile</DropdownMenuItem>
               <DropdownMenuItem>Settings</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/login">
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Logout
-                </Link>
+              <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
