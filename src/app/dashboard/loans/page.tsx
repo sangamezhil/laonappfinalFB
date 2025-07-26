@@ -63,6 +63,15 @@ export default function LoansPage() {
     });
   };
 
+  const handlePreclose = (loanId: string) => {
+    updateLoanStatus(loanId, 'Closed');
+    logActivity('Preclose Loan', `Pre-closed loan ${loanId}.`);
+    toast({
+      title: 'Loan Pre-closed',
+      description: `Loan ${loanId} has been marked as closed.`,
+    });
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -147,6 +156,11 @@ export default function LoansPage() {
                         {loan.status === 'Pending' && user?.role === 'Admin' && (
                           <DropdownMenuItem onSelect={() => handleApprove(loan.id)}>
                             Approve Loan
+                          </DropdownMenuItem>
+                        )}
+                        {(loan.status === 'Active' || loan.status === 'Overdue') && user?.role === 'Admin' && (
+                          <DropdownMenuItem onSelect={() => handlePreclose(loan.id)}>
+                            Preclose Loan
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuItem 
