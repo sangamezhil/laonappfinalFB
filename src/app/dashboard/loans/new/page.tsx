@@ -19,8 +19,9 @@ import { useCustomers, useLoans } from '@/lib/data'
 const personalLoanSchema = z.object({
   customerId: z.string().nonempty({ message: 'Please select a customer.' }),
   loanAmount: z.coerce.number().positive(),
-  interestRate: z.coerce.number().min(10).max(20),
-  repaymentTerm: z.coerce.number().min(10).max(50),
+  collectionFrequency: z.enum(['Daily', 'Weekly', 'Monthly']),
+  repaymentTerm: z.coerce.number().positive(),
+  interestRate: z.coerce.number().min(12).max(20),
   docCharges: z.coerce.number().nonnegative().optional(),
   insuranceCharges: z.coerce.number().nonnegative().optional(),
 });
@@ -77,10 +78,36 @@ export default function NewLoanPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { customers } = useCustomers();
-  const { addLoan } = useLoans();
+  const { loans, addLoan } = useLoans();
 
-  const personalForm = useForm<z.infer<typeof personalLoanSchema>>({ resolver: zodResolver(personalLoanSchema) });
+  const personalForm = useForm<z.infer<typeof personalLoanSchema>>({ 
+    resolver: zodResolver(personalLoanSchema),
+    defaultValues: {
+      collectionFrequency: 'Weekly',
+      interestRate: 12,
+      repaymentTerm: 10,
+    }
+  });
   const groupForm = useForm<z.infer<typeof groupLoanSchema>>({ resolver: zodResolver(groupLoanSchema) });
+
+  const collectionFrequency = useWatch({
+      control: personalForm.control,
+      name: 'collectionFrequency',
+  });
+
+  React.useEffect(() => {
+      if (collectionFrequency === 'Daily') {
+          personalForm.setValue('interestRate', 20);
+          personalForm.setValue('repaymentTerm', 70);
+      } else if (collectionFrequency === 'Weekly') {
+          personalForm.setValue('interestRate', 12);
+          personalForm.setValue('repaymentTerm', 10);
+      } else if (collectionFrequency === 'Monthly') {
+          personalForm.setValue('interestRate', 20);
+          personalForm.setValue('repaymentTerm', 1);
+      }
+  }, [collectionFrequency, personalForm]);
+
 
   const onPersonalSubmit = (data: z.infer<typeof personalLoanSchema>) => {
     const customer = customers.find(c => c.id === data.customerId);
@@ -88,7 +115,15 @@ export default function NewLoanPage() {
         toast({ variant: 'destructive', title: "Customer not found" });
         return;
     }
-    const weeklyRepayment = (data.loanAmount + (data.loanAmount * data.interestRate / 100)) / data.repaymentTerm;
+
+    const existingLoan = loans.find(l => l.customerId === data.customerId && l.status !== 'Closed');
+    if (existingLoan) {
+        toast({ variant: 'destructive', title: "Loan Exists", description: `${customer.name} already has an active loan (${existingLoan.id}).` });
+        return;
+    }
+
+    const totalLoanValue = data.loanAmount + (data.loanAmount * data.interestRate / 100);
+    const repaymentAmount = totalLoanValue / data.repaymentTerm;
 
     addLoan({
         customerId: data.customerId,
@@ -99,11 +134,12 @@ export default function NewLoanPage() {
         term: data.repaymentTerm,
         status: 'Pending',
         disbursalDate: new Date().toISOString().split('T')[0],
-        weeklyRepayment: weeklyRepayment,
+        weeklyRepayment: repaymentAmount,
         totalPaid: 0,
-        outstandingAmount: data.loanAmount + (data.loanAmount * data.interestRate / 100)
+        outstandingAmount: totalLoanValue,
+        collectionFrequency: data.collectionFrequency,
     });
-    toast({ title: "Personal Loan Submitted", description: `Loan for customer ID ${data.customerId} is now pending approval.` });
+    toast({ title: "Personal Loan Submitted", description: `Loan for customer ${customer.name} is now pending approval.` });
     router.push('/dashboard/loans');
   };
 
@@ -157,17 +193,27 @@ export default function NewLoanPage() {
                   <FormField control={personalForm.control} name="loanAmount" render={({ field }) => (
                     <FormItem><FormLabel>Loan Amount (₹)</FormLabel><FormControl><Input type="number" placeholder="e.g., 50000" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
+                   <FormField control={personalForm.control} name="collectionFrequency" render={({ field }) => (
+                    <FormItem><FormLabel>Collection Frequency</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Select frequency" /></SelectTrigger></FormControl>
+                        <SelectContent>
+                            <SelectItem value="Daily">Daily</SelectItem>
+                            <SelectItem value="Weekly">Weekly</SelectItem>
+                            <SelectItem value="Monthly">Monthly</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <FormMessage /></FormItem>
+                  )} />
                   <FormField control={personalForm.control} name="interestRate" render={({ field }) => (
                     <FormItem><FormLabel>Interest Rate (%)</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={String(field.value)}><FormControl><SelectTrigger><SelectValue placeholder="10% - 20%" /></SelectTrigger></FormControl>
-                    <SelectContent>{Array.from({ length: 11 }, (_, i) => 10 + i).map(rate => <SelectItem key={rate} value={String(rate)}>{rate}%</SelectItem>)}</SelectContent>
-                    </Select><FormMessage /></FormItem>
+                    <FormControl><Input type="number" {...field} readOnly className="bg-muted" /></FormControl>
+                    <FormMessage /></FormItem>
                   )} />
                   <FormField control={personalForm.control} name="repaymentTerm" render={({ field }) => (
-                    <FormItem><FormLabel>Repayment Term (Weeks)</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={String(field.value)}><FormControl><SelectTrigger><SelectValue placeholder="10 - 50 Weeks" /></SelectTrigger></FormControl>
-                    <SelectContent>{[10, 12, 15, 20, 25, 30, 40, 50].map(term => <SelectItem key={term} value={String(term)}>{term} Weeks</SelectItem>)}</SelectContent>
-                    </Select><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Repayment Term ({collectionFrequency === 'Daily' ? 'Days' : collectionFrequency === 'Weekly' ? 'Weeks' : 'Months'})</FormLabel>
+                    <FormControl><Input type="number" {...field} readOnly className="bg-muted" /></FormControl>
+                    <FormMessage /></FormItem>
                   )} />
                   <FormField control={personalForm.control} name="docCharges" render={({ field }) => (
                     <FormItem><FormLabel>Documentation Charges (₹)</FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} /></FormControl><FormMessage /></FormItem>
@@ -238,3 +284,5 @@ export default function NewLoanPage() {
     </Card>
   )
 }
+
+    

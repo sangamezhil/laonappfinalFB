@@ -24,12 +24,13 @@ export type Loan = {
   loanType: 'Personal' | 'Group';
   amount: number;
   interestRate: number;
-  term: number; // in weeks
-  status: 'Pending' | 'Active' | 'Overdue' | 'Closed';
+  term: number; 
+  status: 'Pending' | 'Active' | 'Overdue' | 'Closed' | 'Missed';
   disbursalDate: string;
-  weeklyRepayment: number;
+  weeklyRepayment: number; // This will now be just 'repaymentAmount' based on frequency
   totalPaid: number;
   outstandingAmount: number;
+  collectionFrequency?: 'Daily' | 'Weekly' | 'Monthly';
 };
 
 const initialCustomers: Customer[] = [
@@ -39,9 +40,9 @@ const initialCustomers: Customer[] = [
 ];
 
 const initialLoans: Loan[] = [
-  { id: 'LOAN001', customerId: 'CUST001', customerName: 'Ravi Kumar', loanType: 'Personal', amount: 50000, interestRate: 12, term: 50, status: 'Active', disbursalDate: '2023-05-01', weeklyRepayment: 1120, totalPaid: 22400, outstandingAmount: 33600 },
-  { id: 'LOAN002', customerId: 'CUST002', customerName: 'Priya Sharma', loanType: 'Personal', amount: 25000, interestRate: 15, term: 20, status: 'Overdue', disbursalDate: '2023-06-15', weeklyRepayment: 1406.25, totalPaid: 11250, outstandingAmount: 16875 },
-  { id: 'LOAN003', customerId: 'CUST001', customerName: 'Ravi Kumar', loanType: 'Personal', amount: 100000, interestRate: 10, term: 50, status: 'Closed', disbursalDate: '2022-01-20', weeklyRepayment: 2200, totalPaid: 110000, outstandingAmount: 0 },
+  { id: 'LOAN001', customerId: 'CUST001', customerName: 'Ravi Kumar', loanType: 'Personal', amount: 50000, interestRate: 12, term: 10, status: 'Active', disbursalDate: '2023-05-01', weeklyRepayment: 5600, totalPaid: 22400, outstandingAmount: 33600, collectionFrequency: 'Weekly' },
+  { id: 'LOAN002', customerId: 'CUST002', customerName: 'Priya Sharma', loanType: 'Personal', amount: 25000, interestRate: 20, term: 70, status: 'Overdue', disbursalDate: '2023-06-15', weeklyRepayment: 428.57, totalPaid: 11250, outstandingAmount: 18750, collectionFrequency: 'Daily' },
+  { id: 'LOAN003', customerId: 'CUST001', customerName: 'Ravi Kumar', loanType: 'Personal', amount: 100000, interestRate: 12, term: 10, status: 'Closed', disbursalDate: '2022-01-20', weeklyRepayment: 11200, totalPaid: 112000, outstandingAmount: 0, collectionFrequency: 'Weekly' },
   { id: 'LOAN004', customerId: 'GRP001', customerName: 'Suresh Patel (Leader)', groupName: 'Sahara Group', loanType: 'Group', amount: 200000, interestRate: 18, term: 40, status: 'Active', disbursalDate: '2023-07-01', weeklyRepayment: 6800, totalPaid: 81600, outstandingAmount: 180400 },
 ];
 
@@ -126,9 +127,13 @@ export const useLoans = () => {
 
 
 export function getCustomerById(id: string) {
-  return getCustomersFromStorage().find(c => c.id === id);
+  const customers = getCustomersFromStorage();
+  return customers.find(c => c.id === id);
 }
 
 export function getLoansByCustomerId(customerId: string) {
-  return getLoansFromStorage().filter(l => l.customerId === customerId);
+  const loans = getLoansFromStorage();
+  return loans.filter(l => l.customerId === customerId);
 }
+
+    
