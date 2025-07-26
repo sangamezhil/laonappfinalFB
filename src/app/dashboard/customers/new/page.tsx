@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useForm } from 'react-hook-form'
@@ -52,6 +53,8 @@ export default function NewCustomerPage() {
       address: '',
       occupation: '',
       idNumber: '',
+      monthlyIncome: undefined,
+      idType: undefined,
     },
   })
 
@@ -184,7 +187,7 @@ export default function NewCustomerPage() {
                   <FormItem>
                     <FormLabel>Monthly Income (₹)</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="Enter monthly income" {...field} />
+                      <Input type="number" placeholder="Enter monthly income" {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
