@@ -147,7 +147,12 @@ function CollectionsPageContent() {
       title: 'Collection Recorded',
       description: `Payment of ₹${data.amount.toLocaleString('en-IN')} for loan ${data.loanId} has been recorded.`,
     });
-    form.reset();
+    form.reset({
+        loanId: '',
+        amount: '' as any,
+        paymentMethod: 'Cash',
+        collectionDate: new Date(),
+    });
   }
 
   const getLoanDisplayName = (loan: Loan) => {
