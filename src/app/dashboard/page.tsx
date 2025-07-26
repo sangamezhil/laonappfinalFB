@@ -2,13 +2,15 @@
 'use client'
 
 import * as React from 'react'
-import { TrendingUp, Users, Landmark, AlertCircle, CheckCircle, Wallet, FileText } from 'lucide-react'
+import { TrendingUp, Users, Landmark, AlertCircle, CheckCircle, Wallet, FileText, Trash2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Line, LineChart } from 'recharts'
 import type { ChartConfig } from '@/components/ui/chart'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { useToast } from '@/hooks/use-toast'
 
 const chartData = [
   { month: 'January', disbursed: 186000, collected: 80000 },
@@ -39,8 +41,28 @@ const recentLoans = [
 ]
 
 export default function DashboardPage() {
+  const { toast } = useToast()
+
+  const handleClearData = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('customers')
+      localStorage.removeItem('loans')
+      toast({
+        title: 'Data Cleared',
+        description: 'All customer and loan data has been reset.',
+      })
+      window.location.reload()
+    }
+  }
+
   return (
     <div className="space-y-8">
+      <div className="flex justify-end">
+        <Button variant="destructive" onClick={handleClearData}>
+          <Trash2 className="w-4 h-4 mr-2" />
+          Clear All Data (Temporary)
+        </Button>
+      </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
