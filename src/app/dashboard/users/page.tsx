@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -73,7 +73,7 @@ type User = {
 const userSchema = z.object({
   id: z.string().optional(),
   username: z.string().min(3, 'Username must be at least 3 characters.'),
-  password: z.string().min(6, 'Password must be at least 6 characters.').optional(),
+  password: z.string().min(6, 'Password must be at least 6 characters.').optional().or(z.literal('')),
   role: z.enum(['Admin', 'Collection Agent', 'Auditor']),
 });
 
@@ -85,14 +85,34 @@ const initialUsers: User[] = [
   { id: 'USR003', username: 'auditor_sunita', role: 'Auditor', lastLogin: '2024-07-28 02:15 PM' },
 ];
 
+const getUsersFromStorage = (): User[] => {
+    if (typeof window === 'undefined') return [];
+    const stored = localStorage.getItem('users');
+    return stored ? JSON.parse(stored) : initialUsers;
+}
+
+const setUsersInStorage = (users: User[]) => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('users', JSON.stringify(users));
+}
+
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
-
   const { toast } = useToast();
+
+  useEffect(() => {
+    const data = getUsersFromStorage();
+    if (!localStorage.getItem('users')) {
+      setUsersInStorage(data);
+    }
+    setUsers(data);
+    setIsLoaded(true);
+  }, []);
   
   const createForm = useForm<z.infer<typeof userSchema>>({
     resolver: zodResolver(userSchema),
@@ -110,7 +130,9 @@ export default function UsersPage() {
         role: data.role,
         lastLogin: 'Never'
     }
-    setUsers(prev => [...prev, newUser]);
+    const updatedUsers = [...users, newUser];
+    setUsers(updatedUsers);
+    setUsersInStorage(updatedUsers);
     toast({
       title: 'User Created',
       description: `User ${data.username} with role ${data.role} has been created.`,
@@ -122,17 +144,23 @@ export default function UsersPage() {
   function handleEditUser(data: z.infer<typeof editUserSchema>) {
     if (!userToEdit) return;
 
-    setUsers(prev => prev.map(u => u.id === userToEdit.id ? {...u, username: data.username, role: data.role } : u));
+    const updatedUsers = users.map(u => u.id === userToEdit.id ? {...u, username: data.username, role: data.role } : u);
+    setUsers(updatedUsers);
+    setUsersInStorage(updatedUsers);
+
     toast({
       title: 'User Updated',
       description: `User ${data.username}'s details have been updated.`,
     });
     setEditDialogOpen(false);
+    setUserToEdit(null);
   }
 
   function handleDeleteUser() {
     if (!userToDelete) return;
-    setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
+    const updatedUsers = users.filter(u => u.id !== userToDelete.id);
+    setUsers(updatedUsers);
+    setUsersInStorage(updatedUsers);
     toast({
         title: 'User Deleted',
         description: `User ${userToDelete.username} has been deleted.`,
