@@ -362,7 +362,7 @@ export default function NewLoanPage() {
                         {fields.map((item, index) => (
                            <FormField key={item.id} control={groupForm.control} name={`members.${index}.customerId`} render={({ field }) => (
                             <FormItem>
-                               <Select onValueChange={field.onChange} defaultValue={field.value}>
+                               <Select onValueChange={field.onChange} value={field.value}>
                                   <FormControl><SelectTrigger><SelectValue placeholder={`Select Member ${index + 1}`} /></SelectTrigger></FormControl>
                                   <SelectContent>
                                     {availableCustomers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
