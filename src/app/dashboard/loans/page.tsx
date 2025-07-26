@@ -28,71 +28,20 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
-import { useLoans, useUserActivity } from '@/lib/data'
+import { useLoans, useUserActivity, Loan } from '@/lib/data'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
 import { useRouter } from 'next/navigation'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 type User = {
   username: string;
   role: string;
 }
 
-export default function LoansPage() {
-  const { loans, isLoaded, updateLoanStatus } = useLoans();
-  const { toast } = useToast();
-  const router = useRouter();
-  const [user, setUser] = React.useState<User | null>(null);
-  const { logActivity } = useUserActivity();
-
-  React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedUser = localStorage.getItem('loggedInUser');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
-    }
-  }, []);
-
-  const handleApprove = (loanId: string) => {
-    updateLoanStatus(loanId, 'Active');
-    logActivity('Approve Loan', `Approved loan ${loanId}.`);
-    toast({
-      title: 'Loan Approved',
-      description: `Loan ${loanId} has been activated.`,
-    });
-  };
-
-  const handlePreclose = (loanId: string) => {
-    updateLoanStatus(loanId, 'Closed');
-    logActivity('Preclose Loan', `Pre-closed loan ${loanId}.`);
-    toast({
-      title: 'Loan Pre-closed',
-      description: `Loan ${loanId} has been marked as closed.`,
-    });
-  };
-
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Loans</CardTitle>
-            <CardDescription>
-              Track and manage all loan applications.
-            </CardDescription>
-          </div>
-          {user?.role === 'Admin' && (
-            <Link href="/dashboard/loans/new" passHref>
-                <Button>
-                <PlusCircle className="w-4 h-4 mr-2" />
-                New Loan Application
-                </Button>
-            </Link>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent>
+const LoanTable = ({ loans, user, handleApprove, handlePreclose }: { loans: Loan[], user: User | null, handleApprove: (id: string) => void, handlePreclose: (id: string) => void }) => {
+    const router = useRouter();
+    return (
         <Table>
           <TableHeader>
             <TableRow>
@@ -108,20 +57,7 @@ export default function LoansPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {!isLoaded ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell><Skeleton className="w-20 h-5" /></TableCell>
-                  <TableCell><Skeleton className="w-40 h-5" /></TableCell>
-                  <TableCell><Skeleton className="w-16 h-5" /></TableCell>
-                  <TableCell><Skeleton className="w-24 h-5" /></TableCell>
-                  <TableCell><Skeleton className="w-16 h-5" /></TableCell>
-                  <TableCell><Skeleton className="w-24 h-5" /></TableCell>
-                  <TableCell><Skeleton className="w-8 h-8 rounded-full" /></TableCell>
-                </TableRow>
-              ))
-            ) : (
-              loans.map((loan) => (
+              {loans.map((loan) => (
                 <TableRow key={loan.id}>
                   <TableCell className="font-medium">{loan.id}</TableCell>
                   <TableCell>
@@ -169,17 +105,136 @@ export default function LoansPage() {
                         >
                           View Customer
                         </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => router.push(`/dashboard/collections?loanId=${loan.id}`)}>
-                          Record Payment
-                        </DropdownMenuItem>
+                        {(loan.status === 'Active' || loan.status === 'Overdue') &&
+                          <DropdownMenuItem onSelect={() => router.push(`/dashboard/collections?loanId=${loan.id}`)}>
+                            Record Payment
+                          </DropdownMenuItem>
+                        }
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
+              ))}
           </TableBody>
         </Table>
+    )
+}
+
+export default function LoansPage() {
+  const { loans, isLoaded, updateLoanStatus } = useLoans();
+  const { toast } = useToast();
+  const [user, setUser] = React.useState<User | null>(null);
+  const { logActivity } = useUserActivity();
+
+  const activeLoans = React.useMemo(() => loans.filter(l => l.status === 'Active' || l.status === 'Overdue' || l.status === 'Pending'), [loans]);
+  const closedLoans = React.useMemo(() => loans.filter(l => l.status === 'Closed'), [loans]);
+
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedUser = localStorage.getItem('loggedInUser');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+    }
+  }, []);
+
+  const handleApprove = (loanId: string) => {
+    updateLoanStatus(loanId, 'Active');
+    logActivity('Approve Loan', `Approved loan ${loanId}.`);
+    toast({
+      title: 'Loan Approved',
+      description: `Loan ${loanId} has been activated.`,
+    });
+  };
+
+  const handlePreclose = (loanId: string) => {
+    updateLoanStatus(loanId, 'Closed');
+    logActivity('Preclose Loan', `Pre-closed loan ${loanId}.`);
+    toast({
+      title: 'Loan Pre-closed',
+      description: `Loan ${loanId} has been marked as closed.`,
+    });
+  };
+
+  if (!isLoaded) {
+    return (
+        <Card>
+            <CardHeader>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <Skeleton className="h-8 w-24 mb-2" />
+                        <Skeleton className="h-4 w-72" />
+                    </div>
+                     <Skeleton className="h-10 w-44" />
+                </div>
+            </CardHeader>
+            <CardContent>
+                 <Skeleton className="h-10 w-[200px] mb-4" />
+                 <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Loan ID</TableHead>
+                            <TableHead>Customer / Group</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Amount (₹)</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Outstanding (₹)</TableHead>
+                            <TableHead><span className="sr-only">Actions</span></TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {Array.from({ length: 5 }).map((_, i) => (
+                            <TableRow key={i}>
+                            <TableCell><Skeleton className="w-20 h-5" /></TableCell>
+                            <TableCell><Skeleton className="w-40 h-5" /></TableCell>
+                            <TableCell><Skeleton className="w-16 h-5" /></TableCell>
+                            <TableCell><Skeleton className="w-24 h-5" /></TableCell>
+                            <TableCell><Skeleton className="w-16 h-5" /></TableCell>
+                            <TableCell><Skeleton className="w-24 h-5" /></TableCell>
+                            <TableCell><Skeleton className="w-8 h-8 rounded-full" /></TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                 </Table>
+            </CardContent>
+        </Card>
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Loans</CardTitle>
+            <CardDescription>
+              Track and manage all loan applications.
+            </CardDescription>
+          </div>
+          {user?.role === 'Admin' && (
+            <Link href="/dashboard/loans/new" passHref>
+                <Button>
+                <PlusCircle className="w-4 h-4 mr-2" />
+                New Loan Application
+                </Button>
+            </Link>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue="active">
+            <TabsList>
+                <TabsTrigger value="active">Active & Overdue</TabsTrigger>
+                <TabsTrigger value="closed">Closed</TabsTrigger>
+            </TabsList>
+            <TabsContent value="active">
+                <LoanTable loans={activeLoans} user={user} handleApprove={handleApprove} handlePreclose={handlePreclose} />
+            </TabsContent>
+            <TabsContent value="closed">
+                <LoanTable loans={closedLoans} user={user} handleApprove={handleApprove} handlePreclose={handlePreclose} />
+            </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   )
