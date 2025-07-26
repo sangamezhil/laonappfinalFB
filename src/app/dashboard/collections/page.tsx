@@ -30,9 +30,9 @@ const collectionSchema = z.object({
 type CollectionFormValues = z.infer<typeof collectionSchema>;
 
 const recentCollections = [
-  { id: 'COLL001', loanId: 'LOAN001', customer: 'Ravi Kumar', amount: 1120, date: '2024-07-28' },
-  { id: 'COLL002', loanId: 'LOAN004', customer: 'Sahara Group', amount: 6800, date: '2024-07-27' },
-  { id: 'COLL003', loanId: 'LOAN002', customer: 'Priya Sharma', amount: 1406.25, date: '2024-07-25' },
+  { id: 'COLL001', loanId: 'LOAN001', customer: 'Ravi Kumar', amount: 5000, date: '2024-07-28' },
+  { id: 'COLL002', loanId: 'LOAN004', customer: 'Sahara Group', amount: 5000, date: '2024-07-27' },
+  { id: 'COLL003', loanId: 'LOAN002', customer: 'Priya Sharma', amount: 2500, date: '2024-07-25' },
 ];
 
 export default function CollectionsPage() {
@@ -51,6 +51,14 @@ export default function CollectionsPage() {
     });
     form.reset();
   }
+
+  const getLoanDisplayName = (loan: any) => {
+    if (loan.loanType === 'Group') {
+      return `${loan.groupName} (Leader: ${loan.customerName}) - ${loan.id}`
+    }
+    return `${loan.customerName} - ${loan.id}`
+  }
+
 
   return (
     <div className="grid gap-6 md:grid-cols-5">
@@ -72,7 +80,7 @@ export default function CollectionsPage() {
                       </FormControl>
                       <SelectContent>
                         {loans.filter(l => l.status === 'Active' || l.status === 'Overdue').map(loan => (
-                          <SelectItem key={loan.id} value={loan.id}>{loan.customerName} - {loan.id}</SelectItem>
+                          <SelectItem key={loan.id} value={loan.id}>{getLoanDisplayName(loan)}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

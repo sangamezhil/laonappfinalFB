@@ -1,8 +1,8 @@
 
 'use client'
 
-import React, { useState } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
+import React from 'react'
+import { useForm, useWatch, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useRouter } from 'next/navigation'
@@ -12,7 +12,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/use-toast'
 import { useCustomers, useLoans } from '@/lib/data'
 
@@ -28,14 +27,14 @@ const personalLoanSchema = z.object({
 
 const groupLoanSchema = z.object({
   groupName: z.string().min(3, { message: 'Group name is required.' }),
-  groupLeader: z.string().min(3, { message: 'Group leader is required.' }),
+  groupLeaderId: z.string().nonempty({ message: 'Please select a group leader.' }),
   groupSize: z.enum(['5', '10', '15', '20']),
   loanAmount: z.coerce.number().positive(),
   interestRate: z.coerce.number().min(10).max(20),
   repaymentTerm: z.coerce.number().min(10).max(50),
-  docCharges: z.coerce.number().nonnegative(),
-  insuranceCharges: z.coerce.number().nonnegative(),
-  members: z.string().min(10, { message: 'Please list group members.' }),
+  docCharges: z.coerce.number().nonnegative().optional(),
+  insuranceCharges: z.coerce.number().nonnegative().optional(),
+  members: z.array(z.object({ customerId: z.string().nonempty() })).min(1, 'Please add members'),
 });
 
 const DisbursalCalculator = ({ control, loanType }: { control: any, loanType: 'personal' | 'group' }) => {
@@ -88,7 +87,47 @@ export default function NewLoanPage() {
       repaymentTerm: 10,
     }
   });
-  const groupForm = useForm<z.infer<typeof groupLoanSchema>>({ resolver: zodResolver(groupLoanSchema) });
+
+  const groupForm = useForm<z.infer<typeof groupLoanSchema>>({ 
+    resolver: zodResolver(groupLoanSchema),
+    defaultValues: {
+      members: [],
+      groupSize: '5',
+      interestRate: 10,
+      repaymentTerm: 10,
+    }
+   });
+
+  const { fields, append, remove } = useFieldArray({
+    control: groupForm.control,
+    name: "members"
+  });
+
+  const groupSize = useWatch({ control: groupForm.control, name: 'groupSize' });
+  const selectedMembers = useWatch({ control: groupForm.control, name: 'members' });
+  const groupLeaderId = useWatch({ control: groupForm.control, name: 'groupLeaderId' });
+
+  const availableCustomers = React.useMemo(() => {
+    const activeLoanCustomerIds = new Set(loans.filter(l => l.status === 'Active' || l.status === 'Overdue').map(l => l.customerId));
+    const selectedMemberIds = new Set(selectedMembers.map(m => m.customerId));
+    if(groupLeaderId) selectedMemberIds.add(groupLeaderId);
+    
+    return customers.filter(c => !activeLoanCustomerIds.has(c.id) && !selectedMemberIds.has(c.id));
+  }, [customers, loans, selectedMembers, groupLeaderId]);
+
+  React.useEffect(() => {
+    const size = parseInt(groupSize);
+    if (fields.length > size) {
+      for (let i = fields.length - 1; i >= size; i--) {
+        remove(i);
+      }
+    } else if (fields.length < size) {
+      for (let i = fields.length; i < size; i++) {
+        append({ customerId: "" });
+      }
+    }
+  }, [groupSize, fields, append, remove]);
+
 
   const collectionFrequency = useWatch({
       control: personalForm.control,
@@ -144,10 +183,23 @@ export default function NewLoanPage() {
   };
 
   const onGroupSubmit = (data: z.infer<typeof groupLoanSchema>) => {
-    const weeklyRepayment = (data.loanAmount + (data.loanAmount * data.interestRate / 100)) / data.repaymentTerm;
+    const leader = customers.find(c => c.id === data.groupLeaderId);
+    if (!leader) {
+      toast({ variant: "destructive", title: "Group Leader not found" });
+      return;
+    }
+
+    const allMemberIds = [data.groupLeaderId, ...data.members.map(m => m.customerId)];
+    const existingLoan = loans.find(l => l.members?.some(m => allMemberIds.includes(m)) && l.status !== 'Closed');
+    if(existingLoan) {
+        toast({ variant: 'destructive', title: "Member Has Active Loan", description: `One or more members in this group already have an active loan.` });
+        return;
+    }
+
+    const weeklyRepayment = data.loanAmount / data.repaymentTerm;
     addLoan({
         customerId: `GRP_${data.groupName.replace(/\s/g, '')}`,
-        customerName: data.groupLeader,
+        customerName: leader.name,
         groupName: data.groupName,
         loanType: 'Group',
         amount: data.loanAmount,
@@ -157,7 +209,8 @@ export default function NewLoanPage() {
         disbursalDate: new Date().toISOString().split('T')[0],
         weeklyRepayment: weeklyRepayment,
         totalPaid: 0,
-        outstandingAmount: data.loanAmount
+        outstandingAmount: data.loanAmount,
+        members: allMemberIds,
     });
     toast({ title: "Group Loan Submitted", description: `Loan for ${data.groupName} is now pending approval.` });
     router.push('/dashboard/loans');
@@ -185,7 +238,7 @@ export default function NewLoanPage() {
                       <FormLabel>Customer</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Select a registered customer" /></SelectTrigger></FormControl>
-                        <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name} - {c.id}</SelectItem>)}</SelectContent>
+                        <SelectContent>{customers.filter(c => !loans.some(l => l.customerId === c.id && l.status !== 'Closed')).map(c => <SelectItem key={c.id} value={c.id}>{c.name} - {c.id}</SelectItem>)}</SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
@@ -235,9 +288,6 @@ export default function NewLoanPage() {
                     <FormField control={groupForm.control} name="groupName" render={({ field }) => (
                         <FormItem><FormLabel>Group Name</FormLabel><FormControl><Input placeholder="Enter group name" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
-                    <FormField control={groupForm.control} name="groupLeader" render={({ field }) => (
-                        <FormItem><FormLabel>Group Leader</FormLabel><FormControl><Input placeholder="Enter group leader's name" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
                     <FormField control={groupForm.control} name="groupSize" render={({ field }) => (
                         <FormItem><FormLabel>Group Size</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select group size" /></SelectTrigger></FormControl>
@@ -254,25 +304,53 @@ export default function NewLoanPage() {
                     )} />
                     <FormField control={groupForm.control} name="interestRate" render={({ field }) => (
                         <FormItem><FormLabel>Interest Rate (%)</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={String(field.value)}><FormControl><SelectTrigger><SelectValue placeholder="10% - 20%" /></SelectTrigger></FormControl>
+                        <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={String(field.value)}><FormControl><SelectTrigger><SelectValue placeholder="10% - 20%" /></SelectTrigger></FormControl>
                         <SelectContent>{Array.from({ length: 11 }, (_, i) => 10 + i).map(rate => <SelectItem key={rate} value={String(rate)}>{rate}%</SelectItem>)}</SelectContent>
                         </Select><FormMessage /></FormItem>
                     )} />
                     <FormField control={groupForm.control} name="repaymentTerm" render={({ field }) => (
                         <FormItem><FormLabel>Repayment Term (Weeks)</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={String(field.value)}><FormControl><SelectTrigger><SelectValue placeholder="10 - 50 Weeks" /></SelectTrigger></FormControl>
+                        <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={String(field.value)}><FormControl><SelectTrigger><SelectValue placeholder="10 - 50 Weeks" /></SelectTrigger></FormControl>
                         <SelectContent>{[10, 12, 15, 20, 25, 30, 40, 50].map(term => <SelectItem key={term} value={String(term)}>{term} Weeks</SelectItem>)}</SelectContent>
                         </Select><FormMessage /></FormItem>
                     )} />
-                    <FormField control={groupForm.control} name="docCharges" render={({ field }) => (
-                        <FormItem><FormLabel>Documentation Charges (₹)</FormLabel><FormControl><Input type="number" placeholder="Enter doc charges" {...field} /></FormControl><FormMessage /></FormItem>
+                     <FormField control={groupForm.control} name="docCharges" render={({ field }) => (
+                        <FormItem><FormLabel>Documentation Charges (₹)</FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={groupForm.control} name="insuranceCharges" render={({ field }) => (
-                        <FormItem><FormLabel>Insurance Charges (₹)</FormLabel><FormControl><Input type="number" placeholder="Enter insurance charges" {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Insurance Charges (₹)</FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
-                    <FormField control={groupForm.control} name="members" render={({ field }) => (
-                        <FormItem className="md:col-span-2"><FormLabel>Group Members</FormLabel><FormControl><Textarea placeholder="List all group members, one per line." {...field} /></FormControl><FormMessage /></FormItem>
+                </div>
+                <div className="space-y-4">
+                  <FormField control={groupForm.control} name="groupLeaderId" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Group Leader</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl><SelectTrigger><SelectValue placeholder="Select a group leader" /></SelectTrigger></FormControl>
+                          <SelectContent>{customers.filter(c => !loans.some(l => (l.status === 'Active' || l.status === 'Overdue') && l.members?.includes(c.id))).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
                     )} />
+
+                    <div>
+                      <FormLabel>Group Members</FormLabel>
+                      <div className="space-y-2 mt-2">
+                        {fields.map((item, index) => (
+                           <FormField key={item.id} control={groupForm.control} name={`members.${index}.customerId`} render={({ field }) => (
+                            <FormItem>
+                               <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl><SelectTrigger><SelectValue placeholder={`Select Member ${index + 1}`} /></SelectTrigger></FormControl>
+                                  <SelectContent>
+                                    {availableCustomers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
+                               <FormMessage />
+                             </FormItem>
+                          )} />
+                        ))}
+                      </div>
+                    </div>
                 </div>
                 <DisbursalCalculator control={groupForm.control} loanType="group" />
                 <CardFooter className="px-0 pt-6 flex justify-end gap-2"><Button variant="outline" type="button" onClick={() => router.back()}>Cancel</Button><Button type="submit">Submit Application</Button></CardFooter>
@@ -284,7 +362,3 @@ export default function NewLoanPage() {
     </Card>
   )
 }
-
-    
-
-    
