@@ -90,6 +90,9 @@ export default function NewLoanPage() {
       collectionFrequency: 'Weekly',
       interestRate: 12,
       repaymentTerm: 10,
+      loanAmount: undefined,
+      docCharges: undefined,
+      insuranceCharges: undefined,
     }
   });
 
@@ -100,6 +103,9 @@ export default function NewLoanPage() {
       groupSize: '5',
       interestRate: 10,
       repaymentTerm: 10,
+      loanAmount: undefined,
+      docCharges: undefined,
+      insuranceCharges: undefined,
     }
    });
 
@@ -267,7 +273,7 @@ export default function NewLoanPage() {
                     </FormItem>
                   )} />
                   <FormField control={personalForm.control} name="loanAmount" render={({ field }) => (
-                    <FormItem><FormLabel>Loan Amount (₹)</FormLabel><FormControl><Input type="number" placeholder="e.g., 50000" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Loan Amount (₹)</FormLabel><FormControl><Input type="number" placeholder="e.g., 50000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                   )} />
                    <FormField control={personalForm.control} name="collectionFrequency" render={({ field }) => (
                     <FormItem><FormLabel>Collection Frequency</FormLabel>
@@ -323,7 +329,7 @@ export default function NewLoanPage() {
                         </Select><FormMessage /></FormItem>
                     )} />
                     <FormField control={groupForm.control} name="loanAmount" render={({ field }) => (
-                        <FormItem><FormLabel>Total Group Loan Amount (₹)</FormLabel><FormControl><Input type="number" placeholder="e.g., 200000" {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Total Group Loan Amount (₹)</FormLabel><FormControl><Input type="number" placeholder="e.g., 200000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={groupForm.control} name="interestRate" render={({ field }) => (
                         <FormItem><FormLabel>Interest Rate (%)</FormLabel>
