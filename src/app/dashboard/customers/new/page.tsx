@@ -30,13 +30,13 @@ import { useCustomers, useUserActivity } from '@/lib/data'
 
 const kycFormSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
-  email: z.string().email({ message: 'Please enter a valid email address.' }),
+  email: z.string().email({ message: 'Please enter a valid email address.' }).optional().or(z.literal('')),
   phone: z.string().regex(/^\d{10}$/, { message: 'Phone number must be 10 digits.' }),
   address: z.string().min(10, { message: 'Address is too short.' }),
   idType: z.enum(['Aadhaar Card', 'PAN Card', 'Ration Card', 'Voter ID', 'Bank Passbook', 'Gas Book']),
   idNumber: z.string().min(5, { message: 'ID number is required.' }),
-  occupation: z.string().min(2, { message: 'Occupation is required.' }),
-  monthlyIncome: z.coerce.number().positive({ message: 'Monthly income must be a positive number.' }),
+  occupation: z.string().optional(),
+  monthlyIncome: z.coerce.number().positive().optional(),
 })
 
 type KycFormValues = z.infer<typeof kycFormSchema>
@@ -62,7 +62,7 @@ export default function NewCustomerPage() {
 
   function onSubmit(data: KycFormValues) {
     const {fullName, ...rest} = data
-    const newCustomer = addCustomer({name: fullName, ...rest});
+    const newCustomer = addCustomer({name: fullName, ...rest, monthlyIncome: data.monthlyIncome || 0, occupation: data.occupation || '', email: data.email || ''});
     logActivity('Create Customer', `Registered new customer: ${newCustomer.name} (${newCustomer.id})`);
     toast({
       title: 'Customer Registered',
@@ -99,7 +99,7 @@ export default function NewCustomerPage() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email Address</FormLabel>
+                    <FormLabel>Email Address (Optional)</FormLabel>
                     <FormControl>
                       <Input type="email" placeholder="example@email.com" {...field} />
                     </FormControl>
@@ -176,7 +176,7 @@ export default function NewCustomerPage() {
                 name="occupation"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Occupation</FormLabel>
+                    <FormLabel>Occupation (Optional)</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g., Software Engineer, Farmer" {...field} />
                     </FormControl>
@@ -189,7 +189,7 @@ export default function NewCustomerPage() {
                 name="monthlyIncome"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Monthly Income (₹)</FormLabel>
+                    <FormLabel>Monthly Income (₹) (Optional)</FormLabel>
                     <FormControl>
                       <Input type="number" placeholder="Enter monthly income" {...field} value={field.value ?? ''} />
                     </FormControl>
