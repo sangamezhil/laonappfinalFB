@@ -85,7 +85,7 @@ function CollectionsPageContent() {
         setDueDates({ current: currentDueDate, next: nextDueDate });
 
         // If navigating from another page, clear the query param after use
-        if(loanIdFromQuery) {
+        if(loanIdFromQuery && loanIdFromQuery === loanIdToSelect) {
             router.replace('/dashboard/collections', { scroll: false });
         }
 
@@ -335,3 +335,5 @@ export default function CollectionsPage() {
     </Suspense>
   )
 }
+
+    
