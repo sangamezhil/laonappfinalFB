@@ -292,10 +292,10 @@ export default function NewLoanPage() {
                     <FormMessage /></FormItem>
                   )} />
                   <FormField control={personalForm.control} name="docCharges" render={({ field }) => (
-                    <FormItem><FormLabel>Documentation Charges (₹)</FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Documentation Charges (₹)</FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={personalForm.control} name="insuranceCharges" render={({ field }) => (
-                    <FormItem><FormLabel>Insurance Charges (₹)</FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Insurance Charges (₹)</FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                   )} />
                 </div>
                 <DisbursalCalculator control={personalForm.control} loanType="personal" />
@@ -338,17 +338,17 @@ export default function NewLoanPage() {
                         </Select><FormMessage /></FormItem>
                     )} />
                      <FormField control={groupForm.control} name="docCharges" render={({ field }) => (
-                        <FormItem><FormLabel>Total Documentation Charges (₹)</FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Total Documentation Charges (₹)</FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={groupForm.control} name="insuranceCharges" render={({ field }) => (
-                        <FormItem><FormLabel>Total Insurance Charges (₹)</FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Total Insurance Charges (₹)</FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                     )} />
                 </div>
                 <div className="space-y-4">
                   <FormField control={groupForm.control} name="groupLeaderId" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Group Leader</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl><SelectTrigger><SelectValue placeholder="Select a group leader" /></SelectTrigger></FormControl>
                            <SelectContent>{customers.filter(c => !loans.some(l => (l.customerId === c.id) && (l.status === 'Active' || l.status === 'Overdue'))).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                         </Select>
@@ -385,3 +385,5 @@ export default function NewLoanPage() {
     </Card>
   )
 }
+
+    
