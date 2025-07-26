@@ -54,21 +54,23 @@ function CollectionsPageContent() {
   });
   
   const selectedLoanId = form.watch('loanId');
+  const loanIdFromQuery = searchParams.get('loanId');
 
   useEffect(() => {
-    const loanIdFromQuery = searchParams.get('loanId');
-    const targetLoanId = loanIdFromQuery || selectedLoanId;
-
-    if (loanIdFromQuery && loanIdFromQuery !== selectedLoanId) {
-      form.setValue('loanId', loanIdFromQuery, { shouldValidate: true });
-      return; 
+    if (loanIdFromQuery) {
+        form.setValue('loanId', loanIdFromQuery, { shouldValidate: true });
+        // Clear the query param from URL after setting it
+        router.replace('/dashboard/collections', { scroll: false });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loanIdFromQuery]);
 
-    if (targetLoanId) {
-      const loan = loans.find(l => l.id === targetLoanId);
+  useEffect(() => {
+    if (selectedLoanId) {
+      const loan = loans.find(l => l.id === selectedLoanId);
       if (loan) {
         setSelectedLoan(loan);
-        form.setValue('amount', loan.weeklyRepayment);
+        form.setValue('amount', loan.weeklyRepayment, { shouldValidate: true });
 
         const installmentsPaid = loan.totalPaid > 0 ? Math.floor(loan.totalPaid / loan.weeklyRepayment) : 0;
         const startDate = new Date(loan.disbursalDate);
@@ -103,7 +105,7 @@ function CollectionsPageContent() {
         });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedLoanId, searchParams, loans, form.setValue]);
+  }, [selectedLoanId, loans]);
 
   function onSubmit(data: CollectionFormValues) {
     console.log(data);
@@ -112,9 +114,6 @@ function CollectionsPageContent() {
       description: `Payment of ₹${data.amount} for loan ${data.loanId} has been recorded.`,
     });
     form.reset();
-    setSelectedLoan(null);
-    setDueDates({ current: null, next: null });
-    router.replace('/dashboard/collections');
   }
 
   const getLoanDisplayName = (loan: Loan) => {
