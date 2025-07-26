@@ -16,10 +16,11 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
   const [loans, setLoans] = useState<Loan[]>([]);
 
   useEffect(() => {
-    const cust = getCustomerById(params.id);
+    const customerId = params.id;
+    const cust = getCustomerById(customerId);
     if (cust) {
       setCustomer(cust);
-      const customerLoans = getLoansByCustomerId(params.id);
+      const customerLoans = getLoansByCustomerId(customerId);
       setLoans(customerLoans);
     } else {
       setCustomer(null);
