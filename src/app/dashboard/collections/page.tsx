@@ -1,11 +1,11 @@
 
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
@@ -35,8 +35,9 @@ const recentCollections = [
   { id: 'COLL003', loanId: 'LOAN002', customer: 'Priya Sharma', amount: 2500, date: '2024-07-25' },
 ];
 
-export default function CollectionsPage() {
+function CollectionsPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const { loans } = useLoans();
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
@@ -51,6 +52,14 @@ export default function CollectionsPage() {
   });
 
   const selectedLoanId = form.watch('loanId');
+
+  useEffect(() => {
+    const loanIdFromQuery = searchParams.get('loanId');
+    if (loanIdFromQuery) {
+      form.setValue('loanId', loanIdFromQuery);
+    }
+  }, [searchParams, form]);
+
 
   useEffect(() => {
     if (selectedLoanId) {
@@ -79,12 +88,12 @@ export default function CollectionsPage() {
       } else {
         setSelectedLoan(null);
         setDueDates({ current: null, next: null });
-        form.reset();
+        form.resetField('amount');
       }
     } else {
       setSelectedLoan(null);
       setDueDates({ current: null, next: null });
-       form.reset();
+      form.resetField('amount');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLoanId, loans]);
@@ -98,6 +107,7 @@ export default function CollectionsPage() {
     form.reset();
     setSelectedLoan(null);
     setDueDates({ current: null, next: null });
+    router.replace('/dashboard/collections');
   }
 
   const getLoanDisplayName = (loan: Loan) => {
@@ -121,7 +131,7 @@ export default function CollectionsPage() {
                 <FormField control={form.control} name="loanId" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Loan / Customer</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger><SelectValue placeholder="Select a loan" /></SelectTrigger>
                       </FormControl>
@@ -252,4 +262,13 @@ export default function CollectionsPage() {
       </div>
     </div>
   );
+}
+
+
+export default function CollectionsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <CollectionsPageContent />
+    </Suspense>
+  )
 }

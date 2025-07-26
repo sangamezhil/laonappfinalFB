@@ -131,13 +131,11 @@ export default function LoansPage() {
                         )}
                         <DropdownMenuItem 
                           onSelect={() => router.push(`/dashboard/customers/${loan.customerId}`)}
+                          disabled={loan.loanType === 'Group'}
                         >
                           View Customer
                         </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => {
-                            form.setValue('loanId', loan.id)
-                            router.push('/dashboard/collections')
-                        }}>
+                        <DropdownMenuItem onSelect={() => router.push(`/dashboard/collections?loanId=${loan.id}`)}>
                           Record Payment
                         </DropdownMenuItem>
                       </DropdownMenuContent>
