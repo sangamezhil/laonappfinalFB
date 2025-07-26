@@ -54,58 +54,65 @@ function CollectionsPageContent() {
   const loanIdFromQuery = searchParams.get('loanId');
   const selectedLoanIdInForm = form.watch('loanId');
 
+  // Effect to handle setting loan from either URL query or form selection
   useEffect(() => {
-    const loanIdToSelect = loanIdFromQuery || selectedLoanIdInForm;
+    const loanIdToProcess = loanIdFromQuery || selectedLoanIdInForm;
 
-    if (loanIdToSelect) {
-      const loan = loans.find(l => l.id === loanIdToSelect);
-      if (loan) {
-        if (loanIdToSelect !== selectedLoanIdInForm) {
-            form.setValue('loanId', loan.id, { shouldValidate: true });
-        }
-        
-        setSelectedLoan(loan);
-        form.setValue('amount', loan.weeklyRepayment, { shouldValidate: true });
-
-        const installmentsPaid = loan.totalPaid > 0 ? Math.floor(loan.totalPaid / loan.weeklyRepayment) : 0;
-        const startDate = new Date(loan.disbursalDate);
-        let currentDueDate: Date | null = null;
-        let nextDueDate: Date | null = null;
-        
-        if (loan.collectionFrequency === 'Daily') {
-          currentDueDate = addDays(startDate, installmentsPaid + 1);
-          nextDueDate = addDays(startDate, installmentsPaid + 2);
-        } else if (loan.collectionFrequency === 'Weekly') {
-          currentDueDate = addWeeks(startDate, installmentsPaid + 1);
-          nextDueDate = addWeeks(startDate, installmentsPaid + 2);
-        } else if (loan.collectionFrequency === 'Monthly') {
-          currentDueDate = addMonths(startDate, installmentsPaid + 1);
-          nextDueDate = addMonths(startDate, installmentsPaid + 2);
-        }
-        setDueDates({ current: currentDueDate, next: nextDueDate });
-
-        // If navigating from another page, clear the query param after use
-        if(loanIdFromQuery && loanIdFromQuery === loanIdToSelect) {
-            router.replace('/dashboard/collections', { scroll: false });
-        }
-
-      } else {
-        setSelectedLoan(null);
-        setDueDates({ current: null, next: null });
-        form.resetField('amount');
-      }
-    } else {
-        setSelectedLoan(null);
-        setDueDates({ current: null, next: null });
-        form.reset({
+    if (!loanIdToProcess) {
+      setSelectedLoan(null);
+      setDueDates({ current: null, next: null });
+       form.reset({
             loanId: '',
             amount: '' as any,
             paymentMethod: 'Cash',
             collectionDate: new Date(),
         });
+      return;
+    }
+
+    const loan = loans.find(l => l.id === loanIdToProcess);
+
+    if (loan) {
+      setSelectedLoan(loan);
+      form.setValue('amount', loan.weeklyRepayment, { shouldValidate: true });
+
+      const installmentsPaid = loan.totalPaid > 0 ? Math.floor(loan.totalPaid / loan.weeklyRepayment) : 0;
+      const startDate = new Date(loan.disbursalDate);
+      let currentDueDate: Date | null = null;
+      let nextDueDate: Date | null = null;
+      
+      if (loan.collectionFrequency === 'Daily') {
+        currentDueDate = addDays(startDate, installmentsPaid + 1);
+        nextDueDate = addDays(startDate, installmentsPaid + 2);
+      } else if (loan.collectionFrequency === 'Weekly') {
+        currentDueDate = addWeeks(startDate, installmentsPaid + 1);
+        nextDueDate = addWeeks(startDate, installmentsPaid + 2);
+      } else if (loan.collectionFrequency === 'Monthly') {
+        currentDueDate = addMonths(startDate, installmentsPaid + 1);
+        nextDueDate = addMonths(startDate, installmentsPaid + 2);
+      }
+      setDueDates({ current: currentDueDate, next: nextDueDate });
+    } else {
+      setSelectedLoan(null);
+      setDueDates({ current: null, next: null });
+      form.resetField('amount');
+    }
+  }, [selectedLoanIdInForm, loans, form]);
+
+
+  // Effect to sync URL query param to form state, and then clear the URL.
+  // This runs only when the query param itself changes.
+  useEffect(() => {
+    if (loanIdFromQuery) {
+        if (loanIdFromQuery !== form.getValues('loanId')) {
+            form.setValue('loanId', loanIdFromQuery, { shouldValidate: true });
+        }
+        // Clear the query parameter from the URL without re-triggering a full navigation loop
+        router.replace('/dashboard/collections', { scroll: false });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loanIdFromQuery, selectedLoanIdInForm, loans]);
+  }, [loanIdFromQuery]);
+
 
   const handlePhoneSearch = () => {
     if (!phoneSearch || phoneSearch.length < 10) {
