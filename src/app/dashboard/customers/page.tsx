@@ -157,9 +157,6 @@ export default function CustomersPage() {
                         <DropdownMenuItem asChild>
                           <Link href={`/dashboard/customers/${customer.id}`}>View Details</Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                           <Link href={`/dashboard/customers/${customer.id}/edit`}>Edit</Link>
-                        </DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => handleDeleteClick(customer)} className="text-destructive">Delete</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
