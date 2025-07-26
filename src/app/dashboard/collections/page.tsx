@@ -48,21 +48,22 @@ function CollectionsPageContent() {
     defaultValues: {
       paymentMethod: 'Cash',
       collectionDate: new Date(),
-      amount: undefined,
+      amount: '' as any, // Set a default empty value to avoid uncontrolled to controlled error
+      loanId: '',
     },
   });
-
+  
   const selectedLoanId = form.watch('loanId');
 
   useEffect(() => {
     const loanIdFromQuery = searchParams.get('loanId');
-    if (loanIdFromQuery && loans.length > 0) {
+    if (loanIdFromQuery) {
         const loanExists = loans.some(l => l.id === loanIdFromQuery);
-        if(loanExists) {
+        if(loanExists && loanIdFromQuery !== selectedLoanId) {
             form.setValue('loanId', loanIdFromQuery, { shouldValidate: true, shouldDirty: true });
         }
     }
-  }, [searchParams, form, loans]);
+  }, [searchParams, loans, form, selectedLoanId]);
 
 
   useEffect(() => {
@@ -100,7 +101,7 @@ function CollectionsPageContent() {
       form.resetField('amount');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedLoanId, loans]);
+  }, [selectedLoanId, loans, form]);
 
   function onSubmit(data: CollectionFormValues) {
     console.log(data);
@@ -276,5 +277,3 @@ export default function CollectionsPage() {
     </Suspense>
   )
 }
-
-    
