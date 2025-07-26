@@ -16,6 +16,14 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { Logo } from '@/components/logo'
 
+// Basic User type to match what's in users/page.tsx
+type User = {
+    id: string;
+    username: string;
+    role: string;
+    lastLogin: string;
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
@@ -27,15 +35,35 @@ export default function LoginPage() {
     e.preventDefault()
     setIsLoading(true)
 
-    // Mock authentication
+    // Mock authentication that checks localStorage
     setTimeout(() => {
-      if (username === 'admin' && password === 'admin') {
+      let storedUsers: User[] = [];
+      if (typeof window !== 'undefined') {
+          const stored = localStorage.getItem('users');
+          if (stored) {
+              storedUsers = JSON.parse(stored);
+          }
+      }
+      
+      const foundUser = storedUsers.find(user => user.username === username);
+
+      // Note: We are not checking password for this mock implementation.
+      // In a real app, you would send credentials to a server for validation.
+      if (foundUser) {
+        toast({
+          title: "Login Successful",
+          description: `Welcome back, ${foundUser.username}!`,
+        })
+        router.push('/dashboard')
+      } else if (username === 'admin' && password === 'admin' && storedUsers.length === 0) {
+        // Fallback for initial login if no users exist
         toast({
           title: "Login Successful",
           description: "Welcome back, Admin!",
         })
         router.push('/dashboard')
-      } else {
+      }
+      else {
         toast({
           variant: "destructive",
           title: "Login Failed",
@@ -63,7 +91,7 @@ export default function LoginPage() {
               <Input
                 id="username"
                 type="text"
-                placeholder="admin"
+                placeholder="e.g., admin"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
@@ -75,7 +103,7 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="admin"
+                placeholder="e.g., admin"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
