@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useForm } from 'react-hook-form'
@@ -11,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useToast } from '@/hooks/use-toast'
-import { mockLoans } from '@/lib/data'
+import { useLoans } from '@/lib/data'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { CalendarIcon } from 'lucide-react'
 import { Calendar } from '@/components/ui/calendar'
@@ -37,6 +38,7 @@ const recentCollections = [
 export default function CollectionsPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { loans } = useLoans();
   const form = useForm<CollectionFormValues>({
     resolver: zodResolver(collectionSchema),
   });
@@ -69,7 +71,7 @@ export default function CollectionsPage() {
                         <SelectTrigger><SelectValue placeholder="Select a loan" /></SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {mockLoans.filter(l => l.status === 'Active' || l.status === 'Overdue').map(loan => (
+                        {loans.filter(l => l.status === 'Active' || l.status === 'Overdue').map(loan => (
                           <SelectItem key={loan.id} value={loan.id}>{loan.customerName} - {loan.id}</SelectItem>
                         ))}
                       </SelectContent>

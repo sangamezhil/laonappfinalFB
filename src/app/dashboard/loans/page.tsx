@@ -1,3 +1,6 @@
+
+'use client'
+
 import Link from 'next/link'
 import { PlusCircle, MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -24,9 +27,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
-import { mockLoans } from '@/lib/data'
+import { useLoans } from '@/lib/data'
 
 export default function LoansPage() {
+  const { loans } = useLoans();
   return (
     <Card>
       <CardHeader>
@@ -61,7 +65,7 @@ export default function LoansPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {mockLoans.map((loan) => (
+            {loans.map((loan) => (
               <TableRow key={loan.id}>
                 <TableCell className="font-medium">{loan.id}</TableCell>
                 <TableCell>
