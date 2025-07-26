@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/use-toast'
-import { useCustomers } from '@/lib/data'
+import { useCustomers, useLoans } from '@/lib/data'
 
 const personalLoanSchema = z.object({
   customerId: z.string().nonempty({ message: 'Please select a customer.' }),
@@ -77,16 +77,52 @@ export default function NewLoanPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { customers } = useCustomers();
+  const { addLoan } = useLoans();
 
   const personalForm = useForm<z.infer<typeof personalLoanSchema>>({ resolver: zodResolver(personalLoanSchema) });
   const groupForm = useForm<z.infer<typeof groupLoanSchema>>({ resolver: zodResolver(groupLoanSchema) });
 
   const onPersonalSubmit = (data: z.infer<typeof personalLoanSchema>) => {
+    const customer = customers.find(c => c.id === data.customerId);
+    if (!customer) {
+        toast({ variant: 'destructive', title: "Customer not found" });
+        return;
+    }
+    const weeklyRepayment = (data.loanAmount + (data.loanAmount * data.interestRate / 100)) / data.repaymentTerm;
+
+    addLoan({
+        customerId: data.customerId,
+        customerName: customer.name,
+        loanType: 'Personal',
+        amount: data.loanAmount,
+        interestRate: data.interestRate,
+        term: data.repaymentTerm,
+        status: 'Pending',
+        disbursalDate: new Date().toISOString().split('T')[0],
+        weeklyRepayment: weeklyRepayment,
+        totalPaid: 0,
+        outstandingAmount: data.loanAmount + (data.loanAmount * data.interestRate / 100)
+    });
     toast({ title: "Personal Loan Submitted", description: `Loan for customer ID ${data.customerId} is now pending approval.` });
     router.push('/dashboard/loans');
   };
 
   const onGroupSubmit = (data: z.infer<typeof groupLoanSchema>) => {
+    const weeklyRepayment = (data.loanAmount + (data.loanAmount * data.interestRate / 100)) / data.repaymentTerm;
+    addLoan({
+        customerId: `GRP_${data.groupName.replace(/\s/g, '')}`,
+        customerName: data.groupLeader,
+        groupName: data.groupName,
+        loanType: 'Group',
+        amount: data.loanAmount,
+        interestRate: data.interestRate,
+        term: data.repaymentTerm,
+        status: 'Pending',
+        disbursalDate: new Date().toISOString().split('T')[0],
+        weeklyRepayment: weeklyRepayment,
+        totalPaid: 0,
+        outstandingAmount: data.loanAmount + (data.loanAmount * data.interestRate / 100)
+    });
     toast({ title: "Group Loan Submitted", description: `Loan for ${data.groupName} is now pending approval.` });
     router.push('/dashboard/loans');
   };
