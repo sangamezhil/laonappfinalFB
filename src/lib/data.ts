@@ -156,7 +156,26 @@ export const useLoans = () => {
         setLoans(updatedLoans);
     };
 
-    return { loans, addLoan, isLoaded, updateLoanStatus };
+    const updateLoanPayment = (loanId: string, amount: number) => {
+        const currentLoans = getLoansFromStorage();
+        const updatedLoans = currentLoans.map(loan => {
+            if (loan.id === loanId) {
+                const newTotalPaid = loan.totalPaid + amount;
+                const newOutstandingAmount = loan.outstandingAmount - amount;
+                return {
+                    ...loan,
+                    totalPaid: newTotalPaid,
+                    outstandingAmount: newOutstandingAmount,
+                    status: newOutstandingAmount <= 0 ? 'Closed' : loan.status,
+                };
+            }
+            return loan;
+        });
+        localStorage.setItem('loans', JSON.stringify(updatedLoans));
+        setLoans(updatedLoans);
+    }
+
+    return { loans, addLoan, isLoaded, updateLoanStatus, updateLoanPayment };
 }
 
 

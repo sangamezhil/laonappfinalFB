@@ -29,19 +29,29 @@ const collectionSchema = z.object({
 
 type CollectionFormValues = z.infer<typeof collectionSchema>;
 
-const recentCollections = [
+type RecentCollection = {
+    id: string;
+    loanId: string;
+    customer: string;
+    amount: number;
+    date: string;
+};
+
+const initialRecentCollections: RecentCollection[] = [
   { id: 'COLL001', loanId: 'LOAN001', customer: 'Ravi Kumar', amount: 5000, date: '2024-07-28' },
   { id: 'COLL002', loanId: 'LOAN004', customer: 'Sahara Group', amount: 5000, date: '2024-07-27' },
   { id: 'COLL003', loanId: 'LOAN002', customer: 'Priya Sharma', amount: 2500, date: '2024-07-25' },
 ];
 
+
 function CollectionsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const { loans } = useLoans();
+  const { loans, updateLoanPayment } = useLoans();
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
   const [dueDates, setDueDates] = useState<{ current: Date | null, next: Date | null }>({ current: null, next: null });
+  const [recentCollections, setRecentCollections] = useState<RecentCollection[]>(initialRecentCollections);
 
   const form = useForm<CollectionFormValues>({
     resolver: zodResolver(collectionSchema),
@@ -59,11 +69,8 @@ function CollectionsPageContent() {
   useEffect(() => {
     if (loanIdFromQuery) {
         form.setValue('loanId', loanIdFromQuery, { shouldValidate: true });
-        // Clear the query param from URL after setting it
-        router.replace('/dashboard/collections', { scroll: false });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loanIdFromQuery]);
+  }, [loanIdFromQuery, form]);
 
   useEffect(() => {
     if (selectedLoanId) {
@@ -89,6 +96,11 @@ function CollectionsPageContent() {
         }
         setDueDates({ current: currentDueDate, next: nextDueDate });
 
+        // If navigating from another page, clear the query param after use
+        if(loanIdFromQuery) {
+            router.replace('/dashboard/collections', { scroll: false });
+        }
+
       } else {
         setSelectedLoan(null);
         setDueDates({ current: null, next: null });
@@ -108,10 +120,26 @@ function CollectionsPageContent() {
   }, [selectedLoanId, loans]);
 
   function onSubmit(data: CollectionFormValues) {
-    console.log(data);
+    const loan = loans.find(l => l.id === data.loanId);
+    if (!loan) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Selected loan not found.' });
+        return;
+    }
+    
+    updateLoanPayment(data.loanId, data.amount);
+
+    const newCollection: RecentCollection = {
+      id: `COLL${Date.now()}`,
+      loanId: data.loanId,
+      customer: loan.customerName,
+      amount: data.amount,
+      date: format(data.collectionDate, 'yyyy-MM-dd'),
+    };
+    setRecentCollections(prev => [newCollection, ...prev]);
+
     toast({
       title: 'Collection Recorded',
-      description: `Payment of ₹${data.amount} for loan ${data.loanId} has been recorded.`,
+      description: `Payment of ₹${data.amount.toLocaleString('en-IN')} for loan ${data.loanId} has been recorded.`,
     });
     form.reset();
   }
@@ -258,7 +286,7 @@ function CollectionsPageContent() {
                       <div className="text-sm text-muted-foreground">{c.loanId}</div>
                     </TableCell>
                     <TableCell>₹{c.amount.toLocaleString('en-IN')}</TableCell>
-                    <TableCell>{c.date}</TableCell>
+                    <TableCell>{format(new Date(c.date), 'dd MMM yyyy')}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -278,5 +306,3 @@ export default function CollectionsPage() {
     </Suspense>
   )
 }
-
-    
