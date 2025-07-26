@@ -48,6 +48,7 @@ function CollectionsPageContent() {
     defaultValues: {
       paymentMethod: 'Cash',
       collectionDate: new Date(),
+      amount: undefined,
     },
   });
 
@@ -186,7 +187,7 @@ function CollectionsPageContent() {
                 <FormField control={form.control} name="amount" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Amount Collected (₹)</FormLabel>
-                    <FormControl><Input type="number" placeholder="Enter amount" {...field} /></FormControl>
+                    <FormControl><Input type="number" placeholder="Enter amount" {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -275,3 +276,5 @@ export default function CollectionsPage() {
     </Suspense>
   )
 }
+
+    
