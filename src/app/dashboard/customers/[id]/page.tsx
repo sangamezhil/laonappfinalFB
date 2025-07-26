@@ -16,7 +16,7 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
   const [loans, setLoans] = useState<Loan[]>([]);
   
   useEffect(() => {
-    const { id: customerId } = params;
+    const customerId = params.id;
     const cust = getCustomerById(customerId);
     if (cust) {
       setCustomer(cust);
@@ -25,7 +25,7 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
     } else {
       setCustomer(null);
     }
-  }, [params]);
+  }, [params.id]);
 
   if (customer === undefined) {
     return (
