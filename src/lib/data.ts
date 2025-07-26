@@ -45,85 +45,81 @@ const initialLoans: Loan[] = [
   { id: 'LOAN004', customerId: 'GRP001', customerName: 'Suresh Patel (Leader)', groupName: 'Sahara Group', loanType: 'Group', amount: 200000, interestRate: 18, term: 40, status: 'Active', disbursalDate: '2023-07-01', weeklyRepayment: 6800, totalPaid: 81600, outstandingAmount: 180400 },
 ];
 
-let mockCustomers: Customer[] = [];
-let mockLoans: Loan[] = [];
+const getCustomersFromStorage = (): Customer[] => {
+    if (typeof window === 'undefined') return [];
+    const stored = localStorage.getItem('customers');
+    return stored ? JSON.parse(stored) : initialCustomers;
+}
 
-
-const initializeData = () => {
-    if (typeof window !== 'undefined') {
-        const storedCustomers = localStorage.getItem('customers');
-        if (storedCustomers) {
-            mockCustomers = JSON.parse(storedCustomers);
-        } else {
-            mockCustomers = [...initialCustomers];
-            localStorage.setItem('customers', JSON.stringify(mockCustomers));
-        }
-
-        const storedLoans = localStorage.getItem('loans');
-        if (storedLoans) {
-            mockLoans = JSON.parse(storedLoans);
-        } else {
-            mockLoans = [...initialLoans];
-            localStorage.setItem('loans', JSON.stringify(mockLoans));
-        }
-    }
-};
-
-initializeData();
+const getLoansFromStorage = (): Loan[] => {
+    if (typeof window === 'undefined') return [];
+    const stored = localStorage.getItem('loans');
+    return stored ? JSON.parse(stored) : initialLoans;
+}
 
 export const useCustomers = () => {
-    const [customers, setCustomers] = useState<Customer[]>(mockCustomers);
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [isLoaded, setIsLoaded] = useState(false);
 
     useEffect(() => {
-        initializeData();
-        setCustomers(mockCustomers);
-    }, []);
+        const data = getCustomersFromStorage();
+        if (!isLoaded) {
+            localStorage.setItem('customers', JSON.stringify(data));
+        }
+        setCustomers(data);
+        setIsLoaded(true);
+    }, [isLoaded]);
 
     const addCustomer = (customer: Omit<Customer, 'id' | 'registrationDate' | 'profilePicture'>) => {
-        const newIdNumber = mockCustomers.length + 1;
+        const currentCustomers = getCustomersFromStorage();
+        const newIdNumber = currentCustomers.length + 1;
         const newCustomer: Customer = {
             ...customer,
             id: `CUST${String(newIdNumber).padStart(3, '0')}`,
             registrationDate: new Date().toISOString().split('T')[0],
             profilePicture: 'https://placehold.co/100x100',
         };
-        const updatedCustomers = [...mockCustomers, newCustomer];
+        const updatedCustomers = [...currentCustomers, newCustomer];
         localStorage.setItem('customers', JSON.stringify(updatedCustomers));
-        mockCustomers = updatedCustomers;
         setCustomers(updatedCustomers);
     };
 
-    return { customers, addCustomer };
+    return { customers, addCustomer, isLoaded };
 };
 
 export const useLoans = () => {
-    const [loans, setLoans] = useState<Loan[]>(mockLoans);
+    const [loans, setLoans] = useState<Loan[]>([]);
+    const [isLoaded, setIsLoaded] = useState(false);
 
      useEffect(() => {
-        initializeData();
-        setLoans(mockLoans);
-    }, []);
+        const data = getLoansFromStorage();
+        if(!isLoaded) {
+            localStorage.setItem('loans', JSON.stringify(data));
+        }
+        setLoans(data);
+        setIsLoaded(true);
+    }, [isLoaded]);
 
     const addLoan = (loan: Omit<Loan, 'id'>) => {
-        const newIdNumber = mockLoans.length + 1;
+        const currentLoans = getLoansFromStorage();
+        const newIdNumber = currentLoans.length + 1;
         const newLoan: Loan = {
             ...loan,
             id: `LOAN${String(newIdNumber).padStart(3, '0')}`,
         };
-        const updatedLoans = [...mockLoans, newLoan];
+        const updatedLoans = [...currentLoans, newLoan];
         localStorage.setItem('loans', JSON.stringify(updatedLoans));
-        mockLoans = updatedLoans;
         setLoans(updatedLoans);
     };
 
-    return { loans, addLoan };
+    return { loans, addLoan, isLoaded };
 }
 
 
 export function getCustomerById(id: string) {
-  return mockCustomers.find(c => c.id === id);
+  return getCustomersFromStorage().find(c => c.id === id);
 }
 
 export function getLoansByCustomerId(customerId: string) {
-  return mockLoans.filter(l => l.customerId === customerId);
+  return getLoansFromStorage().filter(l => l.customerId === customerId);
 }
