@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useToast } from '@/hooks/use-toast'
-import { useLoans, Loan, useUserActivity } from '@/lib/data'
+import { useLoans, Loan, useUserActivity, useCollections, Collection } from '@/lib/data'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { CalendarIcon, IndianRupee, Landmark, Users } from 'lucide-react'
 import { Calendar } from '@/components/ui/calendar'
@@ -29,30 +29,15 @@ const collectionSchema = z.object({
 
 type CollectionFormValues = z.infer<typeof collectionSchema>;
 
-type RecentCollection = {
-    id: string;
-    loanId: string;
-    customer: string;
-    amount: number;
-    date: string;
-};
-
-const initialRecentCollections: RecentCollection[] = [
-  { id: 'COLL001', loanId: 'LOAN001', customer: 'Ravi Kumar', amount: 5000, date: '2024-07-28' },
-  { id: 'COLL002', loanId: 'LOAN004', customer: 'Sahara Group', amount: 5000, date: '2024-07-27' },
-  { id: 'COLL003', loanId: 'LOAN002', customer: 'Priya Sharma', amount: 2500, date: '2024-07-25' },
-];
-
-
 function CollectionsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const { loans, updateLoanPayment } = useLoans();
   const { logActivity } = useUserActivity();
+  const { collections, addCollection } = useCollections();
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
   const [dueDates, setDueDates] = useState<{ current: Date | null, next: Date | null }>({ current: null, next: null });
-  const [recentCollections, setRecentCollections] = useState<RecentCollection[]>(initialRecentCollections);
 
   const form = useForm<CollectionFormValues>({
     resolver: zodResolver(collectionSchema),
@@ -130,14 +115,12 @@ function CollectionsPageContent() {
     updateLoanPayment(data.loanId, data.amount);
     logActivity('Record Collection', `Recorded payment of ₹${data.amount} for loan ${data.loanId} (${loan.customerName}).`);
 
-    const newCollection: RecentCollection = {
-      id: `COLL${Date.now()}`,
+    addCollection({
       loanId: data.loanId,
       customer: loan.customerName,
       amount: data.amount,
       date: format(data.collectionDate, 'yyyy-MM-dd'),
-    };
-    setRecentCollections(prev => [newCollection, ...prev]);
+    });
 
     toast({
       title: 'Collection Recorded',
@@ -281,7 +264,7 @@ function CollectionsPageContent() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {recentCollections.map(c => (
+                {collections.map(c => (
                   <TableRow key={c.id}>
                     <TableCell>
                       <div className="font-medium">{c.customer}</div>
@@ -308,3 +291,5 @@ export default function CollectionsPage() {
     </Suspense>
   )
 }
+
+    

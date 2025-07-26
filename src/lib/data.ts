@@ -44,6 +44,14 @@ export type UserActivity = {
     details: string;
 };
 
+export type Collection = {
+    id: string;
+    loanId: string;
+    customer: string;
+    amount: number;
+    date: string;
+};
+
 const initialCustomers: Customer[] = [
   { id: 'CUST001', name: 'Ravi Kumar', email: 'ravi.kumar@example.com', phone: '9876543210', address: '123, MG Road, Bangalore', idType: 'Aadhaar Card', idNumber: '1234 5678 9012', occupation: 'Software Engineer', monthlyIncome: 80000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-01-15' },
   { id: 'CUST002', name: 'Priya Sharma', email: 'priya.sharma@example.com', phone: '8765432109', address: '456, Main Street, Mumbai', idType: 'PAN Card', idNumber: 'ABCDE1234F', occupation: 'Graphic Designer', monthlyIncome: 65000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-02-20' },
@@ -64,6 +72,12 @@ const initialLoans: Loan[] = [
   { id: 'LOAN006', customerId: 'CUST006', groupName: 'Sahara Group', groupId: 'GRP001', groupLeaderName: 'Suresh Patel', loanType: 'Group', amount: 40000, interestRate: 18, term: 40, status: 'Active', disbursalDate: '2023-07-01', weeklyRepayment: 1000, totalPaid: 12000, outstandingAmount: 28000, customerName: 'Anita Desai' },
   { id: 'LOAN007', customerId: 'CUST007', groupName: 'Sahara Group', groupId: 'GRP001', groupLeaderName: 'Suresh Patel', loanType: 'Group', amount: 40000, interestRate: 18, term: 40, status: 'Active', disbursalDate: '2023-07-01', weeklyRepayment: 1000, totalPaid: 12000, outstandingAmount: 28000, customerName: 'Sanjay Gupta' },
   { id: 'LOAN008', customerId: 'CUST008', groupName: 'Sahara Group', groupId: 'GRP001', groupLeaderName: 'Suresh Patel', loanType: 'Group', amount: 40000, interestRate: 18, term: 40, status: 'Active', disbursalDate: '2023-07-01', weeklyRepayment: 1000, totalPaid: 12000, outstandingAmount: 28000, customerName: 'Meena Kumari' },
+];
+
+const initialCollections: Collection[] = [
+  { id: 'COLL001', loanId: 'LOAN001', customer: 'Ravi Kumar', amount: 5000, date: '2024-07-28' },
+  { id: 'COLL002', loanId: 'LOAN004', customer: 'Sahara Group', amount: 5000, date: '2024-07-27' },
+  { id: 'COLL003', loanId: 'LOAN002', customer: 'Priya Sharma', amount: 2500, date: '2024-07-25' },
 ];
 
 const getFromStorage = <T>(key: string, initialData: T[]): T[] => {
@@ -220,6 +234,31 @@ export const useUserActivity = () => {
     return { activities, isLoaded, logActivity };
 };
 
+export const useCollections = () => {
+    const [collections, setCollections] = useState<Collection[]>([]);
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    useEffect(() => {
+        const data = getFromStorage('collections', initialCollections);
+        setCollections(data);
+        setIsLoaded(true);
+    }, []);
+
+    const addCollection = (collection: Omit<Collection, 'id'>): Collection => {
+        const currentCollections = getFromStorage('collections', initialCollections);
+        const newCollection: Collection = {
+            ...collection,
+            id: `COLL${Date.now()}`,
+        };
+        const updatedCollections = [newCollection, ...currentCollections];
+        setInStorage('collections', updatedCollections);
+        setCollections(updatedCollections);
+        return newCollection;
+    };
+
+    return { collections, isLoaded, addCollection };
+}
+
 
 export function getCustomerById(id: string) {
   const customers = getFromStorage('customers', initialCustomers);
@@ -230,3 +269,5 @@ export function getLoansByCustomerId(customerId: string) {
   const loans = getFromStorage('loans', initialLoans);
   return loans.filter(l => l.customerId === customerId);
 }
+
+    
