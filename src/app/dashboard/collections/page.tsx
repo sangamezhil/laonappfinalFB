@@ -7,7 +7,7 @@ import { z } from 'zod'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -119,7 +119,7 @@ export default function CollectionsPage() {
                     <FormMessage />
                   </FormItem>
                 )} />
-                 <FormDescription>Any overdue or missed dues will be automatically tracked.</FormDescription>
+                 <CardDescription>Any overdue or missed dues will be automatically tracked.</CardDescription>
               </CardContent>
               <CardFooter>
                 <Button type="submit" className="w-full">Record Collection</Button>
