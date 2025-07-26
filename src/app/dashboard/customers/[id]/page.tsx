@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { notFound } from 'next/navigation';
 import { getCustomerById, getLoansByCustomerId, Customer, Loan } from '@/lib/data'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -12,11 +12,15 @@ import { User, Briefcase, IndianRupee, Hash, Calendar } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function CustomerProfilePage({ params }: { params: { id: string } }) {
+  // `params` is a Promise-like object in Client Components.
+  // We use `React.use` to unwrap it.
+  const resolvedParams = use(params);
+  const customerId = resolvedParams.id;
+
   const [customer, setCustomer] = useState<Customer | null | undefined>(undefined);
   const [loans, setLoans] = useState<Loan[]>([]);
   
   useEffect(() => {
-    const customerId = params.id;
     if (customerId) {
       const cust = getCustomerById(customerId);
       if (cust) {
@@ -27,7 +31,7 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
         setCustomer(null);
       }
     }
-  }, [params]);
+  }, [customerId]);
 
   if (customer === undefined) {
     return (
