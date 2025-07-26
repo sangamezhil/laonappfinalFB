@@ -41,6 +41,10 @@ function CollectionsPageContent() {
   const [phoneSearch, setPhoneSearch] = useState('');
   const [dueDates, setDueDates] = useState<{ current: Date | null, next: Date | null }>({ current: null, next: null });
 
+  const activeAndOverdueLoans = React.useMemo(() => {
+    return loans.filter(l => l.status === 'Active' || l.status === 'Overdue')
+  }, [loans]);
+
   const form = useForm<CollectionFormValues>({
     resolver: zodResolver(collectionSchema),
     defaultValues: {
@@ -49,13 +53,14 @@ function CollectionsPageContent() {
       paymentMethod: 'Cash',
       collectionDate: new Date(),
     },
+    disabled: activeAndOverdueLoans.length === 0,
   });
   
   const loanIdFromQuery = searchParams.get('loanId');
-  const selectedLoanIdInForm = form.watch('loanId');
-
+  
   // Effect to handle setting loan from either URL query or form selection
   useEffect(() => {
+    const selectedLoanIdInForm = form.watch('loanId');
     const loanIdToProcess = loanIdFromQuery || selectedLoanIdInForm;
 
     if (!loanIdToProcess) {
@@ -97,7 +102,8 @@ function CollectionsPageContent() {
       setDueDates({ current: null, next: null });
       form.resetField('amount');
     }
-  }, [selectedLoanIdInForm, loans, form]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.watch('loanId'), loans, form.setValue]);
 
 
   // Effect to sync URL query param to form state, and then clear the URL.
@@ -107,8 +113,9 @@ function CollectionsPageContent() {
         if (loanIdFromQuery !== form.getValues('loanId')) {
             form.setValue('loanId', loanIdFromQuery, { shouldValidate: true });
         }
-        // Clear the query parameter from the URL without re-triggering a full navigation loop
-        router.replace('/dashboard/collections', { scroll: false });
+        if (router.replace) {
+            router.replace('/dashboard/collections', { scroll: false });
+        }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loanIdFromQuery]);
@@ -183,6 +190,11 @@ function CollectionsPageContent() {
                 <CardDescription>Record a new payment from a customer.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {activeAndOverdueLoans.length === 0 && (
+                  <div className="p-4 text-center rounded-md bg-secondary text-muted-foreground">
+                    There are no active or overdue loans to collect payments for.
+                  </div>
+                )}
                 <div className="flex gap-2">
                     <div className="relative w-full">
                         <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -192,9 +204,10 @@ function CollectionsPageContent() {
                             value={phoneSearch} 
                             onChange={(e) => setPhoneSearch(e.target.value)}
                             className="pl-9"
+                            disabled={activeAndOverdueLoans.length === 0}
                         />
                     </div>
-                    <Button type="button" onClick={handlePhoneSearch}><Search className="w-4 h-4" /></Button>
+                    <Button type="button" onClick={handlePhoneSearch} disabled={activeAndOverdueLoans.length === 0}><Search className="w-4 h-4" /></Button>
                 </div>
 
 
@@ -206,7 +219,7 @@ function CollectionsPageContent() {
                         <SelectTrigger><SelectValue placeholder="Select a loan" /></SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {loans.filter(l => l.status === 'Active' || l.status === 'Overdue').map(loan => (
+                        {activeAndOverdueLoans.map(loan => (
                           <SelectItem key={loan.id} value={loan.id}>{getLoanDisplayName(loan)}</SelectItem>
                         ))}
                       </SelectContent>
@@ -293,7 +306,7 @@ function CollectionsPageContent() {
                  <CardDescription>Any overdue or missed dues will be automatically tracked.</CardDescription>
               </CardContent>
               <CardFooter>
-                <Button type="submit" className="w-full">Record Collection</Button>
+                <Button type="submit" className="w-full" disabled={activeAndOverdueLoans.length === 0}>Record Collection</Button>
               </CardFooter>
             </Card>
           </form>
@@ -343,4 +356,5 @@ export default function CollectionsPage() {
   )
 }
 
+    
     
