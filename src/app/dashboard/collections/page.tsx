@@ -13,9 +13,9 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useToast } from '@/hooks/use-toast'
-import { useLoans, Loan, useUserActivity, useCollections, Collection } from '@/lib/data'
+import { useLoans, Loan, useUserActivity, useCollections, Collection, useCustomers } from '@/lib/data'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { CalendarIcon, IndianRupee, Landmark, Users } from 'lucide-react'
+import { CalendarIcon, IndianRupee, Landmark, Users, Phone, Search } from 'lucide-react'
 import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
 import { format, addDays, addWeeks, addMonths } from 'date-fns'
@@ -34,9 +34,11 @@ function CollectionsPageContent() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const { loans, updateLoanPayment } = useLoans();
+  const { customers } = useCustomers();
   const { logActivity } = useUserActivity();
   const { collections, addCollection } = useCollections();
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
+  const [phoneSearch, setPhoneSearch] = useState('');
   const [dueDates, setDueDates] = useState<{ current: Date | null, next: Date | null }>({ current: null, next: null });
 
   const form = useForm<CollectionFormValues>({
@@ -105,6 +107,25 @@ function CollectionsPageContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loanIdFromQuery, selectedLoanIdInForm, loans]);
 
+  const handlePhoneSearch = () => {
+    if (!phoneSearch || phoneSearch.length < 10) {
+      toast({ variant: 'destructive', title: 'Invalid Phone Number', description: 'Please enter a valid 10-digit phone number.' });
+      return;
+    }
+    const customer = customers.find(c => c.phone === phoneSearch);
+    if (!customer) {
+      toast({ variant: 'destructive', title: 'Customer Not Found', description: 'No customer found with this phone number.' });
+      return;
+    }
+    const activeLoan = loans.find(l => l.customerId === customer.id && (l.status === 'Active' || l.status === 'Overdue'));
+    if (activeLoan) {
+      form.setValue('loanId', activeLoan.id, { shouldValidate: true });
+    } else {
+      toast({ title: 'No Active Loan', description: `${customer.name} does not have an active loan.` });
+    }
+  };
+
+
   function onSubmit(data: CollectionFormValues) {
     const loan = loans.find(l => l.id === data.loanId);
     if (!loan) {
@@ -130,10 +151,13 @@ function CollectionsPageContent() {
   }
 
   const getLoanDisplayName = (loan: Loan) => {
+    const customer = customers.find(c => c.id === loan.customerId);
+    const phone = customer ? `(${customer.phone})` : '';
+
     if (loan.loanType === 'Group') {
-      return `${loan.customerName} (${loan.groupName} / ${loan.groupLeaderName}) - ${loan.id}`
+      return `${loan.customerName} ${phone} (${loan.groupName}) - ${loan.id}`
     }
-    return `${loan.customerName} - ${loan.id}`
+    return `${loan.customerName} ${phone} - ${loan.id}`
   }
 
   return (
@@ -147,6 +171,21 @@ function CollectionsPageContent() {
                 <CardDescription>Record a new payment from a customer.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                    <div className="relative w-full">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input 
+                            type="tel" 
+                            placeholder="Search by phone number..." 
+                            value={phoneSearch} 
+                            onChange={(e) => setPhoneSearch(e.target.value)}
+                            className="pl-9"
+                        />
+                    </div>
+                    <Button type="button" onClick={handlePhoneSearch}><Search className="w-4 h-4" /></Button>
+                </div>
+
+
                 <FormField control={form.control} name="loanId" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Loan / Customer</FormLabel>
@@ -291,5 +330,3 @@ export default function CollectionsPage() {
     </Suspense>
   )
 }
-
-    
