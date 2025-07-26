@@ -100,9 +100,9 @@ export default function CollectionsPage() {
     setDueDates({ current: null, next: null });
   }
 
-  const getLoanDisplayName = (loan: any) => {
+  const getLoanDisplayName = (loan: Loan) => {
     if (loan.loanType === 'Group') {
-      return `${loan.groupName} (Leader: ${loan.customerName}) - ${loan.id}`
+      return `${loan.customerName} (${loan.groupName} / ${loan.groupLeaderName}) - ${loan.id}`
     }
     return `${loan.customerName} - ${loan.id}`
   }

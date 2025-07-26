@@ -21,17 +21,19 @@ export type Loan = {
   customerId: string;
   customerName: string;
   groupName?: string;
+  groupId?: string; // To link group members' loans
+  groupLeaderName?: string; // To display leader in collections
   loanType: 'Personal' | 'Group';
   amount: number;
   interestRate: number;
   term: number; 
   status: 'Pending' | 'Active' | 'Overdue' | 'Closed' | 'Missed';
   disbursalDate: string;
-  weeklyRepayment: number; // This will now be just 'repaymentAmount' based on frequency
+  weeklyRepayment: number; 
   totalPaid: number;
   outstandingAmount: number;
   collectionFrequency?: 'Daily' | 'Weekly' | 'Monthly';
-  members?: string[];
+  members?: string[]; // Kept for historical data if needed, but new logic won't heavily rely on it
 };
 
 const initialCustomers: Customer[] = [
@@ -49,7 +51,11 @@ const initialLoans: Loan[] = [
   { id: 'LOAN001', customerId: 'CUST001', customerName: 'Ravi Kumar', loanType: 'Personal', amount: 50000, interestRate: 12, term: 10, status: 'Active', disbursalDate: '2023-05-01', weeklyRepayment: 5000, totalPaid: 25000, outstandingAmount: 25000, collectionFrequency: 'Weekly' },
   { id: 'LOAN002', customerId: 'CUST002', customerName: 'Priya Sharma', loanType: 'Personal', amount: 25000, interestRate: 20, term: 70, status: 'Overdue', disbursalDate: '2023-06-15', weeklyRepayment: 357.14, totalPaid: 10000, outstandingAmount: 15000, collectionFrequency: 'Daily' },
   { id: 'LOAN003', customerId: 'CUST003', customerName: 'Amit Singh', loanType: 'Personal', amount: 100000, interestRate: 12, term: 10, status: 'Closed', disbursalDate: '2022-01-20', weeklyRepayment: 10000, totalPaid: 100000, outstandingAmount: 0, collectionFrequency: 'Weekly' },
-  { id: 'LOAN004', customerId: 'GRP001', customerName: 'Suresh Patel (Leader)', groupName: 'Sahara Group', loanType: 'Group', amount: 200000, interestRate: 18, term: 40, status: 'Active', disbursalDate: '2023-07-01', weeklyRepayment: 5000, totalPaid: 60000, outstandingAmount: 140000, members: ['CUST004', 'CUST005', 'CUST006', 'CUST007', 'CUST008'] },
+  { id: 'LOAN004', customerId: 'CUST004', groupName: 'Sahara Group', groupId: 'GRP001', groupLeaderName: 'Suresh Patel', loanType: 'Group', amount: 40000, interestRate: 18, term: 40, status: 'Active', disbursalDate: '2023-07-01', weeklyRepayment: 1000, totalPaid: 12000, outstandingAmount: 28000, customerName: 'Sunita Devi' },
+  { id: 'LOAN005', customerId: 'CUST005', groupName: 'Sahara Group', groupId: 'GRP001', groupLeaderName: 'Suresh Patel', loanType: 'Group', amount: 40000, interestRate: 18, term: 40, status: 'Active', disbursalDate: '2023-07-01', weeklyRepayment: 1000, totalPaid: 12000, outstandingAmount: 28000, customerName: 'Rajesh Verma' },
+  { id: 'LOAN006', customerId: 'CUST006', groupName: 'Sahara Group', groupId: 'GRP001', groupLeaderName: 'Suresh Patel', loanType: 'Group', amount: 40000, interestRate: 18, term: 40, status: 'Active', disbursalDate: '2023-07-01', weeklyRepayment: 1000, totalPaid: 12000, outstandingAmount: 28000, customerName: 'Anita Desai' },
+  { id: 'LOAN007', customerId: 'CUST007', groupName: 'Sahara Group', groupId: 'GRP001', groupLeaderName: 'Suresh Patel', loanType: 'Group', amount: 40000, interestRate: 18, term: 40, status: 'Active', disbursalDate: '2023-07-01', weeklyRepayment: 1000, totalPaid: 12000, outstandingAmount: 28000, customerName: 'Sanjay Gupta' },
+  { id: 'LOAN008', customerId: 'CUST008', groupName: 'Sahara Group', groupId: 'GRP001', groupLeaderName: 'Suresh Patel', loanType: 'Group', amount: 40000, interestRate: 18, term: 40, status: 'Active', disbursalDate: '2023-07-01', weeklyRepayment: 1000, totalPaid: 12000, outstandingAmount: 28000, customerName: 'Meena Kumari' },
 ];
 
 const getCustomersFromStorage = (): Customer[] => {
@@ -107,14 +113,29 @@ export const useLoans = () => {
         setIsLoaded(true);
     }, []);
 
-    const addLoan = (loan: Omit<Loan, 'id'>) => {
+    const addLoan = (loan: Omit<Loan, 'id'> | Omit<Loan, 'id'>[]) => {
         const currentLoans = getLoansFromStorage();
-        const newIdNumber = (currentLoans.length > 0 ? Math.max(...currentLoans.map(c => parseInt(c.id.replace('LOAN','')))) : 0) + 1;
-        const newLoan: Loan = {
-            ...loan,
-            id: `LOAN${String(newIdNumber).padStart(3, '0')}`,
-        };
-        const updatedLoans = [...currentLoans, newLoan];
+        let lastIdNumber = (currentLoans.length > 0 ? Math.max(...currentLoans.map(l => parseInt(l.id.replace('LOAN','')))) : 0);
+        
+        const loansToAdd: Loan[] = [];
+        
+        if (Array.isArray(loan)) {
+            loan.forEach(l => {
+                lastIdNumber++;
+                loansToAdd.push({
+                    ...l,
+                    id: `LOAN${String(lastIdNumber).padStart(3, '0')}`,
+                });
+            });
+        } else {
+            lastIdNumber++;
+            loansToAdd.push({
+                ...loan,
+                id: `LOAN${String(lastIdNumber).padStart(3, '0')}`,
+            });
+        }
+
+        const updatedLoans = [...currentLoans, ...loansToAdd];
         localStorage.setItem('loans', JSON.stringify(updatedLoans));
         setLoans(updatedLoans);
     };

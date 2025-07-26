@@ -97,7 +97,7 @@ export default function LoansPage() {
                   <TableCell className="font-medium">{loan.id}</TableCell>
                   <TableCell>
                     <div className="font-medium">{loan.customerName}</div>
-                    {loan.groupName && <div className="text-sm text-muted-foreground">{loan.groupName}</div>}
+                    {loan.loanType === 'Group' && <div className="text-sm text-muted-foreground">{loan.groupName}</div>}
                   </TableCell>
                   <TableCell>{loan.loanType}</TableCell>
                   <TableCell>₹{loan.amount.toLocaleString('en-IN')}</TableCell>
@@ -131,11 +131,13 @@ export default function LoansPage() {
                         )}
                         <DropdownMenuItem 
                           onSelect={() => router.push(`/dashboard/customers/${loan.customerId}`)}
-                          disabled={loan.loanType === 'Group'}
                         >
-                          View Details
+                          View Customer
                         </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => router.push('/dashboard/collections')}>
+                        <DropdownMenuItem onSelect={() => {
+                            form.setValue('loanId', loan.id)
+                            router.push('/dashboard/collections')
+                        }}>
                           Record Payment
                         </DropdownMenuItem>
                       </DropdownMenuContent>

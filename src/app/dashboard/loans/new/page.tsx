@@ -29,12 +29,12 @@ const groupLoanSchema = z.object({
   groupName: z.string().min(3, { message: 'Group name is required.' }),
   groupLeaderId: z.string().nonempty({ message: 'Please select a group leader.' }),
   groupSize: z.enum(['5', '10', '15', '20']),
-  loanAmount: z.coerce.number().positive(),
+  loanAmount: z.coerce.number().positive(), // This is the total loan amount for the group
   interestRate: z.coerce.number().min(10).max(20),
   repaymentTerm: z.coerce.number().min(10).max(50),
   docCharges: z.coerce.number().nonnegative().optional(),
   insuranceCharges: z.coerce.number().nonnegative().optional(),
-  members: z.array(z.object({ customerId: z.string().nonempty() })).min(1, 'Please add members'),
+  members: z.array(z.object({ customerId: z.string().nonempty("Please select a member") })).min(1, 'Please add members'),
 });
 
 const DisbursalCalculator = ({ control, loanType }: { control: any, loanType: 'personal' | 'group' }) => {
@@ -44,28 +44,32 @@ const DisbursalCalculator = ({ control, loanType }: { control: any, loanType: 'p
   });
 
   const principal = parseFloat(loanAmount) || 0;
-  const interest = (principal * (parseFloat(interestRate) || 0)) / 100;
-  const docs = parseFloat(docCharges) || 0;
-  const insurance = parseFloat(insuranceCharges) || 0;
+  const size = parseInt(groupSize) || 1;
+  const perMemberPrincipal = loanType === 'group' ? principal / size : principal;
+
+  const interest = (perMemberPrincipal * (parseFloat(interestRate) || 0)) / 100;
+  const docs = (parseFloat(docCharges) || 0) / (loanType === 'group' ? size : 1);
+  const insurance = (parseFloat(insuranceCharges) || 0) / (loanType === 'group' ? size : 1);
   
   const totalDeductions = interest + docs + insurance;
-  const disbursalAmount = principal - totalDeductions;
-  const size = parseInt(groupSize) || 1;
-  const perMemberAmount = disbursalAmount / size;
+  const disbursalAmount = perMemberPrincipal - totalDeductions;
+  
+  const totalGroupDisbursal = disbursalAmount * (loanType === 'group' ? size : 1);
 
   if (principal === 0) return null;
 
   return (
     <div className="p-4 mt-4 border rounded-lg bg-secondary/50">
       <h4 className="mb-2 font-semibold">Loan Calculation</h4>
+      {loanType === 'group' && <div className="flex justify-between"><span>Total Group Principal:</span> <span>₹{principal.toLocaleString('en-IN')}</span></div>}
       <div className="space-y-2 text-sm">
-        <div className="flex justify-between"><span>Principal Amount:</span> <span>₹{principal.toLocaleString('en-IN')}</span></div>
+        <div className="flex justify-between"><span>Principal per Member:</span> <span>₹{perMemberPrincipal.toLocaleString('en-IN')}</span></div>
         <div className="flex justify-between text-muted-foreground"><span>Interest ({interestRate}%):</span> <span>- ₹{interest.toLocaleString('en-IN')}</span></div>
-        <div className="flex justify-between text-muted-foreground"><span>Documentation Charges:</span> <span>- ₹{docs.toLocaleString('en-IN')}</span></div>
-        <div className="flex justify-between text-muted-foreground"><span>Insurance Charges:</span> <span>- ₹{insurance.toLocaleString('en-IN')}</span></div>
-        <div className="flex justify-between pt-2 mt-2 font-bold border-t"><span>Net Disbursal Amount:</span> <span>₹{disbursalAmount.toLocaleString('en-IN')}</span></div>
+        <div className="flex justify-between text-muted-foreground"><span>Doc Charges (per member):</span> <span>- ₹{docs.toLocaleString('en-IN')}</span></div>
+        <div className="flex justify-between text-muted-foreground"><span>Insurance (per member):</span> <span>- ₹{insurance.toLocaleString('en-IN')}</span></div>
+        <div className="flex justify-between pt-2 mt-2 font-bold border-t"><span>Net Disbursal per Member:</span> <span>₹{disbursalAmount.toLocaleString('en-IN')}</span></div>
         {loanType === 'group' && size > 1 && (
-            <div className="flex justify-between text-primary"><span>Amount per Member:</span> <span>₹{perMemberAmount.toLocaleString('en-IN')}</span></div>
+            <div className="flex justify-between pt-2 mt-2 font-bold text-primary"><span>Total Net Disbursal for Group:</span> <span>₹{totalGroupDisbursal.toLocaleString('en-IN')}</span></div>
         )}
       </div>
     </div>
@@ -109,21 +113,21 @@ export default function NewLoanPage() {
 
   const availableCustomers = React.useMemo(() => {
     const activeLoanCustomerIds = new Set(loans.filter(l => l.status === 'Active' || l.status === 'Overdue').map(l => l.customerId));
-    const selectedMemberIds = new Set(selectedMembers.map(m => m.customerId));
+    const selectedMemberIds = new Set(selectedMembers?.map(m => m.customerId).filter(Boolean));
     if(groupLeaderId) selectedMemberIds.add(groupLeaderId);
     
     return customers.filter(c => !activeLoanCustomerIds.has(c.id) && !selectedMemberIds.has(c.id));
   }, [customers, loans, selectedMembers, groupLeaderId]);
 
   React.useEffect(() => {
-    const size = parseInt(groupSize);
+    const size = parseInt(groupSize) -1; // -1 because leader is separate
     if (fields.length > size) {
       for (let i = fields.length - 1; i >= size; i--) {
         remove(i);
       }
     } else if (fields.length < size) {
       for (let i = fields.length; i < size; i++) {
-        append({ customerId: "" });
+        append({ customerId: "" }, { shouldFocus: false });
       }
     }
   }, [groupSize, fields, append, remove]);
@@ -188,31 +192,46 @@ export default function NewLoanPage() {
       toast({ variant: "destructive", title: "Group Leader not found" });
       return;
     }
-
     const allMemberIds = [data.groupLeaderId, ...data.members.map(m => m.customerId)];
-    const existingLoan = loans.find(l => l.members?.some(m => allMemberIds.includes(m)) && l.status !== 'Closed');
+    if(new Set(allMemberIds).size !== allMemberIds.length) {
+      toast({ variant: "destructive", title: "Duplicate Members", description: "Each customer can only be in the group once." });
+      return;
+    }
+
+    const existingLoan = loans.find(l => l.customerId && allMemberIds.includes(l.customerId) && l.status !== 'Closed');
     if(existingLoan) {
         toast({ variant: 'destructive', title: "Member Has Active Loan", description: `One or more members in this group already have an active loan.` });
         return;
     }
 
-    const weeklyRepayment = data.loanAmount / data.repaymentTerm;
-    addLoan({
-        customerId: `GRP_${data.groupName.replace(/\s/g, '')}`,
-        customerName: leader.name,
-        groupName: data.groupName,
-        loanType: 'Group',
-        amount: data.loanAmount,
-        interestRate: data.interestRate,
-        term: data.repaymentTerm,
-        status: 'Pending',
-        disbursalDate: new Date().toISOString().split('T')[0],
-        weeklyRepayment: weeklyRepayment,
-        totalPaid: 0,
-        outstandingAmount: data.loanAmount,
-        members: allMemberIds,
+    const size = parseInt(data.groupSize);
+    const perMemberAmount = data.loanAmount / size;
+    const weeklyRepayment = perMemberAmount / data.repaymentTerm;
+    const groupId = `GRP_${data.groupName.replace(/\s/g, '')}_${Date.now()}`;
+
+    const newLoans = allMemberIds.map(memberId => {
+        const member = customers.find(c => c.id === memberId);
+        return {
+            customerId: member!.id,
+            customerName: member!.name,
+            groupName: data.groupName,
+            groupId: groupId,
+            groupLeaderName: leader.name,
+            loanType: 'Group' as 'Group',
+            amount: perMemberAmount,
+            interestRate: data.interestRate,
+            term: data.repaymentTerm,
+            status: 'Pending' as 'Pending',
+            disbursalDate: new Date().toISOString().split('T')[0],
+            weeklyRepayment: weeklyRepayment,
+            totalPaid: 0,
+            outstandingAmount: perMemberAmount,
+            collectionFrequency: 'Weekly' as 'Weekly',
+        };
     });
-    toast({ title: "Group Loan Submitted", description: `Loan for ${data.groupName} is now pending approval.` });
+    
+    addLoan(newLoans);
+    toast({ title: "Group Loan Submitted", description: `Individual loans for ${data.groupName} are now pending approval.` });
     router.push('/dashboard/loans');
   };
 
@@ -300,7 +319,7 @@ export default function NewLoanPage() {
                         </Select><FormMessage /></FormItem>
                     )} />
                     <FormField control={groupForm.control} name="loanAmount" render={({ field }) => (
-                        <FormItem><FormLabel>Total Loan Amount (₹)</FormLabel><FormControl><Input type="number" placeholder="e.g., 200000" {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Total Group Loan Amount (₹)</FormLabel><FormControl><Input type="number" placeholder="e.g., 200000" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={groupForm.control} name="interestRate" render={({ field }) => (
                         <FormItem><FormLabel>Interest Rate (%)</FormLabel>
@@ -315,10 +334,10 @@ export default function NewLoanPage() {
                         </Select><FormMessage /></FormItem>
                     )} />
                      <FormField control={groupForm.control} name="docCharges" render={({ field }) => (
-                        <FormItem><FormLabel>Documentation Charges (₹)</FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Total Documentation Charges (₹)</FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={groupForm.control} name="insuranceCharges" render={({ field }) => (
-                        <FormItem><FormLabel>Insurance Charges (₹)</FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Total Insurance Charges (₹)</FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                 </div>
                 <div className="space-y-4">
@@ -327,14 +346,14 @@ export default function NewLoanPage() {
                         <FormLabel>Group Leader</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl><SelectTrigger><SelectValue placeholder="Select a group leader" /></SelectTrigger></FormControl>
-                          <SelectContent>{customers.filter(c => !loans.some(l => (l.status === 'Active' || l.status === 'Overdue') && l.members?.includes(c.id))).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                           <SelectContent>{customers.filter(c => !loans.some(l => (l.customerId === c.id) && (l.status === 'Active' || l.status === 'Overdue'))).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                         </Select>
                         <FormMessage />
                       </FormItem>
                     )} />
 
                     <div>
-                      <FormLabel>Group Members</FormLabel>
+                      <FormLabel>Group Members (excluding leader)</FormLabel>
                       <div className="space-y-2 mt-2">
                         {fields.map((item, index) => (
                            <FormField key={item.id} control={groupForm.control} name={`members.${index}.customerId`} render={({ field }) => (
