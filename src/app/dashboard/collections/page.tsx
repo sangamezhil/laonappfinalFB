@@ -68,11 +68,11 @@ export default function CollectionsPage() {
           currentDueDate = addDays(startDate, installmentsPaid + 1);
           nextDueDate = addDays(startDate, installmentsPaid + 2);
         } else if (loan.collectionFrequency === 'Weekly') {
-          currentDueDate = addWeeks(startDate, installmentsPaid);
-          nextDueDate = addWeeks(startDate, installmentsPaid + 1);
+          currentDueDate = addWeeks(startDate, installmentsPaid + 1);
+          nextDueDate = addWeeks(startDate, installmentsPaid + 2);
         } else if (loan.collectionFrequency === 'Monthly') {
-          currentDueDate = addMonths(startDate, installmentsPaid);
-          nextDueDate = addMonths(startDate, installmentsPaid + 1);
+          currentDueDate = addMonths(startDate, installmentsPaid + 1);
+          nextDueDate = addMonths(startDate, installmentsPaid + 2);
         }
         setDueDates({ current: currentDueDate, next: nextDueDate });
 
