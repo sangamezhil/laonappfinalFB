@@ -28,7 +28,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
-import { useLoans } from '@/lib/data'
+import { useLoans, useUserActivity } from '@/lib/data'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
 import { useRouter } from 'next/navigation'
@@ -43,6 +43,7 @@ export default function LoansPage() {
   const { toast } = useToast();
   const router = useRouter();
   const [user, setUser] = React.useState<User | null>(null);
+  const { logActivity } = useUserActivity();
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -55,6 +56,7 @@ export default function LoansPage() {
 
   const handleApprove = (loanId: string) => {
     updateLoanStatus(loanId, 'Active');
+    logActivity('Approve Loan', `Approved loan ${loanId}.`);
     toast({
       title: 'Loan Approved',
       description: `Loan ${loanId} has been activated.`,

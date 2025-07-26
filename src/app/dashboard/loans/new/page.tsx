@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
-import { useCustomers, useLoans } from '@/lib/data'
+import { useCustomers, useLoans, useUserActivity } from '@/lib/data'
 
 const personalLoanSchema = z.object({
   customerId: z.string().nonempty({ message: 'Please select a customer.' }),
@@ -82,6 +82,7 @@ export default function NewLoanPage() {
   const { toast } = useToast();
   const { customers } = useCustomers();
   const { loans, addLoan } = useLoans();
+  const { logActivity } = useUserActivity();
 
   const personalForm = useForm<z.infer<typeof personalLoanSchema>>({ 
     resolver: zodResolver(personalLoanSchema),
@@ -168,7 +169,7 @@ export default function NewLoanPage() {
     const totalLoanValue = data.loanAmount;
     const repaymentAmount = totalLoanValue / data.repaymentTerm;
 
-    addLoan({
+    const newLoans = addLoan({
         customerId: data.customerId,
         customerName: customer.name,
         loanType: 'Personal',
@@ -182,6 +183,8 @@ export default function NewLoanPage() {
         outstandingAmount: totalLoanValue,
         collectionFrequency: data.collectionFrequency,
     });
+    const newLoan = Array.isArray(newLoans) ? newLoans[0] : newLoans;
+    logActivity('Create Personal Loan', `Submitted loan application ${newLoan.id} for ${customer.name}.`);
     toast({ title: "Personal Loan Submitted", description: `Loan for customer ${customer.name} is now pending approval.` });
     router.push('/dashboard/loans');
   };
@@ -209,7 +212,7 @@ export default function NewLoanPage() {
     const weeklyRepayment = perMemberAmount / data.repaymentTerm;
     const groupId = `GRP_${data.groupName.replace(/\s/g, '')}_${Date.now()}`;
 
-    const newLoans = allMemberIds.map(memberId => {
+    const loansToCreate = allMemberIds.map(memberId => {
         const member = customers.find(c => c.id === memberId);
         return {
             customerId: member!.id,
@@ -230,7 +233,8 @@ export default function NewLoanPage() {
         };
     });
     
-    addLoan(newLoans);
+    const newLoans = addLoan(loansToCreate);
+    logActivity('Create Group Loan', `Submitted group loan application for ${data.groupName} with ${newLoans.length} members.`);
     toast({ title: "Group Loan Submitted", description: `Individual loans for ${data.groupName} are now pending approval.` });
     router.push('/dashboard/loans');
   };

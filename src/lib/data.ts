@@ -36,6 +36,14 @@ export type Loan = {
   members?: string[]; // Kept for historical data if needed, but new logic won't heavily rely on it
 };
 
+export type UserActivity = {
+    id: string;
+    timestamp: string;
+    username: string;
+    action: string;
+    details: string;
+};
+
 const initialCustomers: Customer[] = [
   { id: 'CUST001', name: 'Ravi Kumar', email: 'ravi.kumar@example.com', phone: '9876543210', address: '123, MG Road, Bangalore', idType: 'Aadhaar Card', idNumber: '1234 5678 9012', occupation: 'Software Engineer', monthlyIncome: 80000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-01-15' },
   { id: 'CUST002', name: 'Priya Sharma', email: 'priya.sharma@example.com', phone: '8765432109', address: '456, Main Street, Mumbai', idType: 'PAN Card', idNumber: 'ABCDE1234F', occupation: 'Graphic Designer', monthlyIncome: 65000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-02-20' },
@@ -58,33 +66,35 @@ const initialLoans: Loan[] = [
   { id: 'LOAN008', customerId: 'CUST008', groupName: 'Sahara Group', groupId: 'GRP001', groupLeaderName: 'Suresh Patel', loanType: 'Group', amount: 40000, interestRate: 18, term: 40, status: 'Active', disbursalDate: '2023-07-01', weeklyRepayment: 1000, totalPaid: 12000, outstandingAmount: 28000, customerName: 'Meena Kumari' },
 ];
 
-const getCustomersFromStorage = (): Customer[] => {
-    if (typeof window === 'undefined') return [];
-    const stored = localStorage.getItem('customers');
-    return stored ? JSON.parse(stored) : initialCustomers;
-}
+const getFromStorage = <T>(key: string, initialData: T[]): T[] => {
+    if (typeof window === 'undefined') return initialData;
+    const stored = localStorage.getItem(key);
+    try {
+        if (stored) return JSON.parse(stored);
+    } catch (e) {
+        console.error(`Error parsing ${key} from localStorage`, e);
+    }
+    localStorage.setItem(key, JSON.stringify(initialData));
+    return initialData;
+};
 
-const getLoansFromStorage = (): Loan[] => {
-    if (typeof window === 'undefined') return [];
-    const stored = localStorage.getItem('loans');
-    return stored ? JSON.parse(stored) : initialLoans;
-}
+const setInStorage = <T>(key: string, data: T[]) => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(key, JSON.stringify(data));
+};
 
 export const useCustomers = () => {
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
 
     useEffect(() => {
-        const data = getCustomersFromStorage();
-        if (!localStorage.getItem('customers')) {
-            localStorage.setItem('customers', JSON.stringify(data));
-        }
+        const data = getFromStorage('customers', initialCustomers);
         setCustomers(data);
         setIsLoaded(true);
     }, []);
 
-    const addCustomer = (customer: Omit<Customer, 'id' | 'registrationDate' | 'profilePicture'>) => {
-        const currentCustomers = getCustomersFromStorage();
+    const addCustomer = (customer: Omit<Customer, 'id' | 'registrationDate' | 'profilePicture'>): Customer => {
+        const currentCustomers = getFromStorage('customers', initialCustomers);
         const newIdNumber = (currentCustomers.length > 0 ? Math.max(...currentCustomers.map(c => parseInt(c.id.replace('CUST','')))) : 0) + 1;
         const newCustomer: Customer = {
             ...customer,
@@ -93,14 +103,15 @@ export const useCustomers = () => {
             profilePicture: 'https://placehold.co/100x100',
         };
         const updatedCustomers = [...currentCustomers, newCustomer];
-        localStorage.setItem('customers', JSON.stringify(updatedCustomers));
+        setInStorage('customers', updatedCustomers);
         setCustomers(updatedCustomers);
+        return newCustomer;
     };
 
     const deleteCustomer = (customerId: string) => {
-        const currentCustomers = getCustomersFromStorage();
+        const currentCustomers = getFromStorage('customers', initialCustomers);
         const updatedCustomers = currentCustomers.filter(c => c.id !== customerId);
-        localStorage.setItem('customers', JSON.stringify(updatedCustomers));
+        setInStorage('customers', updatedCustomers);
         setCustomers(updatedCustomers);
     };
 
@@ -112,16 +123,13 @@ export const useLoans = () => {
     const [isLoaded, setIsLoaded] = useState(false);
 
      useEffect(() => {
-        const data = getLoansFromStorage();
-        if(!localStorage.getItem('loans')) {
-            localStorage.setItem('loans', JSON.stringify(data));
-        }
+        const data = getFromStorage('loans', initialLoans);
         setLoans(data);
         setIsLoaded(true);
     }, []);
 
-    const addLoan = (loan: Omit<Loan, 'id'> | Omit<Loan, 'id'>[]) => {
-        const currentLoans = getLoansFromStorage();
+    const addLoan = (loan: Omit<Loan, 'id'> | Omit<Loan, 'id'>[]): Loan[] => {
+        const currentLoans = getFromStorage('loans', initialLoans);
         let lastIdNumber = (currentLoans.length > 0 ? Math.max(...currentLoans.map(l => parseInt(l.id.replace('LOAN','')))) : 0);
         
         const loansToAdd: Loan[] = [];
@@ -143,21 +151,22 @@ export const useLoans = () => {
         }
 
         const updatedLoans = [...currentLoans, ...loansToAdd];
-        localStorage.setItem('loans', JSON.stringify(updatedLoans));
+        setInStorage('loans', updatedLoans);
         setLoans(updatedLoans);
+        return loansToAdd;
     };
     
     const updateLoanStatus = (loanId: string, status: Loan['status']) => {
-        const currentLoans = getLoansFromStorage();
+        const currentLoans = getFromStorage('loans', initialLoans);
         const updatedLoans = currentLoans.map(loan => 
             loan.id === loanId ? { ...loan, status: status } : loan
         );
-        localStorage.setItem('loans', JSON.stringify(updatedLoans));
+        setInStorage('loans', updatedLoans);
         setLoans(updatedLoans);
     };
 
     const updateLoanPayment = (loanId: string, amount: number) => {
-        const currentLoans = getLoansFromStorage();
+        const currentLoans = getFromStorage('loans', initialLoans);
         const updatedLoans = currentLoans.map(loan => {
             if (loan.id === loanId) {
                 const newTotalPaid = loan.totalPaid + amount;
@@ -171,20 +180,53 @@ export const useLoans = () => {
             }
             return loan;
         });
-        localStorage.setItem('loans', JSON.stringify(updatedLoans));
+        setInStorage('loans', updatedLoans);
         setLoans(updatedLoans);
     }
 
     return { loans, addLoan, isLoaded, updateLoanStatus, updateLoanPayment };
 }
 
+export const useUserActivity = () => {
+    const [activities, setActivities] = useState<UserActivity[]>([]);
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    useEffect(() => {
+        const data = getFromStorage<UserActivity>('userActivities', []);
+        setActivities(data);
+        setIsLoaded(true);
+    }, []);
+
+    const logActivity = (action: string, details: string) => {
+        if (typeof window === 'undefined') return;
+        const storedUser = localStorage.getItem('loggedInUser');
+        if (!storedUser) return;
+
+        const user = JSON.parse(storedUser);
+        const newActivity: UserActivity = {
+            id: `ACT_${Date.now()}`,
+            timestamp: new Date().toISOString(),
+            username: user.username,
+            action,
+            details,
+        };
+        
+        const currentActivities = getFromStorage<UserActivity>('userActivities', []);
+        const updatedActivities = [newActivity, ...currentActivities];
+        setInStorage('userActivities', updatedActivities);
+        setActivities(updatedActivities);
+    };
+
+    return { activities, isLoaded, logActivity };
+};
+
 
 export function getCustomerById(id: string) {
-  const customers = getCustomersFromStorage();
+  const customers = getFromStorage('customers', initialCustomers);
   return customers.find(c => c.id === id);
 }
 
 export function getLoansByCustomerId(customerId: string) {
-  const loans = getLoansFromStorage();
+  const loans = getFromStorage('loans', initialLoans);
   return loans.filter(l => l.customerId === customerId);
 }

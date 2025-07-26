@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { Logo } from '@/components/logo'
+import { useUserActivity } from '@/lib/data'
 
 // Basic User type to match what's in users/page.tsx
 type User = {
@@ -31,6 +32,7 @@ export default function LoginPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const { logActivity } = useUserActivity();
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
@@ -48,14 +50,15 @@ export default function LoginPage() {
           // Note: We are not checking password for this mock implementation.
           if (foundUser) {
             userToLogin = foundUser;
-          } else if (username === 'admin' && password === 'admin' && storedUsers.length === 0) {
-            // Fallback for initial login if no users exist
-            userToLogin = { id: 'USR000', username: 'admin', role: 'Admin', lastLogin: new Date().toISOString() };
+          } else if (username === 'admin' && password === 'admin' && storedUsers.find(u => u.username === 'admin') === undefined) {
+            // Fallback for initial login if 'admin' doesn't exist yet
+            userToLogin = { id: 'USR001', username: 'admin', role: 'Admin', lastLogin: new Date().toISOString() };
           }
       }
       
       if (userToLogin) {
         localStorage.setItem('loggedInUser', JSON.stringify(userToLogin));
+        logActivity('User Login', `User ${userToLogin.username} logged in.`);
         toast({
           title: "Login Successful",
           description: `Welcome back, ${userToLogin.username}!`,

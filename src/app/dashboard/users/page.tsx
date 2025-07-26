@@ -60,6 +60,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
+import { useUserActivity } from '@/lib/data'
 
 type UserRole = 'Admin' | 'Collection Agent' | 'Auditor';
 
@@ -114,6 +115,7 @@ export default function UsersPage() {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [userToReset, setUserToReset] = useState<User | null>(null);
+  const { logActivity } = useUserActivity();
 
   const { toast } = useToast();
 
@@ -150,6 +152,7 @@ export default function UsersPage() {
     const updatedUsers = [...users, newUser];
     setUsers(updatedUsers);
     setUsersInStorage(updatedUsers);
+    logActivity('Create User', `Created new user: ${data.username} with role ${data.role}.`);
     toast({
       title: 'User Created',
       description: `User ${data.username} with role ${data.role} has been created.`,
@@ -164,7 +167,7 @@ export default function UsersPage() {
     const updatedUsers = users.map(u => u.id === userToEdit.id ? {...u, username: data.username, role: data.role } : u);
     setUsers(updatedUsers);
     setUsersInStorage(updatedUsers);
-
+    logActivity('Edit User', `Updated user details for ${data.username}.`);
     toast({
       title: 'User Updated',
       description: `User ${data.username}'s details have been updated.`,
@@ -178,6 +181,7 @@ export default function UsersPage() {
     const updatedUsers = users.filter(u => u.id !== userToDelete.id);
     setUsers(updatedUsers);
     setUsersInStorage(updatedUsers);
+    logActivity('Delete User', `Deleted user: ${userToDelete.username}.`);
     toast({
         title: 'User Deleted',
         description: `User ${userToDelete.username} has been deleted.`,
@@ -187,6 +191,7 @@ export default function UsersPage() {
 
   function handleResetPassword() {
     if(!userToReset) return;
+    logActivity('Reset Password', `Reset password for user: ${userToReset.username}.`);
     toast({
       title: "Password Reset",
       description: `Password for ${userToReset.username} has been successfully reset.`,
@@ -407,5 +412,3 @@ export default function UsersPage() {
     </>
   )
 }
-
-    

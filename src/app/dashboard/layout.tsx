@@ -12,6 +12,7 @@ import {
   UserCog,
   LogOut,
   ChevronDown,
+  History,
 } from 'lucide-react'
 
 import {
@@ -37,6 +38,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Logo } from '@/components/logo'
+import { useUserActivity } from '@/lib/data'
 
 const allMenuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Admin', 'Collection Agent', 'Auditor'] },
@@ -44,6 +46,7 @@ const allMenuItems = [
   { href: '/dashboard/loans', label: 'Loans', icon: Landmark, roles: ['Admin', 'Collection Agent', 'Auditor'] },
   { href: '/dashboard/collections', label: 'Collections', icon: ClipboardCheck, roles: ['Admin', 'Collection Agent'] },
   { href: '/dashboard/users', label: 'Users', icon: UserCog, roles: ['Admin'] },
+  { href: '/dashboard/activity', label: 'Activity Log', icon: History, roles: ['Admin'] },
 ]
 
 type User = {
@@ -59,6 +62,7 @@ export default function DashboardLayout({
   const pathname = usePathname()
   const router = useRouter();
   const [user, setUser] = React.useState<User | null>(null);
+  const { logActivity } = useUserActivity();
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -72,6 +76,7 @@ export default function DashboardLayout({
   }, [router]);
 
   const handleLogout = () => {
+    logActivity('User Logout', `User ${user?.username} logged out.`);
     localStorage.removeItem('loggedInUser');
     router.push('/login');
   };

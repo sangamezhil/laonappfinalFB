@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
-import { useCustomers } from '@/lib/data'
+import { useCustomers, useUserActivity } from '@/lib/data'
 
 const kycFormSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -45,6 +45,7 @@ export default function NewCustomerPage() {
   const router = useRouter()
   const { toast } = useToast()
   const { addCustomer } = useCustomers();
+  const { logActivity } = useUserActivity();
 
   const form = useForm<KycFormValues>({
     resolver: zodResolver(kycFormSchema),
@@ -61,7 +62,8 @@ export default function NewCustomerPage() {
 
   function onSubmit(data: KycFormValues) {
     const {fullName, ...rest} = data
-    addCustomer({name: fullName, ...rest});
+    const newCustomer = addCustomer({name: fullName, ...rest});
+    logActivity('Create Customer', `Registered new customer: ${newCustomer.name} (${newCustomer.id})`);
     toast({
       title: 'Customer Registered',
       description: `${data.fullName} has been successfully registered.`,

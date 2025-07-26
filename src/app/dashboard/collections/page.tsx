@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useToast } from '@/hooks/use-toast'
-import { useLoans, Loan } from '@/lib/data'
+import { useLoans, Loan, useUserActivity } from '@/lib/data'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { CalendarIcon, IndianRupee, Landmark, Users } from 'lucide-react'
 import { Calendar } from '@/components/ui/calendar'
@@ -49,6 +49,7 @@ function CollectionsPageContent() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const { loans, updateLoanPayment } = useLoans();
+  const { logActivity } = useUserActivity();
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
   const [dueDates, setDueDates] = useState<{ current: Date | null, next: Date | null }>({ current: null, next: null });
   const [recentCollections, setRecentCollections] = useState<RecentCollection[]>(initialRecentCollections);
@@ -63,19 +64,19 @@ function CollectionsPageContent() {
     },
   });
   
-  const selectedLoanId = form.watch('loanId');
   const loanIdFromQuery = searchParams.get('loanId');
+  const selectedLoanIdInForm = form.watch('loanId');
 
   useEffect(() => {
-    if (loanIdFromQuery) {
-        form.setValue('loanId', loanIdFromQuery, { shouldValidate: true });
-    }
-  }, [loanIdFromQuery, form]);
+    const loanIdToSelect = loanIdFromQuery || selectedLoanIdInForm;
 
-  useEffect(() => {
-    if (selectedLoanId) {
-      const loan = loans.find(l => l.id === selectedLoanId);
+    if (loanIdToSelect) {
+      const loan = loans.find(l => l.id === loanIdToSelect);
       if (loan) {
+        if (loanIdToSelect !== selectedLoanIdInForm) {
+            form.setValue('loanId', loan.id, { shouldValidate: true });
+        }
+        
         setSelectedLoan(loan);
         form.setValue('amount', loan.weeklyRepayment, { shouldValidate: true });
 
@@ -117,7 +118,7 @@ function CollectionsPageContent() {
         });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedLoanId, loans]);
+  }, [loanIdFromQuery, selectedLoanIdInForm, loans]);
 
   function onSubmit(data: CollectionFormValues) {
     const loan = loans.find(l => l.id === data.loanId);
@@ -127,6 +128,7 @@ function CollectionsPageContent() {
     }
     
     updateLoanPayment(data.loanId, data.amount);
+    logActivity('Record Collection', `Recorded payment of ₹${data.amount} for loan ${data.loanId} (${loan.customerName}).`);
 
     const newCollection: RecentCollection = {
       id: `COLL${Date.now()}`,
