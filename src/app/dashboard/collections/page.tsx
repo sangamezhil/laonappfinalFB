@@ -18,14 +18,13 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon, IndianRupee, Landmark, Users } from 'lucide-react'
 import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
-import { format } from 'date-fns'
+import { format, addDays, addWeeks, addMonths } from 'date-fns'
 
 const collectionSchema = z.object({
   loanId: z.string().nonempty({ message: 'Please select a loan.' }),
   amount: z.coerce.number().positive({ message: 'Amount must be a positive number.' }),
   collectionDate: z.date({ required_error: 'A collection date is required.' }),
   paymentMethod: z.enum(['Cash', 'Bank Transfer', 'UPI']),
-  nextDueDate: z.date().optional(),
 });
 
 type CollectionFormValues = z.infer<typeof collectionSchema>;
@@ -41,11 +40,13 @@ export default function CollectionsPage() {
   const { toast } = useToast();
   const { loans } = useLoans();
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
+  const [dueDates, setDueDates] = useState<{ current: Date | null, next: Date | null }>({ current: null, next: null });
 
   const form = useForm<CollectionFormValues>({
     resolver: zodResolver(collectionSchema),
     defaultValues: {
       paymentMethod: 'Cash',
+      collectionDate: new Date(),
     },
   });
 
@@ -54,10 +55,38 @@ export default function CollectionsPage() {
   useEffect(() => {
     if (selectedLoanId) {
       const loan = loans.find(l => l.id === selectedLoanId);
-      setSelectedLoan(loan || null);
+      if (loan) {
+        setSelectedLoan(loan);
+        form.setValue('amount', loan.weeklyRepayment);
+
+        const installmentsPaid = Math.floor(loan.totalPaid / loan.weeklyRepayment);
+        const startDate = new Date(loan.disbursalDate);
+        let currentDueDate: Date | null = null;
+        let nextDueDate: Date | null = null;
+        
+        if (loan.collectionFrequency === 'Daily') {
+          currentDueDate = addDays(startDate, installmentsPaid);
+          nextDueDate = addDays(startDate, installmentsPaid + 1);
+        } else if (loan.collectionFrequency === 'Weekly') {
+          currentDueDate = addWeeks(startDate, installmentsPaid);
+          nextDueDate = addWeeks(startDate, installmentsPaid + 1);
+        } else if (loan.collectionFrequency === 'Monthly') {
+          currentDueDate = addMonths(startDate, installmentsPaid);
+          nextDueDate = addMonths(startDate, installmentsPaid + 1);
+        }
+        setDueDates({ current: currentDueDate, next: nextDueDate });
+
+      } else {
+        setSelectedLoan(null);
+        setDueDates({ current: null, next: null });
+        form.reset();
+      }
     } else {
       setSelectedLoan(null);
+      setDueDates({ current: null, next: null });
+       form.reset();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLoanId, loans]);
 
   function onSubmit(data: CollectionFormValues) {
@@ -68,6 +97,7 @@ export default function CollectionsPage() {
     });
     form.reset();
     setSelectedLoan(null);
+    setDueDates({ current: null, next: null });
   }
 
   const getLoanDisplayName = (loan: any) => {
@@ -76,7 +106,6 @@ export default function CollectionsPage() {
     }
     return `${loan.customerName} - ${loan.id}`
   }
-
 
   return (
     <div className="grid gap-6 md:grid-cols-5">
@@ -114,13 +143,27 @@ export default function CollectionsPage() {
                     <CardContent className="text-sm space-y-2">
                        <div className="flex justify-between">
                         <span className="text-muted-foreground flex items-center gap-1">
-                          {selectedLoan.loanType === 'Group' ? <Users className="w-4 h-4" /> : <Landmark className="w-4 h-4" />}
+                          <IndianRupee className="w-4 h-4" />
                           Due Amount
                         </span>
                         <span className="font-semibold">₹{selectedLoan.weeklyRepayment.toLocaleString('en-IN')}</span>
                       </div>
+                       <div className="flex justify-between">
+                        <span className="text-muted-foreground flex items-center gap-1">
+                          <CalendarIcon className="w-4 h-4" />
+                          Current Due Date
+                        </span>
+                        <span className="font-semibold">{dueDates.current ? format(dueDates.current, 'PPP') : 'N/A'}</span>
+                      </div>
+                       <div className="flex justify-between">
+                        <span className="text-muted-foreground flex items-center gap-1">
+                          <CalendarIcon className="w-4 h-4" />
+                          Next Due Date
+                        </span>
+                        <span className="font-semibold">{dueDates.next ? format(dueDates.next, 'PPP') : 'N/A'}</span>
+                      </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground flex items-center gap-1"><IndianRupee className="w-4 h-4" /> Outstanding</span>
+                        <span className="text-muted-foreground flex items-center gap-1"><Landmark className="w-4 h-4" /> Outstanding</span>
                         <span className="font-semibold">₹{selectedLoan.outstandingAmount.toLocaleString('en-IN')}</span>
                       </div>
                     </CardContent>
