@@ -129,7 +129,10 @@ export default function LoansPage() {
                             Approve Loan
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem onSelect={() => router.push(`/dashboard/customers/${loan.customerId}`)}>
+                        <DropdownMenuItem 
+                          onSelect={() => router.push(`/dashboard/customers/${loan.customerId}`)}
+                          disabled={loan.loanType === 'Group'}
+                        >
                           View Details
                         </DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/dashboard/collections')}>
