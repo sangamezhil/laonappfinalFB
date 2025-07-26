@@ -30,10 +30,12 @@ import { Badge } from '@/components/ui/badge'
 import { useLoans } from '@/lib/data'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
+import { useRouter } from 'next/navigation'
 
 export default function LoansPage() {
   const { loans, isLoaded, updateLoanStatus } = useLoans();
   const { toast } = useToast();
+  const router = useRouter();
 
   const handleApprove = (loanId: string) => {
     updateLoanStatus(loanId, 'Active');
@@ -127,8 +129,12 @@ export default function LoansPage() {
                             Approve Loan
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem>View Details</DropdownMenuItem>
-                        <DropdownMenuItem>Record Payment</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => router.push(`/dashboard/customers/${loan.customerId}`)}>
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => router.push('/dashboard/collections')}>
+                          Record Payment
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
