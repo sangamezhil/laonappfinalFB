@@ -55,7 +55,6 @@ export default function NewCustomerPage() {
       address: '',
       occupation: '',
       idNumber: '',
-      monthlyIncome: 0,
       idType: 'Aadhaar Card',
     },
   })
