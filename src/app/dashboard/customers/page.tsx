@@ -42,11 +42,26 @@ import { useCustomers, useLoans, Customer } from '@/lib/data'
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 
+type User = {
+  username: string;
+  role: string;
+}
+
 export default function CustomersPage() {
   const { customers, deleteCustomer, isLoaded } = useCustomers();
   const { loans } = useLoans();
   const { toast } = useToast();
   const [customerToDelete, setCustomerToDelete] = React.useState<Customer | null>(null);
+  const [user, setUser] = React.useState<User | null>(null);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedUser = localStorage.getItem('loggedInUser');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+    }
+  }, []);
 
   const handleDeleteClick = (customer: Customer) => {
     const customerLoans = loans.filter(loan => loan.customerId === customer.id);
@@ -81,12 +96,14 @@ export default function CustomersPage() {
             <CardTitle>Customers</CardTitle>
             <CardDescription>Manage your customers and view their loan histories.</CardDescription>
           </div>
-          <Link href="/dashboard/customers/new" passHref>
-            <Button>
-              <PlusCircle className="w-4 h-4 mr-2" />
-              Add Customer
-            </Button>
-          </Link>
+          {user?.role === 'Admin' && (
+            <Link href="/dashboard/customers/new" passHref>
+                <Button>
+                <PlusCircle className="w-4 h-4 mr-2" />
+                Add Customer
+                </Button>
+            </Link>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -157,7 +174,9 @@ export default function CustomersPage() {
                         <DropdownMenuItem asChild>
                           <Link href={`/dashboard/customers/${customer.id}`}>View Details</Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => handleDeleteClick(customer)} className="text-destructive">Delete</DropdownMenuItem>
+                        {user?.role === 'Admin' && (
+                            <DropdownMenuItem onSelect={() => handleDeleteClick(customer)} className="text-destructive">Delete</DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

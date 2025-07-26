@@ -1,6 +1,7 @@
 
 'use client'
 
+import React from 'react';
 import Link from 'next/link'
 import { PlusCircle, MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -32,10 +33,25 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
 import { useRouter } from 'next/navigation'
 
+type User = {
+  username: string;
+  role: string;
+}
+
 export default function LoansPage() {
   const { loans, isLoaded, updateLoanStatus } = useLoans();
   const { toast } = useToast();
   const router = useRouter();
+  const [user, setUser] = React.useState<User | null>(null);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedUser = localStorage.getItem('loggedInUser');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+    }
+  }, []);
 
   const handleApprove = (loanId: string) => {
     updateLoanStatus(loanId, 'Active');
@@ -55,12 +71,14 @@ export default function LoansPage() {
               Track and manage all loan applications.
             </CardDescription>
           </div>
-          <Link href="/dashboard/loans/new" passHref>
-            <Button>
-              <PlusCircle className="w-4 h-4 mr-2" />
-              New Loan Application
-            </Button>
-          </Link>
+          {user?.role === 'Admin' && (
+            <Link href="/dashboard/loans/new" passHref>
+                <Button>
+                <PlusCircle className="w-4 h-4 mr-2" />
+                New Loan Application
+                </Button>
+            </Link>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -124,7 +142,7 @@ export default function LoansPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        {loan.status === 'Pending' && (
+                        {loan.status === 'Pending' && user?.role === 'Admin' && (
                           <DropdownMenuItem onSelect={() => handleApprove(loan.id)}>
                             Approve Loan
                           </DropdownMenuItem>
