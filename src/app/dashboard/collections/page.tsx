@@ -59,7 +59,7 @@ export default function CollectionsPage() {
         setSelectedLoan(loan);
         form.setValue('amount', loan.weeklyRepayment);
 
-        const installmentsPaid = Math.floor(loan.totalPaid / loan.weeklyRepayment);
+        const installmentsPaid = loan.totalPaid > 0 ? Math.floor(loan.totalPaid / loan.weeklyRepayment) : 0;
         const startDate = new Date(loan.disbursalDate);
         let currentDueDate: Date | null = null;
         let nextDueDate: Date | null = null;
