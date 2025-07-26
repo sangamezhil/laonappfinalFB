@@ -256,48 +256,46 @@ export default function UsersPage() {
       </CardContent>
     </Card>
 
-    {/* Edit User Dialog */}
-     <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
-            <DialogDescription>
-                Update the user's details below.
-            </DialogDescription>
-            </DialogHeader>
-            <Form {...editForm}>
-            <form onSubmit={editForm.handleSubmit(handleEditUser)} className="space-y-4 py-4">
-                <FormField control={editForm.control} name="username" render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Username</FormLabel>
-                    <FormControl><Input placeholder="Enter username" {...field} /></FormControl>
-                    <FormMessage />
-                </FormItem>
-                )} />
-                <FormField control={editForm.control} name="role" render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Role</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
-                    <SelectContent>
-                        <SelectItem value="Admin">Admin</SelectItem>
-                        <SelectItem value="Collection Agent">Collection Agent</SelectItem>
-                        <SelectItem value="Auditor">Auditor</SelectItem>
-                    </SelectContent>
-                    </Select>
-                    <FormMessage />
-                </FormItem>
-                )} />
-                <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-                    <Button type="submit">Save Changes</Button>
-                </DialogFooter>
-            </form>
-            </Form>
-        </DialogContent>
+    <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Edit User</DialogTitle>
+          <DialogDescription>
+            Update the user's details below.
+          </DialogDescription>
+        </DialogHeader>
+        <Form {...editForm}>
+          <form onSubmit={editForm.handleSubmit(handleEditUser)} className="space-y-4 py-4">
+            <FormField control={editForm.control} name="username" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Username</FormLabel>
+                <FormControl><Input placeholder="Enter username" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={editForm.control} name="role" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Role</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    <SelectItem value="Admin">Admin</SelectItem>
+                    <SelectItem value="Collection Agent">Collection Agent</SelectItem>
+                    <SelectItem value="Auditor">Auditor</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+              <Button type="submit">Save Changes</Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
     </Dialog>
 
-    {/* Delete Confirmation Dialog */}
     <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
         <AlertDialogContent>
             <AlertDialogHeader>
