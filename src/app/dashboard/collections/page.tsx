@@ -65,8 +65,8 @@ export default function CollectionsPage() {
         let nextDueDate: Date | null = null;
         
         if (loan.collectionFrequency === 'Daily') {
-          currentDueDate = addDays(startDate, installmentsPaid);
-          nextDueDate = addDays(startDate, installmentsPaid + 1);
+          currentDueDate = addDays(startDate, installmentsPaid + 1);
+          nextDueDate = addDays(startDate, installmentsPaid + 2);
         } else if (loan.collectionFrequency === 'Weekly') {
           currentDueDate = addWeeks(startDate, installmentsPaid);
           nextDueDate = addWeeks(startDate, installmentsPaid + 1);
