@@ -37,7 +37,17 @@ const kycFormSchema = z.object({
   idNumber: z.string().min(5, { message: 'ID number is required.' }),
   occupation: z.string().optional(),
   monthlyIncome: z.coerce.number().positive().optional(),
-})
+}).superRefine((data, ctx) => {
+  if (data.idType === 'Aadhaar Card') {
+    if (!/^\d{12}$/.test(data.idNumber)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Aadhaar number must be 12 numeric digits.",
+        path: ['idNumber'],
+      });
+    }
+  }
+});
 
 type KycFormValues = z.infer<typeof kycFormSchema>
 
@@ -178,7 +188,7 @@ export default function NewCustomerPage() {
                   <FormItem>
                     <FormLabel>Occupation (Optional)</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Software Engineer, Farmer" {...field} />
+                      <Input placeholder="e.g., Software Engineer, Farmer" {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
