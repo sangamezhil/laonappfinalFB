@@ -1,6 +1,7 @@
 
 'use client'
 
+import React, { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -12,9 +13,9 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useToast } from '@/hooks/use-toast'
-import { useLoans } from '@/lib/data'
+import { useLoans, Loan } from '@/lib/data'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { CalendarIcon } from 'lucide-react'
+import { CalendarIcon, IndianRupee, Landmark, Users } from 'lucide-react'
 import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
@@ -39,9 +40,25 @@ export default function CollectionsPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { loans } = useLoans();
+  const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
+
   const form = useForm<CollectionFormValues>({
     resolver: zodResolver(collectionSchema),
+    defaultValues: {
+      paymentMethod: 'Cash',
+    },
   });
+
+  const selectedLoanId = form.watch('loanId');
+
+  useEffect(() => {
+    if (selectedLoanId) {
+      const loan = loans.find(l => l.id === selectedLoanId);
+      setSelectedLoan(loan || null);
+    } else {
+      setSelectedLoan(null);
+    }
+  }, [selectedLoanId, loans]);
 
   function onSubmit(data: CollectionFormValues) {
     console.log(data);
@@ -50,6 +67,7 @@ export default function CollectionsPage() {
       description: `Payment of ₹${data.amount} for loan ${data.loanId} has been recorded.`,
     });
     form.reset();
+    setSelectedLoan(null);
   }
 
   const getLoanDisplayName = (loan: any) => {
@@ -87,6 +105,28 @@ export default function CollectionsPage() {
                     <FormMessage />
                   </FormItem>
                 )} />
+
+                {selectedLoan && (
+                  <Card className="bg-secondary/50">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="text-base">Loan Details</CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-sm space-y-2">
+                       <div className="flex justify-between">
+                        <span className="text-muted-foreground flex items-center gap-1">
+                          {selectedLoan.loanType === 'Group' ? <Users className="w-4 h-4" /> : <Landmark className="w-4 h-4" />}
+                          Due Amount
+                        </span>
+                        <span className="font-semibold">₹{selectedLoan.weeklyRepayment.toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground flex items-center gap-1"><IndianRupee className="w-4 h-4" /> Outstanding</span>
+                        <span className="font-semibold">₹{selectedLoan.outstandingAmount.toLocaleString('en-IN')}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 <FormField control={form.control} name="amount" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Amount Collected (₹)</FormLabel>
