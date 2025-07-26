@@ -46,10 +46,10 @@ function CollectionsPageContent() {
   const form = useForm<CollectionFormValues>({
     resolver: zodResolver(collectionSchema),
     defaultValues: {
+      loanId: '',
+      amount: '' as any,
       paymentMethod: 'Cash',
       collectionDate: new Date(),
-      amount: '' as any, // Set a default empty value to avoid uncontrolled to controlled error
-      loanId: '',
     },
   });
   
@@ -57,18 +57,15 @@ function CollectionsPageContent() {
 
   useEffect(() => {
     const loanIdFromQuery = searchParams.get('loanId');
-    if (loanIdFromQuery) {
-        const loanExists = loans.some(l => l.id === loanIdFromQuery);
-        if(loanExists && loanIdFromQuery !== selectedLoanId) {
-            form.setValue('loanId', loanIdFromQuery, { shouldValidate: true, shouldDirty: true });
-        }
+    const targetLoanId = loanIdFromQuery || selectedLoanId;
+
+    if (loanIdFromQuery && loanIdFromQuery !== selectedLoanId) {
+      form.setValue('loanId', loanIdFromQuery, { shouldValidate: true });
+      return; 
     }
-  }, [searchParams, loans, form, selectedLoanId]);
 
-
-  useEffect(() => {
-    if (selectedLoanId) {
-      const loan = loans.find(l => l.id === selectedLoanId);
+    if (targetLoanId) {
+      const loan = loans.find(l => l.id === targetLoanId);
       if (loan) {
         setSelectedLoan(loan);
         form.setValue('amount', loan.weeklyRepayment);
@@ -96,12 +93,17 @@ function CollectionsPageContent() {
         form.resetField('amount');
       }
     } else {
-      setSelectedLoan(null);
-      setDueDates({ current: null, next: null });
-      form.resetField('amount');
+        setSelectedLoan(null);
+        setDueDates({ current: null, next: null });
+        form.reset({
+            loanId: '',
+            amount: '' as any,
+            paymentMethod: 'Cash',
+            collectionDate: new Date(),
+        });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedLoanId, loans, form]);
+  }, [selectedLoanId, searchParams, loans, form.setValue]);
 
   function onSubmit(data: CollectionFormValues) {
     console.log(data);
@@ -136,7 +138,7 @@ function CollectionsPageContent() {
                 <FormField control={form.control} name="loanId" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Loan / Customer</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger><SelectValue placeholder="Select a loan" /></SelectTrigger>
                       </FormControl>
@@ -277,3 +279,5 @@ export default function CollectionsPage() {
     </Suspense>
   )
 }
+
+    
