@@ -91,19 +91,29 @@ function CollectionsPageContent() {
   }, [form]);
 
   useEffect(() => {
-    const loan = loans.find(l => l.id === selectedLoanIdInForm);
-    updateLoanDetails(loan || null);
-  }, [selectedLoanIdInForm, loans, updateLoanDetails]);
-
-  useEffect(() => {
     if (loanIdFromQuery) {
+        const loan = loans.find(l => l.id === loanIdFromQuery);
+        updateLoanDetails(loan || null);
         form.setValue('loanId', loanIdFromQuery, { shouldValidate: true });
-        // Clean up URL
-        const currentPathname = window.location.pathname;
-        router.replace(currentPathname, { scroll: false });
+
+        // Clean up URL by removing the query parameter
+        const currentPath = window.location.pathname;
+        router.replace(currentPath, { scroll: false });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loanIdFromQuery]);
+
+  useEffect(() => {
+      const loan = loans.find(l => l.id === selectedLoanIdInForm);
+      if (loan) {
+          updateLoanDetails(loan);
+      } else {
+          // If the loanId becomes invalid (e.g., cleared), reset details
+          updateLoanDetails(null);
+      }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLoanIdInForm]);
+
 
 
   const handlePhoneSearch = () => {
@@ -225,7 +235,7 @@ function CollectionsPageContent() {
                           <IndianRupee className="w-4 h-4" />
                           Due Amount
                         </span>
-                        <span className="font-semibold">₹{selectedLoan.weeklyRepayment.toLocaleString('en-IN')}</span>
+                        <span className="font-semibold flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{selectedLoan.weeklyRepayment.toLocaleString('en-IN')}</span>
                       </div>
                        <div className="flex justify-between">
                         <span className="text-muted-foreground flex items-center gap-1">
@@ -243,7 +253,7 @@ function CollectionsPageContent() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground flex items-center gap-1"><Landmark className="w-4 h-4" /> Outstanding</span>
-                        <span className="font-semibold">₹{selectedLoan.outstandingAmount.toLocaleString('en-IN')}</span>
+                        <span className="font-semibold flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{selectedLoan.outstandingAmount.toLocaleString('en-IN')}</span>
                       </div>
                     </CardContent>
                   </Card>
@@ -320,7 +330,7 @@ function CollectionsPageContent() {
                     <TableCell>
                       <div className="font-medium">{c.customer}</div>
                     </TableCell>
-                    <TableCell>₹{c.amount.toLocaleString('en-IN')}</TableCell>
+                    <TableCell className="flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{c.amount.toLocaleString('en-IN')}</TableCell>
                     <TableCell className="font-mono text-xs">{c.loanId}</TableCell>
                     <TableCell>{format(new Date(c.date), 'dd MMM yyyy')}</TableCell>
                   </TableRow>
@@ -342,5 +352,3 @@ export default function CollectionsPage() {
     </Suspense>
   )
 }
-
-    
