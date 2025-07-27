@@ -24,11 +24,11 @@ const chartData = [
 
 const chartConfig = {
   disbursed: {
-    label: 'Disbursed (₹)',
+    label: 'Disbursed',
     color: 'hsl(var(--primary))',
   },
   collected: {
-    label: 'Collected (₹)',
+    label: 'Collected',
     color: 'hsl(var(--accent))',
   },
 } satisfies ChartConfig
@@ -127,7 +127,20 @@ export default function DashboardPage() {
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} tickFormatter={(value) => value.slice(0, 3)} />
                 <YAxis tickFormatter={(value) => `₹${Number(value) / 1000}k`} />
-                <ChartTooltip content={<ChartTooltipContent />} />
+                <ChartTooltip 
+                    cursor={false}
+                    content={<ChartTooltipContent 
+                        formatter={(value, name) => (
+                        <div className="flex items-center">
+                            <span>{chartConfig[name as keyof typeof chartConfig].label}:</span>
+                            <span className="ml-2 font-bold flex items-center">
+                                <IndianRupee className="w-4 h-4 mr-1" />
+                                {Number(value).toLocaleString('en-IN')}
+                            </span>
+                        </div>
+                    )}
+                    />}
+                />
                 <Bar dataKey="disbursed" fill="var(--color-disbursed)" radius={4} />
                 <Bar dataKey="collected" fill="var(--color-collected)" radius={4} />
               </BarChart>
