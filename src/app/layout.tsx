@@ -1,20 +1,33 @@
 
+'use client';
 
-import type {Metadata} from 'next';
+import { useEffect } from 'react';
+import type { Metadata } from 'next';
 import { Toaster } from "@/components/ui/toaster"
 import './globals.css';
-import { useCompanyProfile } from './lib/data';
-
-export const metadata: Metadata = {
-  title: 'LoanTrack Lite',
-  description: 'A modern loan tracking application.',
-};
+import { useCompanyProfile } from '@/lib/data';
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const { profile, isLoaded } = useCompanyProfile();
+
+  useEffect(() => {
+    if (isLoaded) {
+      document.title = profile.name || 'LoanTrack Lite';
+      
+      let link: HTMLLinkElement | null = document.querySelector("link[rel~='icon']");
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.getElementsByTagName('head')[0].appendChild(link);
+      }
+      link.href = profile.logoUrl || '/favicon.ico'; // Fallback to a default if no logo
+    }
+  }, [profile, isLoaded]);
+
   return (
     <html lang="en">
       <head>
