@@ -52,6 +52,22 @@ export type Collection = {
     date: string;
 };
 
+export type CompanyProfile = {
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+  logoUrl?: string;
+};
+
+const initialCompanyProfile: CompanyProfile = {
+    name: 'Your Company Name',
+    address: '123 Business Avenue, Suite 100, City, State 12345',
+    phone: '123-456-7890',
+    email: 'contact@yourcompany.com',
+    logoUrl: 'https://placehold.co/150x50'
+}
+
 const initialCustomers: Customer[] = [
   { id: 'CUST001', name: 'Ravi Kumar', email: 'ravi.kumar@example.com', phone: '9876543210', address: '123, MG Road, Bangalore', idType: 'Aadhaar Card', idNumber: '1234 5678 9012', occupation: 'Software Engineer', monthlyIncome: 80000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-01-15' },
   { id: 'CUST002', name: 'Priya Sharma', email: 'priya.sharma@example.com', phone: '8765432109', address: '456, Main Street, Mumbai', idType: 'PAN Card', idNumber: 'ABCDE1234F', occupation: 'Graphic Designer', monthlyIncome: 65000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-02-20' },
@@ -80,7 +96,7 @@ const initialCollections: Collection[] = [
   { id: 'COLL003', loanId: '987234987234', customer: 'Priya Sharma', amount: 2500, date: '2024-07-25' },
 ];
 
-const getFromStorage = <T>(key: string, initialData: T[]): T[] => {
+const getFromStorage = <T>(key: string, initialData: T): T => {
     if (typeof window === 'undefined') return initialData;
     const stored = localStorage.getItem(key);
     try {
@@ -92,10 +108,29 @@ const getFromStorage = <T>(key: string, initialData: T[]): T[] => {
     return initialData;
 };
 
-const setInStorage = <T>(key: string, data: T[]) => {
+const setInStorage = <T>(key: string, data: T) => {
     if (typeof window === 'undefined') return;
     localStorage.setItem(key, JSON.stringify(data));
 };
+
+export const useCompanyProfile = () => {
+    const [profile, setProfile] = useState<CompanyProfile>(initialCompanyProfile);
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    useEffect(() => {
+        const data = getFromStorage('companyProfile', initialCompanyProfile);
+        setProfile(data);
+        setIsLoaded(true);
+    }, []);
+
+    const updateProfile = (newProfile: CompanyProfile) => {
+        setInStorage('companyProfile', newProfile);
+        setProfile(newProfile);
+    };
+
+    return { profile, updateProfile, isLoaded };
+};
+
 
 export const useCustomers = () => {
     const [customers, setCustomers] = useState<Customer[]>([]);
@@ -207,7 +242,7 @@ export const useUserActivity = () => {
     const [isLoaded, setIsLoaded] = useState(false);
 
     useEffect(() => {
-        const data = getFromStorage<UserActivity>('userActivities', []);
+        const data = getFromStorage<UserActivity[]>('userActivities', []);
         setActivities(data);
         setIsLoaded(true);
     }, []);
@@ -226,7 +261,7 @@ export const useUserActivity = () => {
             details,
         };
         
-        const currentActivities = getFromStorage<UserActivity>('userActivities', []);
+        const currentActivities = getFromStorage<UserActivity[]>('userActivities', []);
         const updatedActivities = [newActivity, ...currentActivities];
         setInStorage('userActivities', updatedActivities);
         setActivities(updatedActivities);
