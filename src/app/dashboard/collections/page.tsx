@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon, IndianRupee, Landmark, Users, Phone, Search, Trash2, MoreHorizontal } from 'lucide-react'
 import { Calendar } from '@/components/ui/calendar'
 import { cn, getAvatarColor } from '@/lib/utils'
-import { format, addDays, addWeeks, addMonths, parse } from 'date-fns'
+import { format, addDays, addWeeks, addMonths } from 'date-fns'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   AlertDialog,
@@ -34,20 +34,8 @@ import {
 const collectionSchema = z.object({
   loanId: z.string().nonempty({ message: 'Please select a loan.' }),
   amount: z.coerce.number().positive({ message: 'Amount must be a positive number.' }),
-  collectionDate: z.string().transform((val, ctx) => {
-    try {
-      const parsed = parse(val, 'ddMMyyyy', new Date());
-      if (isNaN(parsed.getTime())) {
-          throw new Error("Invalid date");
-      }
-      return parsed;
-    } catch(e) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Invalid date format. Please use DDMMYYYY.",
-      });
-      return z.NEVER;
-    }
+  collectionDate: z.date({
+    required_error: "A collection date is required.",
   }),
   paymentMethod: z.enum(['Cash', 'Bank Transfer', 'UPI']),
 });
@@ -94,11 +82,11 @@ function CollectionsPageContent() {
       loanId: '',
       amount: '' as any,
       paymentMethod: 'Cash',
-      collectionDate: format(new Date(), 'ddMMyyyy'),
+      collectionDate: new Date(),
     },
   });
   
-  const { formState, setValue } = form;
+  const { formState, setValue, control } = form;
 
   const selectedLoanIdInForm = form.watch('loanId');
 
@@ -130,18 +118,22 @@ function CollectionsPageContent() {
   }, [loans, setValue]);
 
   useEffect(() => {
-    const loanId = loanIdFromQuery || selectedLoanIdInForm;
+    const loanIdToProcess = loanIdFromQuery || selectedLoanIdInForm;
 
-    if (loanId && loanId !== (selectedLoan?.id ?? '')) {
-        updateLoanDetails(loanId);
-        if (loanIdFromQuery) {
-            setValue('loanId', loanIdFromQuery, { shouldValidate: true, shouldDirty: true });
-            const currentPath = window.location.pathname;
-            window.history.replaceState({ ...window.history.state, as: currentPath, url: currentPath }, '', currentPath);
-        }
-    } else if (!loanId && selectedLoan) {
-      setSelectedLoan(null);
-      setDueDates({ current: null, next: null });
+    if (loanIdToProcess && loanIdToProcess !== (selectedLoan?.id ?? '')) {
+      updateLoanDetails(loanIdToProcess);
+      
+      // If the loanId came from the query, set it in the form.
+      if (loanIdFromQuery) {
+        setValue('loanId', loanIdFromQuery, { shouldValidate: true, shouldDirty: true });
+        
+        // Clean the URL to avoid reprocessing on re-renders
+        const currentPath = window.location.pathname;
+        window.history.replaceState({ ...window.history.state, as: currentPath, url: currentPath }, '', currentPath);
+      }
+    } else if (!loanIdToProcess && selectedLoan) {
+        // This handles clearing the form when the loan selection is removed.
+        handleClear();
     }
   }, [loanIdFromQuery, selectedLoanIdInForm, updateLoanDetails, setValue, selectedLoan]);
 
@@ -169,15 +161,15 @@ function CollectionsPageContent() {
       loanId: '',
       amount: '' as any,
       paymentMethod: 'Cash',
-      collectionDate: format(new Date(), 'ddMMyyyy'),
+      collectionDate: new Date(),
     });
-    setValue('loanId', '');
+    setValue('loanId', ''); // Explicitly clear loanId
     setSelectedLoan(null);
     setPhoneSearch('');
     setDueDates({ current: null, next: null });
   }
 
-  function onSubmit(data: { loanId: string; amount: number; collectionDate: Date; paymentMethod: 'Cash' | 'Bank Transfer' | 'UPI' }) {
+  function onSubmit(data: CollectionFormValues) {
     const loan = loans.find(l => l.id === data.loanId);
     if (!loan) {
         toast({ variant: 'destructive', title: 'Error', description: 'Selected loan not found.' });
@@ -260,7 +252,7 @@ function CollectionsPageContent() {
                 <FormField control={form.control} name="loanId" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Loan / Customer</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={activeAndOverdueLoans.length === 0}>
                       <FormControl>
                         <SelectTrigger><SelectValue placeholder="Select a loan" /></SelectTrigger>
                       </FormControl>
@@ -316,15 +308,47 @@ function CollectionsPageContent() {
                     <FormMessage />
                   </FormItem>
                 )} />
-                <FormField control={form.control} name="collectionDate" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Collection Date</FormLabel>
-                      <FormControl>
-                        <Input placeholder="DDMMYYYY" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                )} />
+                <FormField
+                    control={control}
+                    name="collectionDate"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                        <FormLabel>Collection Date</FormLabel>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                            <FormControl>
+                                <Button
+                                variant={"outline"}
+                                className={cn(
+                                    "w-full pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                )}
+                                >
+                                {field.value ? (
+                                    format(field.value, "PPP")
+                                ) : (
+                                    <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                            </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) =>
+                                date > new Date() || date < new Date("1900-01-01")
+                                }
+                                initialFocus
+                            />
+                            </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
                 <FormField control={form.control} name="paymentMethod" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Payment Method</FormLabel>
@@ -441,3 +465,5 @@ export default function CollectionsPage() {
     </Suspense>
   )
 }
+
+    
