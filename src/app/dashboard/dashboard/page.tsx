@@ -14,12 +14,6 @@ import { useToast } from '@/hooks/use-toast'
 import { useLoans, useCustomers } from '@/lib/data'
 
 const chartData = [
-  { month: 'January', disbursed: 186000, collected: 80000 },
-  { month: 'February', disbursed: 305000, collected: 200000 },
-  { month: 'March', disbursed: 237000, collected: 120000 },
-  { month: 'April', disbursed: 73000, collected: 190000 },
-  { month: 'May', disbursed: 209000, collected: 130000 },
-  { month: 'June', disbursed: 214000, collected: 140000 },
 ]
 
 const chartConfig = {
