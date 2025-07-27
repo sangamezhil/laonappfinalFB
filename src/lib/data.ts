@@ -276,7 +276,14 @@ export const useCollections = () => {
         return newCollection;
     };
 
-    return { collections, isLoaded, addCollection };
+    const deleteCollection = (collectionId: string) => {
+        const currentCollections = getFromStorage('collections', initialCollections);
+        const updatedCollections = currentCollections.filter(c => c.id !== collectionId);
+        setInStorage('collections', updatedCollections);
+        setCollections(updatedCollections);
+    };
+
+    return { collections, isLoaded, addCollection, deleteCollection };
 }
 
 

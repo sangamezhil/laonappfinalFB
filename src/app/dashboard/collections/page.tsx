@@ -15,11 +15,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast'
 import { useLoans, Loan, useUserActivity, useCollections, Collection, useCustomers } from '@/lib/data'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { CalendarIcon, IndianRupee, Landmark, Users, Phone, Search } from 'lucide-react'
+import { CalendarIcon, IndianRupee, Landmark, Users, Phone, Search, Trash2, MoreHorizontal } from 'lucide-react'
 import { Calendar } from '@/components/ui/calendar'
 import { cn, getAvatarColor } from '@/lib/utils'
 import { format, addDays, addWeeks, addMonths } from 'date-fns'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 const collectionSchema = z.object({
   loanId: z.string().nonempty({ message: 'Please select a loan.' }),
@@ -37,10 +47,11 @@ function CollectionsPageContent() {
   const { loans, updateLoanPayment } = useLoans();
   const { customers } = useCustomers();
   const { logActivity } = useUserActivity();
-  const { collections, addCollection } = useCollections();
+  const { collections, addCollection, deleteCollection } = useCollections();
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
   const [phoneSearch, setPhoneSearch] = useState('');
   const [dueDates, setDueDates] = useState<{ current: Date | null, next: Date | null }>({ current: null, next: null });
+  const [collectionToDelete, setCollectionToDelete] = useState<Collection | null>(null);
 
   const activeAndOverdueLoans = React.useMemo(() => {
     return loans.filter(l => l.status === 'Active' || l.status === 'Overdue')
@@ -159,6 +170,17 @@ function CollectionsPageContent() {
     });
     setSelectedLoan(null);
   }
+  
+  const confirmDelete = () => {
+    if (collectionToDelete) {
+      deleteCollection(collectionToDelete.id);
+      toast({
+        title: 'Collection Deleted',
+        description: `The collection record has been successfully deleted.`,
+      });
+      setCollectionToDelete(null);
+    }
+  };
 
   const getLoanDisplayName = (loan: Loan) => {
     const customer = customers.find(c => c.id === loan.customerId);
@@ -171,6 +193,7 @@ function CollectionsPageContent() {
   }
 
   return (
+    <>
     <div className="grid gap-6 md:grid-cols-5">
       <div className="md:col-span-2">
         <Form {...form}>
@@ -323,6 +346,7 @@ function CollectionsPageContent() {
                   <TableHead>Method</TableHead>
                   <TableHead>Loan ID</TableHead>
                   <TableHead>Date</TableHead>
+                  <TableHead><span className="sr-only">Actions</span></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -341,14 +365,20 @@ function CollectionsPageContent() {
                                 </div>
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center">
-                                <IndianRupee className="w-4 h-4 mr-1" />
+                              <div className="items-center">
+                                <IndianRupee className="inline-block w-4 h-4 mr-1" />
                                 {c.amount.toLocaleString('en-IN')}
                               </div>
                             </TableCell>
                             <TableCell>{c.paymentMethod}</TableCell>
                             <TableCell className="font-mono text-xs">{c.loanId}</TableCell>
                             <TableCell>{format(new Date(c.date), 'dd MMM yyyy')}</TableCell>
+                             <TableCell>
+                                <Button variant="ghost" size="icon" onClick={() => setCollectionToDelete(c)}>
+                                    <Trash2 className="w-4 h-4 text-destructive" />
+                                    <span className="sr-only">Delete</span>
+                                </Button>
+                            </TableCell>
                         </TableRow>
                     )
                 })}
@@ -358,6 +388,21 @@ function CollectionsPageContent() {
         </Card>
       </div>
     </div>
+    <AlertDialog open={!!collectionToDelete} onOpenChange={(open) => !open && setCollectionToDelete(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the collection record for <span className="font-bold">{collectionToDelete?.customer}</span> of <span className="font-bold">₹{collectionToDelete?.amount.toLocaleString('en-IN')}</span>.
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
 
