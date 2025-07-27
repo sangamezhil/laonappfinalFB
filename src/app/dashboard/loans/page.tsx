@@ -70,14 +70,12 @@ const LoanTable = ({
     handleApprove, 
     handlePreclose, 
     handleDelete,
-    isClosedTab = false,
 }: { 
     loans: Loan[], 
     user: User | null, 
     handleApprove: (id: string) => void, 
     handlePreclose: (id: string) => void,
     handleDelete: (loan: Loan) => void,
-    isClosedTab?: boolean
 }) => {
     const router = useRouter();
     const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>({});
@@ -229,7 +227,7 @@ const LoanTable = ({
                                     Record Payment
                                     </DropdownMenuItem>
                                 }
-                                 {isClosedTab && user?.role === 'Admin' && (
+                                 {loan.status === 'Closed' && user?.role === 'Admin' && (
                                     <>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem onSelect={() => handleDelete(loan)} className="text-destructive">
@@ -290,7 +288,7 @@ const LoanTable = ({
                                 Record Payment
                                 </DropdownMenuItem>
                             }
-                            {isClosedTab && user?.role === 'Admin' && (
+                            {item.loan.status === 'Closed' && user?.role === 'Admin' && (
                                 <>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onSelect={() => handleDelete(item.loan)} className="text-destructive">
@@ -447,7 +445,6 @@ export default function LoansPage() {
                     handleApprove={handleApprove} 
                     handlePreclose={handlePreclose} 
                     handleDelete={setLoanToDelete}
-                    isClosedTab={true}
                 />
             </TabsContent>
         </Tabs>
