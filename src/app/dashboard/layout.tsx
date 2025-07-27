@@ -47,7 +47,6 @@ const allMenuItems = [
   { href: '/dashboard/loans', label: 'Loans', icon: Landmark, roles: ['Admin', 'Collection Agent', 'Auditor'] },
   { href: '/dashboard/collections', label: 'Collections', icon: ClipboardCheck, roles: ['Admin', 'Collection Agent'] },
   { href: '/dashboard/users', label: 'Users', icon: UserCog, roles: ['Admin'] },
-  { href: '/dashboard/profile', label: 'Company Profile', icon: Building2, roles: ['Admin'] },
   { href: '/dashboard/activity', label: 'Activity Log', icon: History, roles: ['Admin'] },
 ]
 
