@@ -13,6 +13,7 @@ import {
   LogOut,
   ChevronDown,
   History,
+  Building,
 } from 'lucide-react'
 
 import {
@@ -142,7 +143,11 @@ export default function DashboardLayout({
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-2">
                 <Avatar className="w-8 h-8">
-                  <AvatarImage src="https://placehold.co/100x100" alt={user.username} data-ai-hint="person avatar" />
+                  {profile.logoUrl ? (
+                    <AvatarImage src={profile.logoUrl} alt={profile.name} />
+                  ) : (
+                    <AvatarImage src="https://placehold.co/100x100" alt={user.username} data-ai-hint="person avatar" />
+                  )}
                   <AvatarFallback>{user.username.charAt(0).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <span className="hidden md:inline">{user.username}</span>
