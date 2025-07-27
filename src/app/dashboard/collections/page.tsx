@@ -17,8 +17,9 @@ import { useLoans, Loan, useUserActivity, useCollections, Collection, useCustome
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { CalendarIcon, IndianRupee, Landmark, Users, Phone, Search } from 'lucide-react'
 import { Calendar } from '@/components/ui/calendar'
-import { cn } from '@/lib/utils'
+import { cn, getAvatarColor } from '@/lib/utils'
 import { format, addDays, addWeeks, addMonths } from 'date-fns'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
 const collectionSchema = z.object({
   loanId: z.string().nonempty({ message: 'Please select a loan.' }),
@@ -325,17 +326,27 @@ function CollectionsPageContent() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {collections.map(c => (
-                  <TableRow key={c.id}>
-                    <TableCell>
-                      <div className="font-medium">{c.customer}</div>
-                    </TableCell>
-                    <TableCell className="flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{c.amount.toLocaleString('en-IN')}</TableCell>
-                    <TableCell>{c.paymentMethod}</TableCell>
-                    <TableCell className="font-mono text-xs">{c.loanId}</TableCell>
-                    <TableCell>{format(new Date(c.date), 'dd MMM yyyy')}</TableCell>
-                  </TableRow>
-                ))}
+                {collections.map(c => {
+                    const avatarName = c.customer.split('(')[0].trim();
+                    return (
+                        <TableRow key={c.id}>
+                            <TableCell>
+                                <div className="flex items-center gap-3">
+                                    <Avatar className="w-10 h-10 border">
+                                        <AvatarFallback className={getAvatarColor(avatarName)}>
+                                            {avatarName.substring(0, 2)}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <span className="font-medium">{c.customer}</span>
+                                </div>
+                            </TableCell>
+                            <TableCell className="flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{c.amount.toLocaleString('en-IN')}</TableCell>
+                            <TableCell>{c.paymentMethod}</TableCell>
+                            <TableCell className="font-mono text-xs">{c.loanId}</TableCell>
+                            <TableCell>{format(new Date(c.date), 'dd MMM yyyy')}</TableCell>
+                        </TableRow>
+                    )
+                })}
               </TableBody>
             </Table>
           </CardContent>
@@ -353,3 +364,5 @@ export default function CollectionsPage() {
     </Suspense>
   )
 }
+
+    
