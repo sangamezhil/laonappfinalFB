@@ -95,7 +95,7 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
       <Card>
         <CardHeader>
           <div className="flex items-center gap-4">
-            <Avatar className="w-20 h-20">
+            <Avatar className="w-20 h-20 border">
               <AvatarFallback className={cn("text-xl font-bold", getAvatarColor(customer.name))}>
                 {customer.name.substring(0, 2)}
               </AvatarFallback>

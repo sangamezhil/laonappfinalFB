@@ -146,7 +146,7 @@ export default function CustomersPage() {
                 <TableRow key={customer.id}>
                   <TableCell>
                      <div className="flex items-center gap-3">
-                        <Avatar>
+                        <Avatar className="border">
                           <AvatarFallback className={getAvatarColor(customer.name)}>
                             {customer.name.substring(0, 2)}
                           </AvatarFallback>
