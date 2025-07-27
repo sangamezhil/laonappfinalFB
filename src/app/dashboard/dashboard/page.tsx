@@ -11,10 +11,9 @@ import type { ChartConfig } from '@/components/ui/chart'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
-import { useLoans, useCustomers } from '@/lib/data'
+import { useLoans, useCustomers, useCollections } from '@/lib/data'
+import { format, parseISO } from 'date-fns'
 
-const chartData = [
-]
 
 const chartConfig = {
   disbursed: {
@@ -30,6 +29,37 @@ const chartConfig = {
 export default function DashboardPage() {
   const { loans, isLoaded: loansLoaded } = useLoans()
   const { customers, isLoaded: customersLoaded } = useCustomers()
+  const { collections, isLoaded: collectionsLoaded } = useCollections();
+
+  const chartData = React.useMemo(() => {
+    if (!loansLoaded || !collectionsLoaded) return [];
+
+    const monthlyData: { [key: string]: { month: string; disbursed: number; collected: number } } = {};
+
+    // Process disbursements from loans
+    loans.forEach(loan => {
+      if (loan.status !== 'Pending') {
+          const month = format(parseISO(loan.disbursalDate), 'yyyy-MM');
+          if (!monthlyData[month]) {
+            monthlyData[month] = { month: format(parseISO(loan.disbursalDate), 'MMM yyyy'), disbursed: 0, collected: 0 };
+          }
+          monthlyData[month].disbursed += loan.amount;
+      }
+    });
+    
+    // Process collections
+    collections.forEach(collection => {
+        const month = format(parseISO(collection.date), 'yyyy-MM');
+        if (!monthlyData[month]) {
+            monthlyData[month] = { month: format(parseISO(collection.date), 'MMM yyyy'), disbursed: 0, collected: 0 };
+        }
+        monthlyData[month].collected += collection.amount;
+    });
+
+    return Object.values(monthlyData).sort((a,b) => a.month.localeCompare(b.month));
+
+  }, [loans, collections, loansLoaded, collectionsLoaded]);
+
 
   const summary = React.useMemo(() => {
     if (!loansLoaded) return {
