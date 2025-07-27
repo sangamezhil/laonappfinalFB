@@ -3,7 +3,8 @@
 
 import React from 'react';
 import Link from 'next/link'
-import { PlusCircle, MoreHorizontal, ChevronDown, ChevronRight, IndianRupee, CheckCircle } from 'lucide-react'
+import * as XLSX from 'xlsx';
+import { PlusCircle, MoreHorizontal, ChevronDown, ChevronRight, IndianRupee, CheckCircle, FileDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -376,6 +377,17 @@ export default function LoansPage() {
     }
   };
 
+  const handleDownload = () => {
+    const worksheet = XLSX.utils.json_to_sheet(loans);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Loans");
+    XLSX.writeFile(workbook, "loans.xlsx");
+    toast({
+      title: 'Download Started',
+      description: 'Your loan data is being downloaded as an Excel file.',
+    });
+  };
+
   if (!isLoaded) {
     return (
         <Card>
@@ -432,14 +444,20 @@ export default function LoansPage() {
               Track and manage all loan applications.
             </CardDescription>
           </div>
-          {user?.role === 'Admin' && (
-            <Link href="/dashboard/loans/new" passHref>
-                <Button>
-                <PlusCircle className="w-4 h-4 mr-2" />
-                New Loan Application
-                </Button>
-            </Link>
-          )}
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleDownload}>
+                <FileDown className="w-4 h-4 mr-2" />
+                Download Excel
+            </Button>
+            {user?.role === 'Admin' && (
+                <Link href="/dashboard/loans/new" passHref>
+                    <Button>
+                    <PlusCircle className="w-4 h-4 mr-2" />
+                    New Loan Application
+                    </Button>
+                </Link>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent>

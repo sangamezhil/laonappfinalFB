@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useRouter, useSearchParams } from 'next/navigation'
+import * as XLSX from 'xlsx';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
@@ -15,7 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast'
 import { useLoans, Loan, useUserActivity, useCollections, Collection, useCustomers } from '@/lib/data'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { CalendarIcon, IndianRupee, Landmark, Users, Phone, Search, Trash2, MoreHorizontal } from 'lucide-react'
+import { CalendarIcon, IndianRupee, Landmark, Users, Phone, Search, Trash2, MoreHorizontal, FileDown } from 'lucide-react'
 import { Calendar } from '@/components/ui/calendar'
 import { cn, getAvatarColor } from '@/lib/utils'
 import { format, addDays, addWeeks, addMonths } from 'date-fns'
@@ -206,6 +207,17 @@ function CollectionsPageContent() {
     }
   };
 
+  const handleDownload = () => {
+    const worksheet = XLSX.utils.json_to_sheet(collections);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Collections");
+    XLSX.writeFile(workbook, "collections.xlsx");
+     toast({
+      title: 'Download Started',
+      description: 'Your collections data is being downloaded as an Excel file.',
+    });
+  };
+
   const getLoanDisplayName = (loan: Loan) => {
     const customer = customers.find(c => c.id === loan.customerId);
     const phone = customer ? `(${customer.phone})` : '';
@@ -378,8 +390,16 @@ function CollectionsPageContent() {
       <div className="md:col-span-3">
         <Card>
           <CardHeader>
-            <CardTitle>Recent Collections</CardTitle>
-            <CardDescription>History of the latest payments received.</CardDescription>
+            <div className="flex items-center justify-between">
+                <div>
+                    <CardTitle>Recent Collections</CardTitle>
+                    <CardDescription>History of the latest payments received.</CardDescription>
+                </div>
+                <Button variant="outline" onClick={handleDownload}>
+                    <FileDown className="w-4 h-4 mr-2" />
+                    Download
+                </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <Table>

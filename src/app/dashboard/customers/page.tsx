@@ -3,7 +3,8 @@
 
 import React from 'react';
 import Link from 'next/link'
-import { PlusCircle, MoreHorizontal } from 'lucide-react'
+import { PlusCircle, MoreHorizontal, FileDown } from 'lucide-react'
+import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -87,6 +88,17 @@ export default function CustomersPage() {
       setCustomerToDelete(null);
     }
   };
+
+  const handleDownload = () => {
+    const worksheet = XLSX.utils.json_to_sheet(customers);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Customers");
+    XLSX.writeFile(workbook, "customers.xlsx");
+     toast({
+      title: 'Download Started',
+      description: 'Your customer data is being downloaded as an Excel file.',
+    });
+  };
   
   return (
     <>
@@ -97,14 +109,20 @@ export default function CustomersPage() {
             <CardTitle>Customers</CardTitle>
             <CardDescription>Manage your customers and view their loan histories.</CardDescription>
           </div>
-          {user?.role === 'Admin' && (
-            <Link href="/dashboard/customers/new" passHref>
-                <Button>
-                <PlusCircle className="w-4 h-4 mr-2" />
-                Add Customer
-                </Button>
-            </Link>
-          )}
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleDownload}>
+              <FileDown className="w-4 h-4 mr-2" />
+              Download Excel
+            </Button>
+            {user?.role === 'Admin' && (
+              <Link href="/dashboard/customers/new" passHref>
+                  <Button>
+                  <PlusCircle className="w-4 h-4 mr-2" />
+                  Add Customer
+                  </Button>
+              </Link>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent>
