@@ -156,9 +156,11 @@ export default function DashboardLayout({
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/dashboard/profile">Company Profile</Link>
-              </DropdownMenuItem>
+              {user.role === 'Admin' && (
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/profile">Company Profile</Link>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="w-4 h-4 mr-2" />
