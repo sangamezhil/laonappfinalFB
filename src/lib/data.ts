@@ -64,20 +64,20 @@ const initialCustomers: Customer[] = [
 ];
 
 const initialLoans: Loan[] = [
-  { id: 'LOAN001', customerId: 'CUST001', customerName: 'Ravi Kumar', loanType: 'Personal', amount: 50000, interestRate: 12, term: 10, status: 'Active', disbursalDate: '2023-05-01', weeklyRepayment: 5000, totalPaid: 25000, outstandingAmount: 25000, collectionFrequency: 'Weekly' },
-  { id: 'LOAN002', customerId: 'CUST002', customerName: 'Priya Sharma', loanType: 'Personal', amount: 25000, interestRate: 20, term: 70, status: 'Overdue', disbursalDate: '2023-06-15', weeklyRepayment: 357.14, totalPaid: 10000, outstandingAmount: 15000, collectionFrequency: 'Daily' },
-  { id: 'LOAN003', customerId: 'CUST003', customerName: 'Amit Singh', loanType: 'Personal', amount: 100000, interestRate: 12, term: 10, status: 'Closed', disbursalDate: '2022-01-20', weeklyRepayment: 10000, totalPaid: 100000, outstandingAmount: 0, collectionFrequency: 'Weekly' },
-  { id: 'LOAN004', customerId: 'CUST004', groupName: 'Sahara Group', groupId: 'GRP001', groupLeaderName: 'Suresh Patel', loanType: 'Group', amount: 40000, interestRate: 18, term: 40, status: 'Active', disbursalDate: '2023-07-01', weeklyRepayment: 1000, totalPaid: 12000, outstandingAmount: 28000, customerName: 'Sunita Devi' },
-  { id: 'LOAN005', customerId: 'CUST005', groupName: 'Sahara Group', groupId: 'GRP001', groupLeaderName: 'Suresh Patel', loanType: 'Group', amount: 40000, interestRate: 18, term: 40, status: 'Active', disbursalDate: '2023-07-01', weeklyRepayment: 1000, totalPaid: 12000, outstandingAmount: 28000, customerName: 'Rajesh Verma' },
-  { id: 'LOAN006', customerId: 'CUST006', groupName: 'Sahara Group', groupId: 'GRP001', groupLeaderName: 'Suresh Patel', loanType: 'Group', amount: 40000, interestRate: 18, term: 40, status: 'Active', disbursalDate: '2023-07-01', weeklyRepayment: 1000, totalPaid: 12000, outstandingAmount: 28000, customerName: 'Anita Desai' },
-  { id: 'LOAN007', customerId: 'CUST007', groupName: 'Sahara Group', groupId: 'GRP001', groupLeaderName: 'Suresh Patel', loanType: 'Group', amount: 40000, interestRate: 18, term: 40, status: 'Active', disbursalDate: '2023-07-01', weeklyRepayment: 1000, totalPaid: 12000, outstandingAmount: 28000, customerName: 'Sanjay Gupta' },
-  { id: 'LOAN008', customerId: 'CUST008', groupName: 'Sahara Group', groupId: 'GRP001', groupLeaderName: 'Suresh Patel', loanType: 'Group', amount: 40000, interestRate: 18, term: 40, status: 'Active', disbursalDate: '2023-07-01', weeklyRepayment: 1000, totalPaid: 12000, outstandingAmount: 28000, customerName: 'Meena Kumari' },
+  { id: '239847298347', customerId: 'CUST001', customerName: 'Ravi Kumar', loanType: 'Personal', amount: 50000, interestRate: 12, term: 10, status: 'Active', disbursalDate: '2023-05-01', weeklyRepayment: 5000, totalPaid: 25000, outstandingAmount: 25000, collectionFrequency: 'Weekly' },
+  { id: '987234987234', customerId: 'CUST002', customerName: 'Priya Sharma', loanType: 'Personal', amount: 25000, interestRate: 20, term: 70, status: 'Overdue', disbursalDate: '2023-06-15', weeklyRepayment: 357.14, totalPaid: 10000, outstandingAmount: 15000, collectionFrequency: 'Daily' },
+  { id: '192837498234', customerId: 'CUST003', customerName: 'Amit Singh', loanType: 'Personal', amount: 100000, interestRate: 12, term: 10, status: 'Closed', disbursalDate: '2022-01-20', weeklyRepayment: 10000, totalPaid: 100000, outstandingAmount: 0, collectionFrequency: 'Weekly' },
+  { id: '498729384729', customerId: 'CUST004', groupName: 'Sahara Group', groupId: 'GRP001', groupLeaderName: 'Suresh Patel', loanType: 'Group', amount: 40000, interestRate: 18, term: 40, status: 'Active', disbursalDate: '2023-07-01', weeklyRepayment: 1000, totalPaid: 12000, outstandingAmount: 28000, customerName: 'Sunita Devi' },
+  { id: '347298347298', customerId: 'CUST005', groupName: 'Sahara Group', groupId: 'GRP001', groupLeaderName: 'Suresh Patel', loanType: 'Group', amount: 40000, interestRate: 18, term: 40, status: 'Active', disbursalDate: '2023-07-01', weeklyRepayment: 1000, totalPaid: 12000, outstandingAmount: 28000, customerName: 'Rajesh Verma' },
+  { id: '982347293847', customerId: 'CUST006', groupName: 'Sahara Group', groupId: 'GRP001', groupLeaderName: 'Suresh Patel', loanType: 'Group', amount: 40000, interestRate: 18, term: 40, status: 'Active', disbursalDate: '2023-07-01', weeklyRepayment: 1000, totalPaid: 12000, outstandingAmount: 28000, customerName: 'Anita Desai' },
+  { id: '109283748293', customerId: 'CUST007', groupName: 'Sahara Group', groupId: 'GRP001', groupLeaderName: 'Suresh Patel', loanType: 'Group', amount: 40000, interestRate: 18, term: 40, status: 'Active', disbursalDate: '2023-07-01', weeklyRepayment: 1000, totalPaid: 12000, outstandingAmount: 28000, customerName: 'Sanjay Gupta' },
+  { id: '569837459234', customerId: 'CUST008', groupName: 'Sahara Group', groupId: 'GRP001', groupLeaderName: 'Suresh Patel', loanType: 'Group', amount: 40000, interestRate: 18, term: 40, status: 'Active', disbursalDate: '2023-07-01', weeklyRepayment: 1000, totalPaid: 12000, outstandingAmount: 28000, customerName: 'Meena Kumari' },
 ];
 
 const initialCollections: Collection[] = [
-  { id: 'COLL001', loanId: 'LOAN001', customer: 'Ravi Kumar', amount: 5000, date: '2024-07-28' },
-  { id: 'COLL002', loanId: 'LOAN004', customer: 'Sahara Group', amount: 5000, date: '2024-07-27' },
-  { id: 'COLL003', loanId: 'LOAN002', customer: 'Priya Sharma', amount: 2500, date: '2024-07-25' },
+  { id: 'COLL001', loanId: '239847298347', customer: 'Ravi Kumar', amount: 5000, date: '2024-07-28' },
+  { id: 'COLL002', loanId: '498729384729', customer: 'Sahara Group', amount: 5000, date: '2024-07-27' },
+  { id: 'COLL003', loanId: '987234987234', customer: 'Priya Sharma', amount: 2500, date: '2024-07-25' },
 ];
 
 const getFromStorage = <T>(key: string, initialData: T[]): T[] => {
@@ -144,23 +144,24 @@ export const useLoans = () => {
 
     const addLoan = (loan: Omit<Loan, 'id'> | Omit<Loan, 'id'>[]): Loan[] => {
         const currentLoans = getFromStorage('loans', initialLoans);
-        let lastIdNumber = (currentLoans.length > 0 ? Math.max(...currentLoans.map(l => parseInt(l.id.replace('LOAN','')))) : 0);
         
+        const generateLoanId = () => {
+            return Math.floor(100000000000 + Math.random() * 900000000000).toString();
+        }
+
         const loansToAdd: Loan[] = [];
         
         if (Array.isArray(loan)) {
             loan.forEach(l => {
-                lastIdNumber++;
                 loansToAdd.push({
                     ...l,
-                    id: `LOAN${String(lastIdNumber).padStart(3, '0')}`,
+                    id: generateLoanId(),
                 });
             });
         } else {
-            lastIdNumber++;
             loansToAdd.push({
                 ...loan,
-                id: `LOAN${String(lastIdNumber).padStart(3, '0')}`,
+                id: generateLoanId(),
             });
         }
 
@@ -269,5 +270,3 @@ export function getLoansByCustomerId(customerId: string) {
   const loans = getFromStorage('loans', initialLoans);
   return loans.filter(l => l.customerId === customerId);
 }
-
-    

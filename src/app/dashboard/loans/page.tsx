@@ -152,7 +152,7 @@ const LoanTable = ({ loans, user, handleApprove, handlePreclose }: { loans: Loan
                                 const isLeader = loan.customerName === loan.groupLeaderName;
                                 return (
                                 <TableRow key={loan.id} className={cn("bg-background hover:bg-muted/50", isLeader && "bg-primary/10 hover:bg-primary/20")}>
-                                   <TableCell className="pl-12 text-muted-foreground">{loan.id}</TableCell>
+                                   <TableCell className="pl-12 text-muted-foreground font-mono text-xs">{loan.id}</TableCell>
                                    <TableCell>
                                      <div className='flex items-center gap-2'>
                                        {loan.customerName}
@@ -212,7 +212,7 @@ const LoanTable = ({ loans, user, handleApprove, handlePreclose }: { loans: Loan
                     </Collapsible>
                 ) : ( // Personal Loan
                     <TableRow key={item.loan.id}>
-                        <TableCell className="font-medium">{item.loan.id}</TableCell>
+                        <TableCell className="font-mono text-xs">{item.loan.id}</TableCell>
                         <TableCell>{item.loan.customerName}</TableCell>
                         <TableCell>{item.loan.loanType}</TableCell>
                         <TableCell>₹{item.loan.amount.toLocaleString('en-IN')}</TableCell>

@@ -57,10 +57,10 @@ function CollectionsPageContent() {
   });
   
   const loanIdFromQuery = searchParams.get('loanId');
+  const selectedLoanIdInForm = form.watch('loanId');
   
   // Effect to handle setting loan from either URL query or form selection
   useEffect(() => {
-    const selectedLoanIdInForm = form.watch('loanId');
     const loanIdToProcess = loanIdFromQuery || selectedLoanIdInForm;
 
     if (!loanIdToProcess) {
@@ -78,32 +78,34 @@ function CollectionsPageContent() {
     const loan = loans.find(l => l.id === loanIdToProcess);
 
     if (loan) {
-      setSelectedLoan(loan);
-      form.setValue('amount', loan.weeklyRepayment, { shouldValidate: true });
+      if(loan.id !== selectedLoan?.id) {
+          setSelectedLoan(loan);
+          form.setValue('amount', loan.weeklyRepayment, { shouldValidate: true });
 
-      const installmentsPaid = loan.totalPaid > 0 ? Math.floor(loan.totalPaid / loan.weeklyRepayment) : 0;
-      const startDate = new Date(loan.disbursalDate);
-      let currentDueDate: Date | null = null;
-      let nextDueDate: Date | null = null;
-      
-      if (loan.collectionFrequency === 'Daily') {
-        currentDueDate = addDays(startDate, installmentsPaid + 1);
-        nextDueDate = addDays(startDate, installmentsPaid + 2);
-      } else if (loan.collectionFrequency === 'Weekly') {
-        currentDueDate = addWeeks(startDate, installmentsPaid + 1);
-        nextDueDate = addWeeks(startDate, installmentsPaid + 2);
-      } else if (loan.collectionFrequency === 'Monthly') {
-        currentDueDate = addMonths(startDate, installmentsPaid + 1);
-        nextDueDate = addMonths(startDate, installmentsPaid + 2);
+          const installmentsPaid = loan.totalPaid > 0 ? Math.floor(loan.totalPaid / loan.weeklyRepayment) : 0;
+          const startDate = new Date(loan.disbursalDate);
+          let currentDueDate: Date | null = null;
+          let nextDueDate: Date | null = null;
+          
+          if (loan.collectionFrequency === 'Daily') {
+            currentDueDate = addDays(startDate, installmentsPaid + 1);
+            nextDueDate = addDays(startDate, installmentsPaid + 2);
+          } else if (loan.collectionFrequency === 'Weekly') {
+            currentDueDate = addWeeks(startDate, installmentsPaid + 1);
+            nextDueDate = addWeeks(startDate, installmentsPaid + 2);
+          } else if (loan.collectionFrequency === 'Monthly') {
+            currentDueDate = addMonths(startDate, installmentsPaid + 1);
+            nextDueDate = addMonths(startDate, installmentsPaid + 2);
+          }
+          setDueDates({ current: currentDueDate, next: nextDueDate });
       }
-      setDueDates({ current: currentDueDate, next: nextDueDate });
     } else {
       setSelectedLoan(null);
       setDueDates({ current: null, next: null });
       form.resetField('amount');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.watch('loanId'), loans, form.setValue]);
+  }, [selectedLoanIdInForm, loanIdFromQuery, loans, form.setValue, selectedLoan]);
 
 
   // Effect to sync URL query param to form state, and then clear the URL.
@@ -113,12 +115,15 @@ function CollectionsPageContent() {
         if (loanIdFromQuery !== form.getValues('loanId')) {
             form.setValue('loanId', loanIdFromQuery, { shouldValidate: true });
         }
-        if (router.replace) {
-            router.replace('/dashboard/collections', { scroll: false });
+        // Use replace with the current pathname to remove query params
+        const currentPathname = window.location.pathname;
+        if(router.replace && searchParams.has('loanId')){
+            router.replace(currentPathname, { scroll: false });
         }
+
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loanIdFromQuery]);
+  }, [loanIdFromQuery, router, searchParams]);
 
 
   const handlePhoneSearch = () => {
@@ -152,7 +157,7 @@ function CollectionsPageContent() {
 
     addCollection({
       loanId: data.loanId,
-      customer: loan.customerName,
+      customer: loan.loanType === 'Group' ? `${loan.groupName} (${loan.customerName})` : loan.customerName,
       amount: data.amount,
       date: format(data.collectionDate, 'yyyy-MM-dd'),
     });
@@ -167,6 +172,7 @@ function CollectionsPageContent() {
         paymentMethod: 'Cash',
         collectionDate: new Date(),
     });
+    setSelectedLoan(null);
   }
 
   const getLoanDisplayName = (loan: Loan) => {
@@ -322,8 +328,9 @@ function CollectionsPageContent() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Customer</TableHead>
+                  <TableHead>Customer / Group</TableHead>
                   <TableHead>Amount (₹)</TableHead>
+                  <TableHead>Loan ID</TableHead>
                   <TableHead>Date</TableHead>
                 </TableRow>
               </TableHeader>
@@ -332,9 +339,9 @@ function CollectionsPageContent() {
                   <TableRow key={c.id}>
                     <TableCell>
                       <div className="font-medium">{c.customer}</div>
-                      <div className="text-sm text-muted-foreground">{c.loanId}</div>
                     </TableCell>
                     <TableCell>₹{c.amount.toLocaleString('en-IN')}</TableCell>
+                    <TableCell className="font-mono text-xs">{c.loanId}</TableCell>
                     <TableCell>{format(new Date(c.date), 'dd MMM yyyy')}</TableCell>
                   </TableRow>
                 ))}
@@ -355,6 +362,3 @@ export default function CollectionsPage() {
     </Suspense>
   )
 }
-
-    
-    

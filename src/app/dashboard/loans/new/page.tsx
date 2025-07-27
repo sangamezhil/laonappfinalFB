@@ -90,9 +90,9 @@ export default function NewLoanPage() {
       collectionFrequency: 'Weekly',
       interestRate: 12,
       repaymentTerm: 10,
-      loanAmount: undefined,
-      docCharges: undefined,
-      insuranceCharges: undefined,
+      loanAmount: '' as any,
+      docCharges: '' as any,
+      insuranceCharges: '' as any,
     }
   });
 
@@ -103,9 +103,9 @@ export default function NewLoanPage() {
       groupSize: '5',
       interestRate: 10,
       repaymentTerm: 10,
-      loanAmount: undefined,
-      docCharges: undefined,
-      insuranceCharges: undefined,
+      loanAmount: '' as any,
+      docCharges: '' as any,
+      insuranceCharges: '' as any,
     }
    });
 
@@ -391,5 +391,3 @@ export default function NewLoanPage() {
     </Card>
   )
 }
-
-    
