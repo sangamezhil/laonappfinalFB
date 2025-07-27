@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useRouter } from 'next/navigation'
+import { IndianRupee } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -279,7 +280,9 @@ export default function NewCustomerPage() {
                 name="monthlyIncome"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Monthly Income (₹) (Optional)</FormLabel>
+                    <FormLabel className="flex items-center gap-1">
+                      Monthly Income <IndianRupee className="w-4 h-4" /> (Optional)
+                    </FormLabel>
                     <FormControl>
                       <Input type="number" placeholder="Enter monthly income" {...field} value={field.value ?? ''} />
                     </FormControl>
