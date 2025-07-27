@@ -7,6 +7,7 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
+    // Redirect to staff login by default
     router.replace('/login')
   }, [router])
 
