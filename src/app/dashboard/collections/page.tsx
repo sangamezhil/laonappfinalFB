@@ -50,7 +50,7 @@ function CollectionsPageContent() {
   const form = useForm<CollectionFormValues>({
     resolver: zodResolver(collectionSchema),
     defaultValues: {
-      loanId: loanIdFromQuery || '',
+      loanId: '',
       amount: '' as any,
       paymentMethod: 'Cash',
       collectionDate: new Date(),
@@ -65,12 +65,12 @@ function CollectionsPageContent() {
     if (!selectedLoanIdInForm) {
       setSelectedLoan(null);
       setDueDates({ current: null, next: null });
-       form.reset({
-            loanId: '',
-            amount: '' as any,
-            paymentMethod: 'Cash',
-            collectionDate: new Date(),
-        });
+      form.reset({
+        loanId: '',
+        amount: '' as any,
+        paymentMethod: 'Cash',
+        collectionDate: new Date(),
+    });
       return;
     }
 
