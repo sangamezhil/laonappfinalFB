@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useRouter } from 'next/navigation'
 import { CalendarIcon, IndianRupee } from 'lucide-react'
-import { format } from 'date-fns'
+import { format, parse } from 'date-fns'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -36,7 +36,24 @@ import { cn } from '@/lib/utils'
 const kycFormSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
   gender: z.enum(['Male', 'Female', 'Other'], { required_error: "Gender is required."}),
-  dob: z.date({ required_error: "Date of birth is required." }),
+  dob: z.string().transform((val, ctx) => {
+    try {
+      const parsed = parse(val, 'ddMMyyyy', new Date());
+      if (isNaN(parsed.getTime())) {
+          throw new Error("Invalid date");
+      }
+       if (parsed > new Date() || parsed < new Date("1900-01-01")) {
+         throw new Error("Invalid date range");
+      }
+      return parsed;
+    } catch(e) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid date. Use DDMMYYYY format.",
+      });
+      return z.NEVER;
+    }
+  }),
   email: z.string().email({ message: 'Please enter a valid email address.' }).optional().or(z.literal('')),
   phone: z.string().regex(/^\d{10}$/, { message: 'Phone number must be 10 digits.' }),
   secondaryPhone: z.string().regex(/^\d{10}$/, { message: 'Secondary phone number must be 10 digits.' }),
@@ -95,6 +112,7 @@ export default function NewCustomerPage() {
     defaultValues: {
       fullName: '',
       gender: 'Male',
+      dob: '',
       email: '',
       phone: '',
       secondaryPhone: '',
@@ -107,7 +125,7 @@ export default function NewCustomerPage() {
     },
   })
 
-  function onSubmit(data: KycFormValues) {
+  function onSubmit(data: { dob: Date } & Omit<KycFormValues, 'dob'>) {
     const newCustomer = addCustomer({
       name: data.fullName, 
       dob: format(data.dob, 'yyyy-MM-dd'),
@@ -180,39 +198,11 @@ export default function NewCustomerPage() {
                   control={form.control}
                   name="dob"
                   render={({ field }) => (
-                  <FormItem className="flex flex-col">
+                  <FormItem>
                       <FormLabel>Date of Birth</FormLabel>
-                      <Popover>
-                      <PopoverTrigger asChild>
-                          <FormControl>
-                          <Button
-                              variant={"outline"}
-                              className={cn(
-                              "pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                              )}
-                          >
-                              {field.value ? (
-                              format(field.value, "PPP")
-                              ) : (
-                              <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="w-4 h-4 ml-auto opacity-50" />
-                          </Button>
-                          </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) =>
-                                date > new Date() || date < new Date("1900-01-01")
-                            }
-                            initialFocus
-                          />
-                      </PopoverContent>
-                      </Popover>
+                      <FormControl>
+                        <Input placeholder="DDMMYYYY" {...field} />
+                      </FormControl>
                       <FormMessage />
                   </FormItem>
                   )}

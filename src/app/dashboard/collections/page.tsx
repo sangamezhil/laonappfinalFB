@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon, IndianRupee, Landmark, Users, Phone, Search, Trash2, MoreHorizontal } from 'lucide-react'
 import { Calendar } from '@/components/ui/calendar'
 import { cn, getAvatarColor } from '@/lib/utils'
-import { format, addDays, addWeeks, addMonths } from 'date-fns'
+import { format, addDays, addWeeks, addMonths, parse } from 'date-fns'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   AlertDialog,
@@ -34,7 +34,21 @@ import {
 const collectionSchema = z.object({
   loanId: z.string().nonempty({ message: 'Please select a loan.' }),
   amount: z.coerce.number().positive({ message: 'Amount must be a positive number.' }),
-  collectionDate: z.date({ required_error: 'A collection date is required.' }),
+  collectionDate: z.string().transform((val, ctx) => {
+    try {
+      const parsed = parse(val, 'ddMMyyyy', new Date());
+      if (isNaN(parsed.getTime())) {
+          throw new Error("Invalid date");
+      }
+      return parsed;
+    } catch(e) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid date format. Please use DDMMYYYY.",
+      });
+      return z.NEVER;
+    }
+  }),
   paymentMethod: z.enum(['Cash', 'Bank Transfer', 'UPI']),
 });
 
@@ -80,7 +94,7 @@ function CollectionsPageContent() {
       loanId: '',
       amount: '' as any,
       paymentMethod: 'Cash',
-      collectionDate: new Date(),
+      collectionDate: format(new Date(), 'ddMMyyyy'),
     },
   });
 
@@ -114,7 +128,7 @@ function CollectionsPageContent() {
         loanId: '',
         amount: '' as any,
         paymentMethod: 'Cash',
-        collectionDate: new Date(),
+        collectionDate: format(new Date(), 'ddMMyyyy'),
       });
     }
   }, [loans, form]);
@@ -155,7 +169,7 @@ function CollectionsPageContent() {
   };
 
 
-  function onSubmit(data: CollectionFormValues) {
+  function onSubmit(data: { loanId: string; amount: number; collectionDate: Date; paymentMethod: 'Cash' | 'Bank Transfer' | 'UPI' }) {
     const loan = loans.find(l => l.id === data.loanId);
     if (!loan) {
         toast({ variant: 'destructive', title: 'Error', description: 'Selected loan not found.' });
@@ -181,7 +195,7 @@ function CollectionsPageContent() {
         loanId: '',
         amount: '' as any,
         paymentMethod: 'Cash',
-        collectionDate: new Date(),
+        collectionDate: format(new Date(), 'ddMMyyyy'),
     });
     setSelectedLoan(null);
   }
@@ -300,20 +314,12 @@ function CollectionsPageContent() {
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="collectionDate" render={({ field }) => (
-                    <FormItem className="flex flex-col"><FormLabel>Collection Date</FormLabel>
-                        <Popover><PopoverTrigger asChild>
-                                <FormControl>
-                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                    <CalendarIcon className="w-4 h-4 ml-auto opacity-50" />
-                                </Button>
-                                </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                            </PopoverContent>
-                        </Popover>
-                        <FormMessage />
+                    <FormItem>
+                      <FormLabel>Collection Date</FormLabel>
+                      <FormControl>
+                        <Input placeholder="DDMMYYYY" {...field} />
+                      </FormControl>
+                      <FormMessage />
                     </FormItem>
                 )} />
                 <FormField control={form.control} name="paymentMethod" render={({ field }) => (
