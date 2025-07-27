@@ -320,7 +320,12 @@ function CollectionsPageContent() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Customer / Group</TableHead>
-                  <TableHead>Amount (₹)</TableHead>
+                  <TableHead>
+                    <div className="flex items-center gap-1">
+                      <IndianRupee className="w-4 h-4" />
+                      Amount
+                    </div>
+                  </TableHead>
                   <TableHead>Method</TableHead>
                   <TableHead>Loan ID</TableHead>
                   <TableHead>Date</TableHead>
