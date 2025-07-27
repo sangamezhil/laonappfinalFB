@@ -8,8 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { User, Briefcase, IndianRupee, Hash, Calendar, Phone } from 'lucide-react'
+import { User, Briefcase, IndianRupee, Hash, Calendar, Phone, Cake, VenetianMask } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton';
+import { format } from 'date-fns';
 
 export default function CustomerProfilePage({ params }: { params: { id: string } }) {
   // `params` is a Promise-like object in Client Components.
@@ -110,6 +111,14 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
             <div className="flex items-center gap-2">
               <User className="w-4 h-4" />
               <span>{customer.address}</span>
+            </div>
+             <div className="flex items-center gap-2">
+              <VenetianMask className="w-4 h-4" />
+              <span>Gender: <strong>{customer.gender}</strong></span>
+            </div>
+             <div className="flex items-center gap-2">
+              <Cake className="w-4 h-4" />
+              <span>Date of Birth: <strong>{format(new Date(customer.dob), 'PPP')}</strong></span>
             </div>
             <div className="flex items-center gap-2">
               <Briefcase className="w-4 h-4" />

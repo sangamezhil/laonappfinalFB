@@ -5,7 +5,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useRouter } from 'next/navigation'
-import { IndianRupee } from 'lucide-react'
+import { CalendarIcon, IndianRupee } from 'lucide-react'
+import { format } from 'date-fns'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -28,9 +29,14 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { useCustomers, useUserActivity } from '@/lib/data'
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { cn } from '@/lib/utils'
 
 const kycFormSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
+  gender: z.enum(['Male', 'Female', 'Other'], { required_error: "Gender is required."}),
+  dob: z.date({ required_error: "Date of birth is required." }),
   email: z.string().email({ message: 'Please enter a valid email address.' }).optional().or(z.literal('')),
   phone: z.string().regex(/^\d{10}$/, { message: 'Phone number must be 10 digits.' }),
   secondaryPhone: z.string().regex(/^\d{10}$/, { message: 'Secondary phone number must be 10 digits.' }),
@@ -88,6 +94,7 @@ export default function NewCustomerPage() {
     resolver: zodResolver(kycFormSchema),
     defaultValues: {
       fullName: '',
+      gender: 'Male',
       email: '',
       phone: '',
       secondaryPhone: '',
@@ -101,8 +108,15 @@ export default function NewCustomerPage() {
   })
 
   function onSubmit(data: KycFormValues) {
-    const {fullName, ...rest} = data
-    const newCustomer = addCustomer({name: fullName, ...rest, monthlyIncome: data.monthlyIncome || 0, occupation: data.occupation || '', email: data.email || ''});
+    const {fullName, dob, ...rest} = data
+    const newCustomer = addCustomer({
+      name: fullName, 
+      dob: format(dob, 'yyyy-MM-dd'),
+      ...rest, 
+      monthlyIncome: data.monthlyIncome || 0, 
+      occupation: data.occupation || '', 
+      email: data.email || ''
+    });
     logActivity('Create Customer', `Registered new customer: ${newCustomer.name} (${newCustomer.id})`);
     toast({
       title: 'Customer Registered',
@@ -133,6 +147,69 @@ export default function NewCustomerPage() {
                     <FormMessage />
                   </FormItem>
                 )}
+              />
+               <FormField
+                control={form.control}
+                name="gender"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Gender</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select gender" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Male">Male</SelectItem>
+                        <SelectItem value="Female">Female</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                  control={form.control}
+                  name="dob"
+                  render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                      <FormLabel>Date of Birth</FormLabel>
+                      <Popover>
+                      <PopoverTrigger asChild>
+                          <FormControl>
+                          <Button
+                              variant={"outline"}
+                              className={cn(
+                              "pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                              )}
+                          >
+                              {field.value ? (
+                              format(field.value, "PPP")
+                              ) : (
+                              <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className="w-4 h-4 ml-auto opacity-50" />
+                          </Button>
+                          </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                                date > new Date() || date < new Date("1900-01-01")
+                            }
+                            initialFocus
+                          />
+                      </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                  </FormItem>
+                  )}
               />
               <FormField
                 control={form.control}
