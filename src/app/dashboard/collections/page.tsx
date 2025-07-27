@@ -90,7 +90,7 @@ function CollectionsPageContent() {
   const form = useForm<CollectionFormValues>({
     resolver: zodResolver(collectionSchema),
     defaultValues: {
-      loanId: loanIdFromQuery || '',
+      loanId: '',
       amount: '' as any,
       paymentMethod: 'Cash',
       collectionDate: format(new Date(), 'ddMMyyyy'),
@@ -128,13 +128,15 @@ function CollectionsPageContent() {
 
   useEffect(() => {
     const currentPath = window.location.pathname;
-    if (loanIdFromQuery) {
-        form.setValue('loanId', loanIdFromQuery, { shouldValidate: true, shouldDirty: true });
-        updateLoanDetails(loanIdFromQuery);
-        // Clean up URL by removing the query parameter after a short delay
-        window.history.replaceState({ ...window.history.state, as: currentPath, url: currentPath }, '', currentPath);
-    } else {
-       updateLoanDetails(selectedLoanIdInForm);
+    const loanId = loanIdFromQuery || selectedLoanIdInForm;
+
+    if (loanId) {
+        updateLoanDetails(loanId);
+        if (loanIdFromQuery) {
+            form.setValue('loanId', loanIdFromQuery, { shouldValidate: true, shouldDirty: true });
+            // Clean up URL by removing the query parameter after processing
+             window.history.replaceState({ ...window.history.state, as: currentPath, url: currentPath }, '', currentPath);
+        }
     }
   }, [loanIdFromQuery, selectedLoanIdInForm, updateLoanDetails, form]);
 
@@ -180,6 +182,7 @@ function CollectionsPageContent() {
       title: 'Collection Recorded',
       description: `Payment of ₹${data.amount.toLocaleString('en-IN')} for loan ${data.loanId} has been recorded.`,
     });
+
     form.reset({
         loanId: '',
         amount: '' as any,
@@ -428,3 +431,5 @@ export default function CollectionsPage() {
     </Suspense>
   )
 }
+
+    
