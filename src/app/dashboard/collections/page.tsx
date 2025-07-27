@@ -135,22 +135,20 @@ function CollectionsPageContent() {
   }, [loans, form, loanIdFromQuery]);
 
   useEffect(() => {
-    if (loanIdFromQuery && !selectedLoanIdInForm) {
-      form.setValue('loanId', loanIdFromQuery, { shouldValidate: true, shouldDirty: true });
+    updateLoanDetails(selectedLoanIdInForm);
+    if (loanIdFromQuery && selectedLoanIdInForm === loanIdFromQuery) {
+        // Clean up URL by removing the query parameter after a short delay
+        const currentPath = window.location.pathname;
+        window.history.replaceState({ ...window.history.state, as: currentPath, url: currentPath }, '', currentPath);
     }
-    updateLoanDetails(selectedLoanIdInForm || loanIdFromQuery);
-  }, [loanIdFromQuery, selectedLoanIdInForm, updateLoanDetails, form]);
+}, [loanIdFromQuery, selectedLoanIdInForm, updateLoanDetails]);
 
-  useEffect(() => {
-    if (loanIdFromQuery && selectedLoanIdInForm) {
-       // Clean up URL by removing the query parameter after a short delay
-      // to ensure state updates have propagated.
-      setTimeout(() => {
-          const currentPath = window.location.pathname;
-          window.history.replaceState({...window.history.state, as: currentPath, url: currentPath}, '', currentPath);
-      }, 100);
+useEffect(() => {
+    // This effect handles setting the loanId from the query param on initial load
+    if (loanIdFromQuery && !form.getValues('loanId')) {
+        form.setValue('loanId', loanIdFromQuery, { shouldValidate: true, shouldDirty: true });
     }
-  }, [loanIdFromQuery, selectedLoanIdInForm]);
+}, [loanIdFromQuery, form]);
 
 
   const handlePhoneSearch = () => {
@@ -201,6 +199,8 @@ function CollectionsPageContent() {
         collectionDate: format(new Date(), 'ddMMyyyy'),
     });
     setSelectedLoan(null);
+    setPhoneSearch('');
+    setDueDates({ current: null, next: null });
   }
   
   const confirmDelete = () => {
