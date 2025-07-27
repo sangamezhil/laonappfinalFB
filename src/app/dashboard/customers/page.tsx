@@ -4,7 +4,6 @@
 import React from 'react';
 import Link from 'next/link'
 import { PlusCircle, MoreHorizontal, FileDown } from 'lucide-react'
-import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -90,13 +89,9 @@ export default function CustomersPage() {
   };
 
   const handleDownload = () => {
-    const worksheet = XLSX.utils.json_to_sheet(customers);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Customers");
-    XLSX.writeFile(workbook, "customers.xlsx");
-     toast({
-      title: 'Download Started',
-      description: 'Your customer data is being downloaded as an Excel file.',
+    toast({
+        title: 'Feature not available',
+        description: 'The Excel download feature is currently unavailable.',
     });
   };
   

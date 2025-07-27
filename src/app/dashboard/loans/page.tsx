@@ -3,7 +3,6 @@
 
 import React from 'react';
 import Link from 'next/link'
-import * as XLSX from 'xlsx';
 import { PlusCircle, MoreHorizontal, ChevronDown, ChevronRight, IndianRupee, CheckCircle, FileDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -378,13 +377,9 @@ export default function LoansPage() {
   };
 
   const handleDownload = () => {
-    const worksheet = XLSX.utils.json_to_sheet(loans);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Loans");
-    XLSX.writeFile(workbook, "loans.xlsx");
     toast({
-      title: 'Download Started',
-      description: 'Your loan data is being downloaded as an Excel file.',
+      title: 'Feature not available',
+      description: 'The Excel download feature is currently unavailable.',
     });
   };
 

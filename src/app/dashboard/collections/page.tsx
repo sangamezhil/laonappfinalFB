@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useRouter, useSearchParams } from 'next/navigation'
-import * as XLSX from 'xlsx';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
@@ -208,13 +207,9 @@ function CollectionsPageContent() {
   };
 
   const handleDownload = () => {
-    const worksheet = XLSX.utils.json_to_sheet(collections);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Collections");
-    XLSX.writeFile(workbook, "collections.xlsx");
-     toast({
-      title: 'Download Started',
-      description: 'Your collections data is being downloaded as an Excel file.',
+    toast({
+        title: 'Feature not available',
+        description: 'The Excel download feature is currently unavailable.',
     });
   };
 
@@ -485,5 +480,3 @@ export default function CollectionsPage() {
     </Suspense>
   )
 }
-
-    
