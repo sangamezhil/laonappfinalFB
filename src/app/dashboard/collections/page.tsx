@@ -340,7 +340,12 @@ function CollectionsPageContent() {
                                     <span className="font-medium">{c.customer}</span>
                                 </div>
                             </TableCell>
-                            <TableCell className="flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{c.amount.toLocaleString('en-IN')}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center">
+                                <IndianRupee className="w-4 h-4 mr-1" />
+                                {c.amount.toLocaleString('en-IN')}
+                              </div>
+                            </TableCell>
                             <TableCell>{c.paymentMethod}</TableCell>
                             <TableCell className="font-mono text-xs">{c.loanId}</TableCell>
                             <TableCell>{format(new Date(c.date), 'dd MMM yyyy')}</TableCell>
@@ -364,5 +369,3 @@ export default function CollectionsPage() {
     </Suspense>
   )
 }
-
-    
