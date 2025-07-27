@@ -140,43 +140,12 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
-          <CardHeader>
-            <CardTitle>Disbursement &amp; Collection Overview</CardTitle>
-          </CardHeader>
-          <CardContent className="pl-2">
-            <ChartContainer config={chartConfig} className="h-[300px] w-full">
-              <BarChart accessibilityLayer data={chartData}>
-                <CartesianGrid vertical={false} />
-                <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} tickFormatter={(value) => value.slice(0, 3)} />
-                <YAxis tickFormatter={(value) => `₹${new Intl.NumberFormat('en-IN', { notation: 'compact', compactDisplay: 'short' }).format(Number(value))}`} />
-                <ChartTooltip 
-                    cursor={false}
-                    content={<ChartTooltipContent 
-                        formatter={(value, name) => (
-                        <div className="flex items-center">
-                            <span>{chartConfig[name as keyof typeof chartConfig].label}:</span>
-                            <span className="ml-2 font-bold flex items-center">
-                                <IndianRupee className="w-4 h-4 mr-1" />
-                                {Number(value).toLocaleString('en-IN')}
-                            </span>
-                        </div>
-                    )}
-                    />}
-                />
-                <Bar dataKey="disbursed" fill="var(--color-disbursed)" radius={4} />
-                <Bar dataKey="collected" fill="var(--color-collected)" radius={4} />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="col-span-3">
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="col-span-full">
           <CardHeader>
             <CardTitle>Financial Summary</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="grid gap-4 sm:grid-cols-3">
             <div className="flex items-center justify-between p-3 rounded-lg bg-secondary">
                 <div className="flex items-center gap-3">
                     <div className="p-2 rounded-full bg-primary/20 text-primary"><TrendingUp/></div>
