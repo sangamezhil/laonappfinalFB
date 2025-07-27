@@ -152,6 +152,15 @@ export default function UsersPage() {
 
 
   function handleCreateUser(data: z.infer<typeof userSchema>) {
+    if (data.role === 'Admin' && users.some(u => u.role === 'Admin')) {
+        toast({
+            variant: 'destructive',
+            title: 'Admin Limit Reached',
+            description: 'Only one Admin user can be created.',
+        });
+        return;
+    }
+    
     const newUser: User = {
         id: `USR${String(Date.now()).slice(-3)}`,
         username: data.username,
