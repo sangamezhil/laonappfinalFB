@@ -13,8 +13,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 
 export default function CustomerProfilePage({ params }: { params: { id: string } }) {
-  // `params` is a Promise-like object in Client Components.
-  // We use `React.use` to unwrap it.
   const resolvedParams = use(params);
   const customerId = resolvedParams.id;
 
@@ -68,7 +66,7 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
                       <TableRow>
                         <TableHead>Loan ID</TableHead>
                         <TableHead>Type</TableHead>
-                        <TableHead>Amount (₹)</TableHead>
+                        <TableHead>Amount</TableHead>
                         <TableHead>Disbursal Date</TableHead>
                         <TableHead>Status</TableHead>
                       </TableRow>
@@ -91,13 +89,18 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
     notFound()
   }
 
+  const avatarHint = 
+    customer.gender === 'Male' ? 'male avatar' :
+    customer.gender === 'Female' ? 'female avatar' :
+    'person avatar';
+
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
           <div className="flex items-center gap-4">
             <Avatar className="w-20 h-20">
-              <AvatarImage src={customer.profilePicture} alt={customer.name} data-ai-hint="person avatar" />
+              <AvatarImage src={customer.profilePicture} alt={customer.name} data-ai-hint={avatarHint} />
               <AvatarFallback>{customer.name.substring(0, 2)}</AvatarFallback>
             </Avatar>
             <div>
