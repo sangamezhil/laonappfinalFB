@@ -121,9 +121,9 @@ const LoanTable = ({ loans, user, handleApprove, handlePreclose }: { loans: Loan
           <TableBody>
               {groupedLoans.map((item) => (
                 item.isGroup ? (
-                    <Collapsible asChild key={item.groupId} open={openGroups[item.groupId] || false} onOpenChange={() => toggleGroup(item.groupId)}>
-                        <React.Fragment>
-                            <TableRow className="bg-muted/50 hover:bg-muted/80 data-[state=open]:bg-muted">
+                    <React.Fragment key={item.groupId}>
+                        <Collapsible asChild open={openGroups[item.groupId] || false} onOpenChange={() => toggleGroup(item.groupId)}>
+                           <TableRow className="bg-muted/50 hover:bg-muted/80 data-[state=open]:bg-muted">
                                 <TableCell className="font-medium">
                                     <CollapsibleTrigger asChild>
                                         <button className="flex items-center w-full gap-2 cursor-pointer">
@@ -148,12 +148,13 @@ const LoanTable = ({ loans, user, handleApprove, handlePreclose }: { loans: Loan
                                 <TableCell>₹{item.totalOutstanding.toLocaleString('en-IN')}</TableCell>
                                 <TableCell>&nbsp;</TableCell>
                             </TableRow>
-                            <CollapsibleContent asChild>
-                                <React.Fragment>
+                        </Collapsible>
+                        <CollapsibleContent asChild>
+                           <React.Fragment>
                                 {item.loans.map(loan => {
                                     const isLeader = loan.customerName === loan.groupLeaderName;
                                     return (
-                                    <TableRow key={loan.id} className={cn("bg-background hover:bg-muted/50", isLeader && "bg-primary/10 hover:bg-primary/20")}>
+                                    <TableRow key={loan.id} className={cn("bg-background hover:bg-muted/50", isLeader && "bg-primary/10 hover:bg-primary/20", !openGroups[item.groupId] && 'hidden' )}>
                                     <TableCell className="pl-12 text-xs font-mono text-muted-foreground">{loan.id}</TableCell>
                                     <TableCell>
                                         <div className='flex items-center gap-2'>
@@ -208,10 +209,9 @@ const LoanTable = ({ loans, user, handleApprove, handlePreclose }: { loans: Loan
                                     </TableRow>
                                     )
                                 })}
-                                </React.Fragment>
-                            </CollapsibleContent>
-                        </React.Fragment>
-                    </Collapsible>
+                           </React.Fragment>
+                        </CollapsibleContent>
+                    </React.Fragment>
                 ) : ( // Personal Loan
                     <TableRow key={item.loan.id}>
                         <TableCell className="font-mono text-xs">{item.loan.id}</TableCell>
@@ -388,4 +388,5 @@ export default function LoansPage() {
   )
 }
 
+    
     
