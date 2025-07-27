@@ -62,7 +62,7 @@ import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { useUserActivity } from '@/lib/data'
 
-type UserRole = 'Admin' | 'Collection Agent' | 'Auditor';
+type UserRole = 'Admin' | 'Collection Agent';
 
 type User = {
     id: string;
@@ -75,7 +75,7 @@ const userSchema = z.object({
   id: z.string().optional(),
   username: z.string().min(3, 'Username must be at least 3 characters.'),
   password: z.string().min(6, 'Password must be at least 6 characters.').optional().or(z.literal('')),
-  role: z.enum(['Admin', 'Collection Agent', 'Auditor']),
+  role: z.enum(['Admin', 'Collection Agent']),
 });
 
 const editUserSchema = userSchema.omit({ password: true });
@@ -92,7 +92,6 @@ const resetPasswordSchema = z.object({
 const initialUsers: User[] = [
   { id: 'USR001', username: 'admin', role: 'Admin', lastLogin: '2024-07-29 10:00 AM' },
   { id: 'USR002', username: 'agent_ramesh', role: 'Collection Agent', lastLogin: '2024-07-29 09:30 AM' },
-  { id: 'USR003', username: 'auditor_sunita', role: 'Auditor', lastLogin: '2024-07-28 02:15 PM' },
 ];
 
 const getUsersFromStorage = (): User[] => {
@@ -266,7 +265,6 @@ export default function UsersPage() {
                         <SelectContent>
                           <SelectItem value="Admin">Admin</SelectItem>
                           <SelectItem value="Collection Agent">Collection Agent</SelectItem>
-                          <SelectItem value="Auditor">Auditor</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -347,7 +345,6 @@ export default function UsersPage() {
                   <SelectContent>
                     <SelectItem value="Admin">Admin</SelectItem>
                     <SelectItem value="Collection Agent">Collection Agent</SelectItem>
-                    <SelectItem value="Auditor">Auditor</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />

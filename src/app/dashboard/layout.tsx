@@ -42,9 +42,9 @@ import { Logo } from '@/components/logo'
 import { useUserActivity, useCompanyProfile } from '@/lib/data'
 
 const allMenuItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Admin', 'Collection Agent', 'Auditor'] },
-  { href: '/dashboard/customers', label: 'Customers', icon: Users, roles: ['Admin', 'Collection Agent', 'Auditor'] },
-  { href: '/dashboard/loans', label: 'Loans', icon: Landmark, roles: ['Admin', 'Collection Agent', 'Auditor'] },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Admin', 'Collection Agent'] },
+  { href: '/dashboard/customers', label: 'Customers', icon: Users, roles: ['Admin', 'Collection Agent'] },
+  { href: '/dashboard/loans', label: 'Loans', icon: Landmark, roles: ['Admin', 'Collection Agent'] },
   { href: '/dashboard/collections', label: 'Collections', icon: ClipboardCheck, roles: ['Admin', 'Collection Agent'] },
   { href: '/dashboard/users', label: 'Users', icon: UserCog, roles: ['Admin'] },
   { href: '/dashboard/activity', label: 'Activity Log', icon: History, roles: ['Admin'] },
