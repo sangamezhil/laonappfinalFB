@@ -1,7 +1,9 @@
 
+
 import type {Metadata} from 'next';
 import { Toaster } from "@/components/ui/toaster"
 import './globals.css';
+import { useCompanyProfile } from './lib/data';
 
 export const metadata: Metadata = {
   title: 'LoanTrack Lite',
