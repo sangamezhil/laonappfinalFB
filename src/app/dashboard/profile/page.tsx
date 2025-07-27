@@ -63,7 +63,11 @@ export default function CompanyProfilePage() {
   };
 
   function onSubmit(data: ProfileFormValues) {
-    updateProfile(data)
+    const updatedData = {
+      ...data,
+      name: data.name.toUpperCase(),
+    };
+    updateProfile(updatedData)
     logActivity('Update Company Profile', 'Updated company profile details.')
     toast({
       title: 'Profile Updated',
@@ -115,7 +119,12 @@ export default function CompanyProfilePage() {
                   <FormItem>
                     <FormLabel>Company Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter company name" {...field} />
+                      <Input 
+                        placeholder="Enter company name" 
+                        {...field}
+                        value={field.value.toUpperCase()}
+                        onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
