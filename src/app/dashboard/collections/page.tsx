@@ -137,12 +137,15 @@ function CollectionsPageContent() {
     if (loanIdFromQuery) {
       form.setValue('loanId', loanIdFromQuery, { shouldValidate: true });
       updateLoanDetails(loanIdFromQuery);
-      // Clean up URL by removing the query parameter
-      const currentPath = window.location.pathname;
-      router.replace(currentPath, { scroll: false });
+      // Clean up URL by removing the query parameter after a short delay
+      // to ensure state updates have propagated.
+      setTimeout(() => {
+          const currentPath = window.location.pathname;
+          window.history.replaceState({...window.history.state, as: currentPath, url: currentPath}, '', currentPath);
+      }, 100);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loanIdFromQuery, router]);
+  }, [loanIdFromQuery]);
   
   useEffect(() => {
       updateLoanDetails(selectedLoanIdInForm);
