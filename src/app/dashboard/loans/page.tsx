@@ -3,7 +3,7 @@
 
 import React from 'react';
 import Link from 'next/link'
-import { PlusCircle, MoreHorizontal, ChevronDown, ChevronRight, IndianRupee } from 'lucide-react'
+import { PlusCircle, MoreHorizontal, ChevronDown, ChevronRight, IndianRupee, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -73,7 +73,7 @@ const LoanTable = ({
 }: { 
     loans: Loan[], 
     user: User | null, 
-    handleApprove: (id: string) => void, 
+    handleApprove: (id: string, groupId?: string) => void, 
     handlePreclose: (id: string) => void,
     handleDelete: (loan: Loan) => void,
 }) => {
@@ -172,7 +172,14 @@ const LoanTable = ({
                         </Badge>
                       </TableCell>
                       <TableCell className="flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{item.totalOutstanding.toLocaleString('en-IN')}</TableCell>
-                      <TableCell>&nbsp;</TableCell>
+                      <TableCell>
+                        {user?.role === 'Admin' && item.status === 'Pending' && (
+                            <Button variant="outline" size="sm" onClick={() => handleApprove(item.groupId, item.groupId)}>
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                                Approve Group
+                            </Button>
+                        )}
+                      </TableCell>
                     </TableRow>
 
                     {openGroups[item.groupId] && item.loans.map(loan => {
@@ -327,13 +334,25 @@ export default function LoansPage() {
     }
   }, []);
 
-  const handleApprove = (loanId: string) => {
-    updateLoanStatus(loanId, 'Active');
-    logActivity('Approve Loan', `Approved loan ${loanId}.`);
-    toast({
-      title: 'Loan Approved',
-      description: `Loan ${loanId} has been activated.`,
-    });
+  const handleApprove = (id: string, groupId?: string) => {
+    if (groupId) {
+        const groupLoans = loans.filter(l => l.groupId === groupId && l.status === 'Pending');
+        groupLoans.forEach(loan => {
+            updateLoanStatus(loan.id, 'Active');
+        });
+        logActivity('Approve Group Loan', `Approved all loans for group ${groupId}.`);
+        toast({
+            title: 'Group Loans Approved',
+            description: `All pending loans for the group have been activated.`,
+        });
+    } else {
+        updateLoanStatus(id, 'Active');
+        logActivity('Approve Loan', `Approved loan ${id}.`);
+        toast({
+            title: 'Loan Approved',
+            description: `Loan ${id} has been activated.`,
+        });
+    }
   };
 
   const handlePreclose = (loanId: string) => {
