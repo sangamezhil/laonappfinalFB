@@ -45,10 +45,12 @@ function CollectionsPageContent() {
     return loans.filter(l => l.status === 'Active' || l.status === 'Overdue')
   }, [loans]);
 
+  const loanIdFromQuery = searchParams.get('loanId');
+
   const form = useForm<CollectionFormValues>({
     resolver: zodResolver(collectionSchema),
     defaultValues: {
-      loanId: '',
+      loanId: loanIdFromQuery || '',
       amount: '' as any,
       paymentMethod: 'Cash',
       collectionDate: new Date(),
@@ -56,14 +58,11 @@ function CollectionsPageContent() {
     disabled: activeAndOverdueLoans.length === 0,
   });
   
-  const loanIdFromQuery = searchParams.get('loanId');
   const selectedLoanIdInForm = form.watch('loanId');
   
-  // Effect to handle setting loan from either URL query or form selection
+  // Effect to handle setting loan details when the form's loanId changes
   useEffect(() => {
-    const loanIdToProcess = loanIdFromQuery || selectedLoanIdInForm;
-
-    if (!loanIdToProcess) {
+    if (!selectedLoanIdInForm) {
       setSelectedLoan(null);
       setDueDates({ current: null, next: null });
        form.reset({
@@ -75,7 +74,7 @@ function CollectionsPageContent() {
       return;
     }
 
-    const loan = loans.find(l => l.id === loanIdToProcess);
+    const loan = loans.find(l => l.id === selectedLoanIdInForm);
 
     if (loan) {
         setSelectedLoan(loan);
@@ -103,19 +102,18 @@ function CollectionsPageContent() {
       form.resetField('amount');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedLoanIdInForm, loanIdFromQuery, loans, form.setValue]);
+  }, [selectedLoanIdInForm, loans]);
 
 
-  // Effect to sync URL query param to form state, and then clear the URL.
-  // This runs only when the query param itself changes.
+  // Effect to sync URL query param to form state, but only when the page loads with it.
   useEffect(() => {
     if (loanIdFromQuery) {
-        if (loanIdFromQuery !== form.getValues('loanId')) {
-            form.setValue('loanId', loanIdFromQuery, { shouldValidate: true });
-        }
-        // Use replace with the current pathname to remove query params
-        const currentPathname = window.location.pathname;
-        router.replace(currentPathname, { scroll: false });
+      if (loanIdFromQuery !== form.getValues('loanId')) {
+        form.setValue('loanId', loanIdFromQuery, { shouldValidate: true });
+      }
+      // Use replace to remove query params after processing.
+      const currentPathname = window.location.pathname;
+      router.replace(currentPathname, { scroll: false });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loanIdFromQuery]);
