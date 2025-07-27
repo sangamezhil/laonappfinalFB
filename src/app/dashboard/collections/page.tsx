@@ -45,20 +45,21 @@ function CollectionsPageContent() {
     return loans.filter(l => l.status === 'Active' || l.status === 'Overdue')
   }, [loans]);
 
+  const loanIdFromQuery = searchParams.get('loanId');
+
   const form = useForm<CollectionFormValues>({
     resolver: zodResolver(collectionSchema),
     defaultValues: {
-      loanId: '',
+      loanId: loanIdFromQuery || '',
       amount: '' as any,
       paymentMethod: 'Cash',
       collectionDate: new Date(),
     },
     disabled: activeAndOverdueLoans.length === 0,
   });
-  
+
   const selectedLoanIdInForm = form.watch('loanId');
-  
-  // Effect to handle setting loan details when the form's loanId changes
+
   useEffect(() => {
     const loan = loans.find(l => l.id === selectedLoanIdInForm);
     if (loan) {
@@ -84,30 +85,19 @@ function CollectionsPageContent() {
     } else {
       setSelectedLoan(null);
       setDueDates({ current: null, next: null });
-      form.reset({
-        loanId: '',
-        amount: '' as any,
-        paymentMethod: 'Cash',
-        collectionDate: new Date(),
-      });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLoanIdInForm, loans]);
 
-
-  // Effect to sync URL query param to form state, but only when the page loads with it.
   useEffect(() => {
-    const loanIdFromQuery = searchParams.get('loanId');
     if (loanIdFromQuery) {
-      if (loanIdFromQuery !== form.getValues('loanId')) {
         form.setValue('loanId', loanIdFromQuery, { shouldValidate: true });
-      }
-      // Use replace to remove query params after processing.
-      const currentPathname = window.location.pathname;
-      router.replace(currentPathname, { scroll: false });
+        // Clean up URL
+        const currentPathname = window.location.pathname;
+        router.replace(currentPathname, { scroll: false });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, [loanIdFromQuery]);
 
 
   const handlePhoneSearch = () => {
@@ -346,3 +336,5 @@ export default function CollectionsPage() {
     </Suspense>
   )
 }
+
+    
