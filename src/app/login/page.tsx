@@ -97,7 +97,6 @@ export default function LoginPage() {
           ) : (
             <Skeleton className="w-48 h-8 mx-auto" />
           )}
-          <CardDescription>Enter your credentials to access your account</CardDescription>
         </CardHeader>
         <form onSubmit={handleLogin}>
           <CardContent className="space-y-4">
