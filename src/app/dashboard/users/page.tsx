@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { PlusCircle, MoreHorizontal } from 'lucide-react'
+import { PlusCircle, MoreHorizontal, FileDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -13,6 +13,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from '@/components/ui/card'
 import {
   Table,
@@ -60,7 +61,9 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
-import { useUserActivity } from '@/lib/data'
+import { useUserActivity, useCustomers, useLoans, useCollections, Customer, Loan, Collection } from '@/lib/data'
+import * as XLSX from 'xlsx';
+
 
 type UserRole = 'Admin' | 'Collection Agent';
 
@@ -83,7 +86,10 @@ const userSchema = z.object({
   role: z.enum(['Admin', 'Collection Agent']),
 });
 
-const editUserSchema = userSchema.omit({ password: true });
+const editUserSchema = userSchema.omit({ password: true }).extend({
+  role: z.enum(['Collection Agent']),
+});
+
 
 const resetPasswordSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters."),
@@ -120,6 +126,9 @@ export default function UsersPage() {
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [loggedInUser, setLoggedInUser] = useState<LoggedInUser | null>(null);
   const { logActivity } = useUserActivity();
+  const { customers } = useCustomers();
+  const { loans } = useLoans();
+  const { collections } = useCollections();
 
   const { toast } = useToast();
 
@@ -226,7 +235,7 @@ export default function UsersPage() {
     editForm.reset({
         id: user.id,
         username: user.username,
-        role: user.role,
+        role: 'Collection Agent',
     });
     setEditDialogOpen(true);
   }
@@ -235,6 +244,17 @@ export default function UsersPage() {
     setUserToEdit(user);
     setResetPasswordOpen(true);
   }
+
+  const downloadExcel = (data: any[], filename: string) => {
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+    XLSX.writeFile(workbook, `${filename}.xlsx`);
+    toast({
+        title: 'Download Started',
+        description: `${filename}.xlsx is being downloaded.`,
+    });
+  };
 
 
   return (
@@ -341,6 +361,27 @@ export default function UsersPage() {
           </TableBody>
         </Table>
       </CardContent>
+      <CardFooter>
+          {loggedInUser?.role === 'Admin' && (
+            <div className="pt-4 border-t w-full">
+              <h3 className="text-lg font-semibold mb-2">Data Exports</h3>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => downloadExcel(customers, 'customers')}>
+                  <FileDown className="w-4 h-4 mr-2" />
+                  Download Customers
+                </Button>
+                <Button variant="outline" onClick={() => downloadExcel(loans, 'loans')}>
+                  <FileDown className="w-4 h-4 mr-2" />
+                  Download Loans
+                </Button>
+                <Button variant="outline" onClick={() => downloadExcel(collections, 'collections')}>
+                  <FileDown className="w-4 h-4 mr-2" />
+                  Download Collections
+                </Button>
+              </div>
+            </div>
+          )}
+      </CardFooter>
     </Card>
 
     <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
@@ -363,10 +404,9 @@ export default function UsersPage() {
             <FormField control={editForm.control} name="role" render={({ field }) => (
               <FormItem>
                 <FormLabel>Role</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={field.value === 'Admin'}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
                   <SelectContent>
-                    {userToEdit?.role === 'Admin' && <SelectItem value="Admin">Admin</SelectItem>}
                     <SelectItem value="Collection Agent">Collection Agent</SelectItem>
                   </SelectContent>
                 </Select>

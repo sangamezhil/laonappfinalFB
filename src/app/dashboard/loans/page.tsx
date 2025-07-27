@@ -3,7 +3,7 @@
 
 import React from 'react';
 import Link from 'next/link'
-import { PlusCircle, MoreHorizontal, ChevronDown, ChevronRight, IndianRupee, CheckCircle, FileDown } from 'lucide-react'
+import { PlusCircle, MoreHorizontal, ChevronDown, ChevronRight, IndianRupee, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -376,13 +376,6 @@ export default function LoansPage() {
     }
   };
 
-  const handleDownload = () => {
-    toast({
-      title: 'Feature not available',
-      description: 'The Excel download feature is currently unavailable.',
-    });
-  };
-
   if (!isLoaded) {
     return (
         <Card>
@@ -440,10 +433,6 @@ export default function LoansPage() {
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleDownload}>
-                <FileDown className="w-4 h-4 mr-2" />
-                Download Excel
-            </Button>
             {user?.role === 'Admin' && (
                 <Link href="/dashboard/loans/new" passHref>
                     <Button>
