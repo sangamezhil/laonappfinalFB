@@ -72,6 +72,7 @@ function CollectionsPageContent() {
   const [dueDates, setDueDates] = useState<{ current: Date | null, next: Date | null }>({ current: null, next: null });
   const [collectionToDelete, setCollectionToDelete] = useState<Collection | null>(null);
   const [user, setUser] = React.useState<User | null>(null);
+  
   const loanIdFromQuery = searchParams.get('loanId');
 
   useEffect(() => {
@@ -127,7 +128,6 @@ function CollectionsPageContent() {
   }, [loans, form]);
 
   useEffect(() => {
-    const currentPath = window.location.pathname;
     const loanId = loanIdFromQuery || selectedLoanIdInForm;
 
     if (loanId) {
@@ -135,6 +135,7 @@ function CollectionsPageContent() {
         if (loanIdFromQuery) {
             form.setValue('loanId', loanIdFromQuery, { shouldValidate: true, shouldDirty: true });
             // Clean up URL by removing the query parameter after processing
+             const currentPath = window.location.pathname;
              window.history.replaceState({ ...window.history.state, as: currentPath, url: currentPath }, '', currentPath);
         }
     } else {
@@ -435,6 +436,8 @@ export default function CollectionsPage() {
     </Suspense>
   )
 }
+
+    
 
     
 
