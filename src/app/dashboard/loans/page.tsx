@@ -148,10 +148,17 @@ const LoanTable = ({ loans, user, handleApprove, handlePreclose }: { loans: Loan
                         </TableRow>
                         <CollapsibleContent asChild>
                            <>
-                            {item.loans.map(loan => (
-                               <TableRow key={loan.id} className="bg-background hover:bg-muted/50">
+                            {item.loans.map(loan => {
+                                const isLeader = loan.customerName === loan.groupLeaderName;
+                                return (
+                                <TableRow key={loan.id} className={cn("bg-background hover:bg-muted/50", isLeader && "bg-primary/10 hover:bg-primary/20")}>
                                    <TableCell className="pl-12 text-muted-foreground">{loan.id}</TableCell>
-                                   <TableCell>{loan.customerName}</TableCell>
+                                   <TableCell>
+                                     <div className='flex items-center gap-2'>
+                                       {loan.customerName}
+                                       {isLeader && <Badge variant="secondary" size="sm">Leader</Badge>}
+                                     </div>
+                                    </TableCell>
                                    <TableCell className="text-muted-foreground">Member</TableCell>
                                    <TableCell>₹{loan.amount.toLocaleString('en-IN')}</TableCell>
                                    <TableCell>
@@ -197,7 +204,8 @@ const LoanTable = ({ loans, user, handleApprove, handlePreclose }: { loans: Loan
                                         </DropdownMenu>
                                    </TableCell>
                                </TableRow>
-                            ))}
+                                )
+                            })}
                            </>
                         </CollapsibleContent>
                     </>
