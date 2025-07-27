@@ -111,6 +111,7 @@ export default function CustomersPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Customer</TableHead>
+              <TableHead>Phone</TableHead>
               <TableHead>ID Type</TableHead>
               <TableHead>ID Number</TableHead>
               <TableHead>Registered On</TableHead>
@@ -129,6 +130,7 @@ export default function CustomersPage() {
                       <Skeleton className="w-32 h-3" />
                     </div>
                   </TableCell>
+                  <TableCell><Skeleton className="w-24 h-5" /></TableCell>
                   <TableCell><Skeleton className="w-20 h-5" /></TableCell>
                   <TableCell><Skeleton className="w-28 h-5" /></TableCell>
                   <TableCell><Skeleton className="w-24 h-5" /></TableCell>
@@ -146,6 +148,7 @@ export default function CustomersPage() {
                       <div className="text-sm text-muted-foreground">{customer.email}</div>
                     </div>
                   </TableCell>
+                  <TableCell>{customer.phone}</TableCell>
                   <TableCell>{customer.idType}</TableCell>
                   <TableCell>{customer.idNumber}</TableCell>
                   <TableCell>{customer.registrationDate}</TableCell>
