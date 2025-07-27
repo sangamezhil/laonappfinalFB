@@ -2,15 +2,13 @@
 'use client'
 
 import * as React from 'react'
-import { TrendingUp, Users, Landmark, AlertCircle, CheckCircle, Wallet, FileText, Trash2, IndianRupee } from 'lucide-react'
+import { TrendingUp, Users, Landmark, AlertCircle, CheckCircle, Wallet, FileText, IndianRupee } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Line, LineChart } from 'recharts'
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import type { ChartConfig } from '@/components/ui/chart'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { useToast } from '@/hooks/use-toast'
 import { useLoans, useCustomers } from '@/lib/data'
 
 const chartData = [
@@ -34,23 +32,8 @@ const chartConfig = {
 } satisfies ChartConfig
 
 export default function DashboardPage() {
-  const { toast } = useToast()
   const { loans, isLoaded: loansLoaded } = useLoans()
   const { customers, isLoaded: customersLoaded } = useCustomers()
-
-  const handleClearData = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('customers')
-      localStorage.removeItem('loans')
-      // Add other keys to remove here, like 'collections' when implemented
-      toast({
-        title: 'Data Cleared',
-        description: 'All customer and loan data has been reset.',
-      })
-      // Use a short timeout to allow the toast to appear before reload
-      setTimeout(() => window.location.reload(), 500)
-    }
-  }
 
   const summary = React.useMemo(() => {
     if (!loansLoaded) return {
@@ -92,12 +75,6 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-end">
-        <Button variant="destructive" onClick={handleClearData}>
-          <Trash2 className="w-4 h-4 mr-2" />
-          Clear All Data
-        </Button>
-      </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
@@ -140,7 +117,7 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-4">
           <CardHeader>
-            <CardTitle>Disbursement & Collection Overview</CardTitle>
+            <CardTitle>Disbursement &amp; Collection Overview</CardTitle>
           </CardHeader>
           <CardContent className="pl-2">
             <ChartContainer config={chartConfig} className="h-[300px] w-full">
@@ -210,7 +187,7 @@ export default function DashboardPage() {
             <TableBody>
               {summary.recentLoans.map((loan) => (
                 <TableRow key={loan.id}>
-                  <TableCell className="font-medium">{loan.id}</TableCell>
+                  <TableCell className="font-mono text-xs">{loan.id}</TableCell>
                   <TableCell>{loan.customerName}</TableCell>
                   <TableCell className="flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{loan.amount.toLocaleString('en-IN')}</TableCell>
                   <TableCell>
