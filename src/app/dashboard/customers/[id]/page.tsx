@@ -118,7 +118,7 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
             </div>
              <div className="flex items-center gap-2">
               <Cake className="w-4 h-4" />
-              <span>Date of Birth: <strong>{format(new Date(customer.dob), 'PPP')}</strong></span>
+              <span>Date of Birth: <strong>{customer.dob ? format(new Date(customer.dob), 'PPP') : 'N/A'}</strong></span>
             </div>
             <div className="flex items-center gap-2">
               <Briefcase className="w-4 h-4" />
