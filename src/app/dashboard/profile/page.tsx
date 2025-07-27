@@ -122,7 +122,7 @@ export default function CompanyProfilePage() {
                       <Input 
                         placeholder="Enter company name" 
                         {...field}
-                        value={field.value.toUpperCase()}
+                        value={(field.value ?? '').toUpperCase()}
                         onChange={(e) => field.onChange(e.target.value.toUpperCase())}
                       />
                     </FormControl>
