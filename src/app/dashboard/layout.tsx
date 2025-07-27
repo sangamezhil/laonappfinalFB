@@ -146,7 +146,7 @@ export default function DashboardLayout({
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/dashboard/users">Profile</Link>
+                <Link href="/dashboard/users">Company Profile</Link>
               </DropdownMenuItem>
               <DropdownMenuItem disabled>Settings</DropdownMenuItem>
               <DropdownMenuSeparator />
