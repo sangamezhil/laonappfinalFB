@@ -72,6 +72,7 @@ function CollectionsPageContent() {
   const [dueDates, setDueDates] = useState<{ current: Date | null, next: Date | null }>({ current: null, next: null });
   const [collectionToDelete, setCollectionToDelete] = useState<Collection | null>(null);
   const [user, setUser] = React.useState<User | null>(null);
+  const loanIdFromQuery = searchParams.get('loanId');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -86,12 +87,10 @@ function CollectionsPageContent() {
     return loans.filter(l => l.status === 'Active' || l.status === 'Overdue')
   }, [loans]);
 
-  const loanIdFromQuery = searchParams.get('loanId');
-
   const form = useForm<CollectionFormValues>({
     resolver: zodResolver(collectionSchema),
     defaultValues: {
-      loanId: '',
+      loanId: loanIdFromQuery || '',
       amount: '' as any,
       paymentMethod: 'Cash',
       collectionDate: format(new Date(), 'ddMMyyyy'),
@@ -124,33 +123,34 @@ function CollectionsPageContent() {
       setDueDates({ current: currentDueDate, next: nextDueDate });
     } else {
       setDueDates({ current: null, next: null });
-      form.reset({
-        loanId: '',
-        amount: '' as any,
-        paymentMethod: 'Cash',
-        collectionDate: format(new Date(), 'ddMMyyyy'),
-      });
+      if (!loanIdFromQuery) { // Avoid resetting form if there was an attempt to load from query
+        form.reset({
+          loanId: '',
+          amount: '' as any,
+          paymentMethod: 'Cash',
+          collectionDate: format(new Date(), 'ddMMyyyy'),
+        });
+      }
     }
-  }, [loans, form]);
+  }, [loans, form, loanIdFromQuery]);
 
   useEffect(() => {
-    if (loanIdFromQuery) {
-      form.setValue('loanId', loanIdFromQuery, { shouldValidate: true });
-      updateLoanDetails(loanIdFromQuery);
-      // Clean up URL by removing the query parameter after a short delay
+    if (loanIdFromQuery && !selectedLoanIdInForm) {
+      form.setValue('loanId', loanIdFromQuery, { shouldValidate: true, shouldDirty: true });
+    }
+    updateLoanDetails(selectedLoanIdInForm || loanIdFromQuery);
+  }, [loanIdFromQuery, selectedLoanIdInForm, updateLoanDetails, form]);
+
+  useEffect(() => {
+    if (loanIdFromQuery && selectedLoanIdInForm) {
+       // Clean up URL by removing the query parameter after a short delay
       // to ensure state updates have propagated.
       setTimeout(() => {
           const currentPath = window.location.pathname;
           window.history.replaceState({...window.history.state, as: currentPath, url: currentPath}, '', currentPath);
       }, 100);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loanIdFromQuery]);
-  
-  useEffect(() => {
-      updateLoanDetails(selectedLoanIdInForm);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedLoanIdInForm]);
+  }, [loanIdFromQuery, selectedLoanIdInForm]);
 
 
   const handlePhoneSearch = () => {
