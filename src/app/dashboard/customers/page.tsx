@@ -125,12 +125,9 @@ export default function CustomersPage() {
                Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
                   <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Skeleton className="w-10 h-10 rounded-full" />
-                      <div className="grid gap-1">
-                        <Skeleton className="w-24 h-4" />
-                        <Skeleton className="w-32 h-3" />
-                      </div>
+                    <div className="grid gap-1">
+                      <Skeleton className="w-24 h-4" />
+                      <Skeleton className="w-32 h-3" />
                     </div>
                   </TableCell>
                   <TableCell><Skeleton className="w-24 h-5" /></TableCell>
@@ -144,17 +141,11 @@ export default function CustomersPage() {
               customers.map((customer) => (
                 <TableRow key={customer.id}>
                   <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="hidden w-10 h-10 sm:flex">
-                        <AvatarImage src={customer.profilePicture} alt={customer.name} data-ai-hint="person avatar" />
-                        <AvatarFallback>{customer.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div className="grid gap-0.5">
-                        <Link href={`/dashboard/customers/${customer.id}`} className="font-medium hover:underline">
-                          {customer.name}
-                        </Link>
-                        <div className="text-sm text-muted-foreground">{customer.email}</div>
-                      </div>
+                    <div className="grid gap-0.5">
+                      <Link href={`/dashboard/customers/${customer.id}`} className="font-medium hover:underline">
+                        {customer.name}
+                      </Link>
+                      <div className="text-sm text-muted-foreground">{customer.email}</div>
                     </div>
                   </TableCell>
                   <TableCell>{customer.occupation}</TableCell>
