@@ -26,7 +26,18 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Badge } from '@/components/ui/badge'
 import { useLoans, useUserActivity, Loan } from '@/lib/data'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -53,7 +64,21 @@ type GroupedLoan = {
     loan: Loan;
 }
 
-const LoanTable = ({ loans, user, handleApprove, handlePreclose }: { loans: Loan[], user: User | null, handleApprove: (id: string) => void, handlePreclose: (id: string) => void }) => {
+const LoanTable = ({ 
+    loans, 
+    user, 
+    handleApprove, 
+    handlePreclose, 
+    handleDelete,
+    isClosedTab = false,
+}: { 
+    loans: Loan[], 
+    user: User | null, 
+    handleApprove: (id: string) => void, 
+    handlePreclose: (id: string) => void,
+    handleDelete: (loan: Loan) => void,
+    isClosedTab?: boolean
+}) => {
     const router = useRouter();
     const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>({});
 
@@ -204,6 +229,14 @@ const LoanTable = ({ loans, user, handleApprove, handlePreclose }: { loans: Loan
                                     Record Payment
                                     </DropdownMenuItem>
                                 }
+                                 {isClosedTab && user?.role === 'Admin' && (
+                                    <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onSelect={() => handleDelete(loan)} className="text-destructive">
+                                        Delete Loan
+                                    </DropdownMenuItem>
+                                    </>
+                                )}
                                 </DropdownMenuContent>
                             </DropdownMenu>
                             </TableCell>
@@ -257,6 +290,14 @@ const LoanTable = ({ loans, user, handleApprove, handlePreclose }: { loans: Loan
                                 Record Payment
                                 </DropdownMenuItem>
                             }
+                            {isClosedTab && user?.role === 'Admin' && (
+                                <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onSelect={() => handleDelete(item.loan)} className="text-destructive">
+                                    Delete Loan
+                                </DropdownMenuItem>
+                                </>
+                            )}
                             </DropdownMenuContent>
                         </DropdownMenu>
                         </TableCell>
@@ -269,10 +310,11 @@ const LoanTable = ({ loans, user, handleApprove, handlePreclose }: { loans: Loan
 }
 
 export default function LoansPage() {
-  const { loans, isLoaded, updateLoanStatus } = useLoans();
+  const { loans, isLoaded, updateLoanStatus, deleteLoan } = useLoans();
   const { toast } = useToast();
   const [user, setUser] = React.useState<User | null>(null);
   const { logActivity } = useUserActivity();
+  const [loanToDelete, setLoanToDelete] = React.useState<Loan | null>(null);
 
   const activeLoans = React.useMemo(() => loans.filter(l => l.status === 'Active' || l.status === 'Overdue' || l.status === 'Pending'), [loans]);
   const closedLoans = React.useMemo(() => loans.filter(l => l.status === 'Closed'), [loans]);
@@ -303,6 +345,18 @@ export default function LoansPage() {
       title: 'Loan Pre-closed',
       description: `Loan ${loanId} has been marked as closed.`,
     });
+  };
+
+  const confirmDelete = () => {
+    if (loanToDelete) {
+      deleteLoan(loanToDelete.id);
+      logActivity('Delete Loan', `Deleted loan ${loanToDelete.id}.`);
+      toast({
+        title: 'Loan Deleted',
+        description: `Loan ${loanToDelete.id} for ${loanToDelete.customerName} has been deleted.`,
+      });
+      setLoanToDelete(null);
+    }
   };
 
   if (!isLoaded) {
@@ -351,6 +405,7 @@ export default function LoansPage() {
   }
 
   return (
+    <>
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
@@ -377,15 +432,41 @@ export default function LoansPage() {
                 <TabsTrigger value="closed">Closed</TabsTrigger>
             </TabsList>
             <TabsContent value="active">
-                <LoanTable loans={activeLoans} user={user} handleApprove={handleApprove} handlePreclose={handlePreclose} />
+                <LoanTable 
+                    loans={activeLoans} 
+                    user={user} 
+                    handleApprove={handleApprove} 
+                    handlePreclose={handlePreclose} 
+                    handleDelete={setLoanToDelete}
+                />
             </TabsContent>
             <TabsContent value="closed">
-                <LoanTable loans={closedLoans} user={user} handleApprove={handleApprove} handlePreclose={handlePreclose} />
+                <LoanTable 
+                    loans={closedLoans} 
+                    user={user} 
+                    handleApprove={handleApprove} 
+                    handlePreclose={handlePreclose} 
+                    handleDelete={setLoanToDelete}
+                    isClosedTab={true}
+                />
             </TabsContent>
         </Tabs>
       </CardContent>
     </Card>
+     <AlertDialog open={!!loanToDelete} onOpenChange={(open) => !open && setLoanToDelete(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the loan record <span className="font-bold">{loanToDelete?.id}</span> for <span className="font-bold">{loanToDelete?.customerName}</span>.
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    </>
   )
 }
-
-    

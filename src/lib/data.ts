@@ -217,8 +217,15 @@ export const useLoans = () => {
         setInStorage('loans', updatedLoans);
         setLoans(updatedLoans);
     }
+    
+    const deleteLoan = (loanId: string) => {
+        const currentLoans = getFromStorage('loans', initialLoans);
+        const updatedLoans = currentLoans.filter(loan => loan.id !== loanId);
+        setInStorage('loans', updatedLoans);
+        setLoans(updatedLoans);
+    };
 
-    return { loans, addLoan, isLoaded, updateLoanStatus, updateLoanPayment };
+    return { loans, addLoan, isLoaded, updateLoanStatus, updateLoanPayment, deleteLoan };
 }
 
 export const useUserActivity = () => {
