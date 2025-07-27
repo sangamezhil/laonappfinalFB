@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import { notFound, useRouter } from 'next/navigation';
 import { getCustomerById, getLoansByCustomerId, Customer, Loan, useCollections, Collection } from '@/lib/data'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -21,8 +21,7 @@ type LoanWithDetails = Loan & {
 };
 
 export default function CustomerProfilePage({ params }: { params: { id: string } }) {
-  const resolvedParams = use(params);
-  const customerId = resolvedParams.id;
+  const customerId = params.id;
   const router = useRouter();
 
   const [customer, setCustomer] = useState<Customer | null | undefined>(undefined);
@@ -271,5 +270,3 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
     </div>
   )
 }
-
-    
