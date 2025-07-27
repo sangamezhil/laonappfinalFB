@@ -50,7 +50,7 @@ function CollectionsPageContent() {
   const form = useForm<CollectionFormValues>({
     resolver: zodResolver(collectionSchema),
     defaultValues: {
-      loanId: loanIdFromQuery || '',
+      loanId: '',
       amount: '' as any,
       paymentMethod: 'Cash',
       collectionDate: new Date(),
@@ -59,8 +59,10 @@ function CollectionsPageContent() {
 
   const selectedLoanIdInForm = form.watch('loanId');
 
-  const updateLoanDetails = useCallback((loan: Loan | null) => {
-    setSelectedLoan(loan);
+  const updateLoanDetails = useCallback((loanId: string | null) => {
+    const loan = loanId ? loans.find(l => l.id === loanId) : null;
+    setSelectedLoan(loan || null);
+
     if (loan) {
       form.setValue('amount', loan.weeklyRepayment, { shouldValidate: true });
 
@@ -88,32 +90,23 @@ function CollectionsPageContent() {
         collectionDate: new Date(),
       });
     }
-  }, [form]);
+  }, [loans, form]);
 
   useEffect(() => {
     if (loanIdFromQuery) {
-        const loan = loans.find(l => l.id === loanIdFromQuery);
-        updateLoanDetails(loan || null);
-        form.setValue('loanId', loanIdFromQuery, { shouldValidate: true });
-
-        // Clean up URL by removing the query parameter
-        const currentPath = window.location.pathname;
-        router.replace(currentPath, { scroll: false });
+      form.setValue('loanId', loanIdFromQuery, { shouldValidate: true });
+      updateLoanDetails(loanIdFromQuery);
+      // Clean up URL by removing the query parameter
+      const currentPath = window.location.pathname;
+      router.replace(currentPath, { scroll: false });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loanIdFromQuery]);
-
+  }, [loanIdFromQuery, router]);
+  
   useEffect(() => {
-      const loan = loans.find(l => l.id === selectedLoanIdInForm);
-      if (loan) {
-          updateLoanDetails(loan);
-      } else {
-          // If the loanId becomes invalid (e.g., cleared), reset details
-          updateLoanDetails(null);
-      }
+      updateLoanDetails(selectedLoanIdInForm);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLoanIdInForm]);
-
 
 
   const handlePhoneSearch = () => {
@@ -262,7 +255,7 @@ function CollectionsPageContent() {
 
                 <FormField control={form.control} name="amount" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Amount Collected (₹)</FormLabel>
+                    <FormLabel className="flex items-center gap-1">Amount Collected <IndianRupee className="w-4 h-4" /></FormLabel>
                     <FormControl><Input type="number" placeholder="Enter amount" {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                   </FormItem>

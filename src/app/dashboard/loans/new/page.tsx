@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
 import { useCustomers, useLoans, useUserActivity } from '@/lib/data'
+import { IndianRupee } from 'lucide-react'
 
 const personalLoanSchema = z.object({
   customerId: z.string().nonempty({ message: 'Please select a customer.' }),
@@ -46,7 +47,7 @@ const DisbursalCalculator = ({ control, loanType }: { control: any, loanType: 'p
   const principal = parseFloat(loanAmount) || 0;
   const size = parseInt(groupSize) || 1;
   const perMemberPrincipal = loanType === 'group' ? principal / size : principal;
-
+  
   const interest = (perMemberPrincipal * (parseFloat(interestRate) || 0)) / 100;
   const docs = (parseFloat(docCharges) || 0) / (loanType === 'group' ? size : 1);
   const insurance = (parseFloat(insuranceCharges) || 0) / (loanType === 'group' ? size : 1);
@@ -61,15 +62,15 @@ const DisbursalCalculator = ({ control, loanType }: { control: any, loanType: 'p
   return (
     <div className="p-4 mt-4 border rounded-lg bg-secondary/50">
       <h4 className="mb-2 font-semibold">Loan Calculation</h4>
-      {loanType === 'group' && <div className="flex justify-between"><span>Total Group Principal:</span> <span>₹{principal.toLocaleString('en-IN')}</span></div>}
+      {loanType === 'group' && <div className="flex justify-between"><span>Total Group Principal:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{principal.toLocaleString('en-IN')}</span></div>}
       <div className="space-y-2 text-sm">
-        <div className="flex justify-between"><span>Principal per Member:</span> <span>₹{perMemberPrincipal.toLocaleString('en-IN')}</span></div>
-        <div className="flex justify-between text-muted-foreground"><span>Interest ({interestRate}%):</span> <span>- ₹{interest.toLocaleString('en-IN')}</span></div>
-        <div className="flex justify-between text-muted-foreground"><span>Doc Charges (per member):</span> <span>- ₹{docs.toLocaleString('en-IN')}</span></div>
-        <div className="flex justify-between text-muted-foreground"><span>Insurance (per member):</span> <span>- ₹{insurance.toLocaleString('en-IN')}</span></div>
-        <div className="flex justify-between pt-2 mt-2 font-bold border-t"><span>Net Disbursal per Member:</span> <span>₹{disbursalAmount.toLocaleString('en-IN')}</span></div>
+        <div className="flex justify-between"><span>Principal per Member:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{perMemberPrincipal.toLocaleString('en-IN')}</span></div>
+        <div className="flex justify-between text-muted-foreground"><span>Interest ({interestRate}%):</span> <span className='flex items-center'>- <IndianRupee className='w-4 h-4 mx-1'/>{interest.toLocaleString('en-IN')}</span></div>
+        <div className="flex justify-between text-muted-foreground"><span>Doc Charges (per member):</span> <span className='flex items-center'>- <IndianRupee className='w-4 h-4 mx-1'/>{docs.toLocaleString('en-IN')}</span></div>
+        <div className="flex justify-between text-muted-foreground"><span>Insurance (per member):</span> <span className='flex items-center'>- <IndianRupee className='w-4 h-4 mx-1'/>{insurance.toLocaleString('en-IN')}</span></div>
+        <div className="flex justify-between pt-2 mt-2 font-bold border-t"><span>Net Disbursal per Member:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{disbursalAmount.toLocaleString('en-IN')}</span></div>
         {loanType === 'group' && size > 1 && (
-            <div className="flex justify-between pt-2 mt-2 font-bold text-primary"><span>Total Net Disbursal for Group:</span> <span>₹{totalGroupDisbursal.toLocaleString('en-IN')}</span></div>
+            <div className="flex justify-between pt-2 mt-2 font-bold text-primary"><span>Total Net Disbursal for Group:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{totalGroupDisbursal.toLocaleString('en-IN')}</span></div>
         )}
       </div>
     </div>
@@ -273,7 +274,7 @@ export default function NewLoanPage() {
                     </FormItem>
                   )} />
                   <FormField control={personalForm.control} name="loanAmount" render={({ field }) => (
-                    <FormItem><FormLabel>Loan Amount (₹)</FormLabel><FormControl><Input type="number" placeholder="e.g., 50000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel className="flex items-center gap-1">Loan Amount <IndianRupee className="w-4 h-4" /></FormLabel><FormControl><Input type="number" placeholder="e.g., 50000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                   )} />
                    <FormField control={personalForm.control} name="collectionFrequency" render={({ field }) => (
                     <FormItem><FormLabel>Collection Frequency</FormLabel>
@@ -298,10 +299,10 @@ export default function NewLoanPage() {
                     <FormMessage /></FormItem>
                   )} />
                   <FormField control={personalForm.control} name="docCharges" render={({ field }) => (
-                    <FormItem><FormLabel>Documentation Charges (₹)</FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel className="flex items-center gap-1">Documentation Charges <IndianRupee className="w-4 h-4" /></FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={personalForm.control} name="insuranceCharges" render={({ field }) => (
-                    <FormItem><FormLabel>Insurance Charges (₹)</FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel className="flex items-center gap-1">Insurance Charges <IndianRupee className="w-4 h-4" /></FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                   )} />
                 </div>
                 <DisbursalCalculator control={personalForm.control} loanType="personal" />
@@ -329,7 +330,7 @@ export default function NewLoanPage() {
                         </Select><FormMessage /></FormItem>
                     )} />
                     <FormField control={groupForm.control} name="loanAmount" render={({ field }) => (
-                        <FormItem><FormLabel>Total Group Loan Amount (₹)</FormLabel><FormControl><Input type="number" placeholder="e.g., 200000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel className="flex items-center gap-1">Total Group Loan Amount <IndianRupee className="w-4 h-4" /></FormLabel><FormControl><Input type="number" placeholder="e.g., 200000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={groupForm.control} name="interestRate" render={({ field }) => (
                         <FormItem><FormLabel>Interest Rate (%)</FormLabel>
@@ -344,10 +345,10 @@ export default function NewLoanPage() {
                         </Select><FormMessage /></FormItem>
                     )} />
                      <FormField control={groupForm.control} name="docCharges" render={({ field }) => (
-                        <FormItem><FormLabel>Total Documentation Charges (₹)</FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel className="flex items-center gap-1">Total Documentation Charges <IndianRupee className="w-4 h-4" /></FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={groupForm.control} name="insuranceCharges" render={({ field }) => (
-                        <FormItem><FormLabel>Total Insurance Charges (₹)</FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel className="flex items-center gap-1">Total Insurance Charges <IndianRupee className="w-4 h-4" /></FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                     )} />
                 </div>
                 <div className="space-y-4">
