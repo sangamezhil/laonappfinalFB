@@ -97,6 +97,8 @@ function CollectionsPageContent() {
       collectionDate: format(new Date(), 'ddMMyyyy'),
     },
   });
+  
+  const { formState } = form;
 
   const selectedLoanIdInForm = form.watch('loanId');
 
@@ -346,7 +348,7 @@ function CollectionsPageContent() {
               </CardContent>
               <CardFooter className="flex justify-end gap-2">
                 <Button variant="outline" type="button" onClick={handleClear}>Clear</Button>
-                <Button type="submit" disabled={!selectedLoanIdInForm}>Record Collection</Button>
+                <Button type="submit" disabled={!selectedLoanIdInForm || formState.isSubmitting}>Record Collection</Button>
               </CardFooter>
             </Card>
           </form>
@@ -442,6 +444,8 @@ export default function CollectionsPage() {
     </Suspense>
   )
 }
+
+    
 
     
 
