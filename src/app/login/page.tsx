@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import {
@@ -16,7 +16,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { Logo } from '@/components/logo'
-import { useUserActivity } from '@/lib/data'
+import { useUserActivity, useCompanyProfile } from '@/lib/data'
+import { Skeleton } from '@/components/ui/skeleton'
 
 // Basic User type to match what's in users/page.tsx
 type User = {
@@ -33,6 +34,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const { logActivity } = useUserActivity();
+  const { profile, isLoaded: profileLoaded } = useCompanyProfile();
+
+
+  useEffect(() => {
+    if (profileLoaded && profile.name) {
+      document.title = profile.name;
+    }
+  }, [profile, profileLoaded]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
@@ -81,9 +90,13 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <Logo />
+             {profileLoaded ? <Logo logoUrl={profile.logoUrl} /> : <Skeleton className="w-8 h-8 rounded-full" /> }
           </div>
-          <CardTitle className="text-2xl font-headline">LoanTrack Lite</CardTitle>
+          {profileLoaded ? (
+            <CardTitle className="text-2xl font-headline">{profile.name}</CardTitle>
+          ) : (
+            <Skeleton className="w-48 h-8 mx-auto" />
+          )}
           <CardDescription>Enter your credentials to access your account</CardDescription>
         </CardHeader>
         <form onSubmit={handleLogin}>

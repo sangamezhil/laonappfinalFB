@@ -13,7 +13,6 @@ import {
   LogOut,
   ChevronDown,
   History,
-  Building2,
 } from 'lucide-react'
 
 import {
@@ -39,7 +38,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Logo } from '@/components/logo'
-import { useUserActivity } from '@/lib/data'
+import { useUserActivity, useCompanyProfile } from '@/lib/data'
 
 const allMenuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Admin', 'Collection Agent', 'Auditor'] },
@@ -64,6 +63,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const [user, setUser] = React.useState<User | null>(null);
   const { logActivity } = useUserActivity();
+  const { profile, isLoaded: profileLoaded } = useCompanyProfile();
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -76,6 +76,12 @@ export default function DashboardLayout({
     }
   }, [router]);
 
+  React.useEffect(() => {
+    if (profileLoaded && profile.name) {
+      document.title = `${profile.name} | Dashboard`;
+    }
+  }, [profile, profileLoaded]);
+
   const handleLogout = () => {
     logActivity('User Logout', `User ${user?.username} logged out.`);
     localStorage.removeItem('loggedInUser');
@@ -87,7 +93,7 @@ export default function DashboardLayout({
     return allMenuItems.filter(item => item.roles.includes(user.role));
   }, [user]);
 
-  if (!user) {
+  if (!user || !profileLoaded) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div>Loading...</div>
@@ -100,8 +106,8 @@ export default function DashboardLayout({
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2">
-            <Logo />
-            <span className="text-lg font-semibold font-headline">LoanTrack Lite</span>
+            <Logo logoUrl={profile.logoUrl} />
+            <span className="text-lg font-semibold font-headline">{profile.name}</span>
           </div>
         </SidebarHeader>
         <SidebarContent>
