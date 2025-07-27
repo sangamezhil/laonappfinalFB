@@ -126,7 +126,7 @@ export default function DashboardPage() {
               <BarChart accessibilityLayer data={chartData}>
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} tickFormatter={(value) => value.slice(0, 3)} />
-                <YAxis tickFormatter={(value) => `₹${Number(value) / 1000}k`} />
+                <YAxis tickFormatter={(value) => `₹${new Intl.NumberFormat('en-IN', { notation: 'compact', compactDisplay: 'short' }).format(Number(value))}`} />
                 <ChartTooltip 
                     cursor={false}
                     content={<ChartTooltipContent 
