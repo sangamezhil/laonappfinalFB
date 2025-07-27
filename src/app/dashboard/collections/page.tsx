@@ -55,39 +55,45 @@ function CollectionsPageContent() {
       paymentMethod: 'Cash',
       collectionDate: new Date(),
     },
-    disabled: activeAndOverdueLoans.length === 0,
   });
 
   const selectedLoanIdInForm = form.watch('loanId');
 
+  const updateLoanDetails = useCallback((loan: Loan | null) => {
+    setSelectedLoan(loan);
+    if (loan) {
+      form.setValue('amount', loan.weeklyRepayment, { shouldValidate: true });
+
+      const installmentsPaid = loan.totalPaid > 0 ? Math.floor(loan.totalPaid / loan.weeklyRepayment) : 0;
+      const startDate = new Date(loan.disbursalDate);
+      let currentDueDate: Date | null = null;
+      let nextDueDate: Date | null = null;
+      
+      if (loan.collectionFrequency === 'Daily') {
+        currentDueDate = addDays(startDate, installmentsPaid + 1);
+        nextDueDate = addDays(startDate, installmentsPaid + 2);
+      } else if (loan.collectionFrequency === 'Weekly') {
+        currentDueDate = addWeeks(startDate, installmentsPaid + 1);
+        nextDueDate = addWeeks(startDate, installmentsPaid + 2);
+      } else if (loan.collectionFrequency === 'Monthly') {
+        currentDueDate = addMonths(startDate, installmentsPaid + 2);
+      }
+      setDueDates({ current: currentDueDate, next: nextDueDate });
+    } else {
+      setDueDates({ current: null, next: null });
+      form.reset({
+        loanId: '',
+        amount: '' as any,
+        paymentMethod: 'Cash',
+        collectionDate: new Date(),
+      });
+    }
+  }, [form]);
+
   useEffect(() => {
     const loan = loans.find(l => l.id === selectedLoanIdInForm);
-    if (loan) {
-        setSelectedLoan(loan);
-        form.setValue('amount', loan.weeklyRepayment, { shouldValidate: true });
-
-        const installmentsPaid = loan.totalPaid > 0 ? Math.floor(loan.totalPaid / loan.weeklyRepayment) : 0;
-        const startDate = new Date(loan.disbursalDate);
-        let currentDueDate: Date | null = null;
-        let nextDueDate: Date | null = null;
-        
-        if (loan.collectionFrequency === 'Daily') {
-          currentDueDate = addDays(startDate, installmentsPaid + 1);
-          nextDueDate = addDays(startDate, installmentsPaid + 2);
-        } else if (loan.collectionFrequency === 'Weekly') {
-          currentDueDate = addWeeks(startDate, installmentsPaid + 1);
-          nextDueDate = addWeeks(startDate, installmentsPaid + 2);
-        } else if (loan.collectionFrequency === 'Monthly') {
-          currentDueDate = addMonths(startDate, installmentsPaid + 1);
-          nextDueDate = addMonths(startDate, installmentsPaid + 2);
-        }
-        setDueDates({ current: currentDueDate, next: nextDueDate });
-    } else {
-      setSelectedLoan(null);
-      setDueDates({ current: null, next: null });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedLoanIdInForm, loans]);
+    updateLoanDetails(loan || null);
+  }, [selectedLoanIdInForm, loans, updateLoanDetails]);
 
   useEffect(() => {
     if (loanIdFromQuery) {
@@ -286,7 +292,7 @@ function CollectionsPageContent() {
                  <CardDescription>Any overdue or missed dues will be automatically tracked.</CardDescription>
               </CardContent>
               <CardFooter>
-                <Button type="submit" className="w-full" disabled={activeAndOverdueLoans.length === 0}>Record Collection</Button>
+                <Button type="submit" className="w-full" disabled={!selectedLoanIdInForm}>Record Collection</Button>
               </CardFooter>
             </Card>
           </form>
