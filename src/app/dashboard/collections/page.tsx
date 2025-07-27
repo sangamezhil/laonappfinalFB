@@ -123,32 +123,20 @@ function CollectionsPageContent() {
       setDueDates({ current: currentDueDate, next: nextDueDate });
     } else {
       setDueDates({ current: null, next: null });
-      if (!loanIdFromQuery) { // Avoid resetting form if there was an attempt to load from query
-        form.reset({
-          loanId: '',
-          amount: '' as any,
-          paymentMethod: 'Cash',
-          collectionDate: format(new Date(), 'ddMMyyyy'),
-        });
-      }
     }
-  }, [loans, form, loanIdFromQuery]);
+  }, [loans, form]);
 
   useEffect(() => {
-    updateLoanDetails(selectedLoanIdInForm);
-    if (loanIdFromQuery && selectedLoanIdInForm === loanIdFromQuery) {
-        // Clean up URL by removing the query parameter after a short delay
-        const currentPath = window.location.pathname;
-        window.history.replaceState({ ...window.history.state, as: currentPath, url: currentPath }, '', currentPath);
-    }
-}, [loanIdFromQuery, selectedLoanIdInForm, updateLoanDetails]);
-
-useEffect(() => {
-    // This effect handles setting the loanId from the query param on initial load
-    if (loanIdFromQuery && !form.getValues('loanId')) {
+    const currentPath = window.location.pathname;
+    if (loanIdFromQuery) {
         form.setValue('loanId', loanIdFromQuery, { shouldValidate: true, shouldDirty: true });
+        updateLoanDetails(loanIdFromQuery);
+        // Clean up URL by removing the query parameter after a short delay
+        window.history.replaceState({ ...window.history.state, as: currentPath, url: currentPath }, '', currentPath);
+    } else {
+       updateLoanDetails(selectedLoanIdInForm);
     }
-}, [loanIdFromQuery, form]);
+  }, [loanIdFromQuery, selectedLoanIdInForm, updateLoanDetails, form]);
 
 
   const handlePhoneSearch = () => {
