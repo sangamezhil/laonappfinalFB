@@ -61,7 +61,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
-import { useUserActivity, useCustomers, useLoans, useCollections, Customer, Loan, Collection } from '@/lib/data'
+import { useUserActivity, useCustomers, useLoans, useCollections } from '@/lib/data'
 import * as XLSX from 'xlsx';
 
 
@@ -245,14 +245,20 @@ export default function UsersPage() {
     setResetPasswordOpen(true);
   }
 
-  const downloadExcel = (data: any[], filename: string) => {
-    const worksheet = XLSX.utils.json_to_sheet(data);
+  const downloadAllData = () => {
+    const customerSheet = XLSX.utils.json_to_sheet(customers);
+    const loanSheet = XLSX.utils.json_to_sheet(loans);
+    const collectionSheet = XLSX.utils.json_to_sheet(collections);
+
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
-    XLSX.writeFile(workbook, `${filename}.xlsx`);
+    XLSX.utils.book_append_sheet(workbook, customerSheet, 'Customers');
+    XLSX.utils.book_append_sheet(workbook, loanSheet, 'Loans');
+    XLSX.utils.book_append_sheet(workbook, collectionSheet, 'Collections');
+
+    XLSX.writeFile(workbook, 'LoanTrackLite_AllData.xlsx');
     toast({
         title: 'Download Started',
-        description: `${filename}.xlsx is being downloaded.`,
+        description: `LoanTrackLite_AllData.xlsx is being downloaded.`,
     });
   };
 
@@ -365,20 +371,10 @@ export default function UsersPage() {
           {loggedInUser?.role === 'Admin' && (
             <div className="pt-4 border-t w-full">
               <h3 className="text-lg font-semibold mb-2">Data Exports</h3>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => downloadExcel(customers, 'customers')}>
+               <Button variant="outline" onClick={downloadAllData}>
                   <FileDown className="w-4 h-4 mr-2" />
-                  Download Customers
+                  Download All Data
                 </Button>
-                <Button variant="outline" onClick={() => downloadExcel(loans, 'loans')}>
-                  <FileDown className="w-4 h-4 mr-2" />
-                  Download Loans
-                </Button>
-                <Button variant="outline" onClick={() => downloadExcel(collections, 'collections')}>
-                  <FileDown className="w-4 h-4 mr-2" />
-                  Download Collections
-                </Button>
-              </div>
             </div>
           )}
       </CardFooter>
