@@ -20,8 +20,7 @@ type LoanWithDetails = Loan & {
   collections: Collection[];
 };
 
-export default function CustomerProfilePage({ params }: { params: { id: string } }) {
-  const customerId = params.id;
+export default function CustomerProfilePage({ params: { id: customerId } }: { params: { id: string } }) {
   const router = useRouter();
 
   const [customer, setCustomer] = useState<Customer | null | undefined>(undefined);
