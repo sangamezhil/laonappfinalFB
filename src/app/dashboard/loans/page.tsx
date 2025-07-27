@@ -121,99 +121,97 @@ const LoanTable = ({ loans, user, handleApprove, handlePreclose }: { loans: Loan
           <TableBody>
               {groupedLoans.map((item) => (
                 item.isGroup ? (
-                    <React.Fragment key={item.groupId}>
-                      <Collapsible asChild open={openGroups[item.groupId] || false} onOpenChange={() => toggleGroup(item.groupId)}>
-                        <>
-                          <TableRow className="bg-muted/50 hover:bg-muted/80 data-[state=open]:bg-muted">
-                              <TableCell className="font-medium">
-                                  <CollapsibleTrigger asChild>
-                                      <button className="flex items-center w-full gap-2 cursor-pointer">
-                                          {openGroups[item.groupId] ? <ChevronDown className="w-4 h-4"/> : <ChevronRight className="w-4 h-4"/>}
-                                          {item.groupId}
-                                      </button>
-                                  </CollapsibleTrigger>
-                              </TableCell>
-                              <TableCell>{item.groupName}</TableCell>
-                              <TableCell>Group</TableCell>
-                              <TableCell>₹{item.totalAmount.toLocaleString('en-IN')}</TableCell>
-                              <TableCell>
-                                  <Badge variant={
-                                      item.status === 'Active' ? 'secondary' :
-                                      item.status === 'Overdue' ? 'destructive' :
-                                      item.status === 'Closed' ? 'default' :
-                                      'outline'
-                                  } className={item.status === 'Closed' ? 'bg-green-600 text-white' : ''}>
-                                  {item.status}
-                                  </Badge>
-                              </TableCell>
-                              <TableCell>₹{item.totalOutstanding.toLocaleString('en-IN')}</TableCell>
-                              <TableCell>&nbsp;</TableCell>
-                          </TableRow>
-                          <CollapsibleContent asChild>
-                              <>
-                              {item.loans.map(loan => {
-                                  const isLeader = loan.customerName === loan.groupLeaderName;
-                                  return (
-                                  <TableRow key={loan.id} className={cn("bg-background hover:bg-muted/50", isLeader && "bg-primary/10 hover:bg-primary/20")}>
-                                  <TableCell className="pl-12 text-xs font-mono text-muted-foreground">{loan.id}</TableCell>
-                                  <TableCell>
-                                      <div className='flex items-center gap-2'>
-                                      {loan.customerName}
-                                      {isLeader && <Badge variant="secondary" size="sm">Leader</Badge>}
-                                      </div>
-                                      </TableCell>
-                                  <TableCell className="text-muted-foreground">Member</TableCell>
-                                  <TableCell>₹{loan.amount.toLocaleString('en-IN')}</TableCell>
-                                  <TableCell>
-                                      <Badge variant={
-                                          loan.status === 'Active' ? 'secondary' :
-                                          loan.status === 'Overdue' ? 'destructive' :
-                                          loan.status === 'Closed' ? 'default' :
-                                          'outline'
-                                      } className={loan.status === 'Closed' ? 'bg-green-600 text-white' : ''}>
-                                      {loan.status}
-                                      </Badge>
-                                  </TableCell>
-                                  <TableCell>₹{loan.outstandingAmount.toLocaleString('en-IN')}</TableCell>
-                                  <TableCell>
-                                          <DropdownMenu>
-                                          <DropdownMenuTrigger asChild>
-                                              <Button aria-haspopup="true" size="icon" variant="ghost">
-                                              <MoreHorizontal className="w-4 h-4" />
-                                              <span className="sr-only">Toggle menu</span>
-                                              </Button>
-                                          </DropdownMenuTrigger>
-                                          <DropdownMenuContent align="end">
-                                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                              {loan.status === 'Pending' && user?.role === 'Admin' && (
-                                              <DropdownMenuItem onSelect={() => handleApprove(loan.id)}>
-                                                  Approve Loan
-                                              </DropdownMenuItem>
-                                              )}
-                                              {(loan.status === 'Active' || loan.status === 'Overdue') && user?.role === 'Admin' && (
-                                              <DropdownMenuItem onSelect={() => handlePreclose(loan.id)}>
-                                                  Preclose Loan
-                                              </DropdownMenuItem>
-                                              )}
-                                              <DropdownMenuItem onSelect={() => router.push(`/dashboard/customers/${loan.customerId}`)}>
-                                                  View Customer
-                                              </DropdownMenuItem>
-                                              {(loan.status === 'Active' || loan.status === 'Overdue') &&
-                                              <DropdownMenuItem onSelect={() => router.push(`/dashboard/collections?loanId=${loan.id}`)}>
-                                                  Record Payment
-                                              </DropdownMenuItem>
-                                              }
-                                          </DropdownMenuContent>
-                                          </DropdownMenu>
-                                  </TableCell>
-                                  </TableRow>
-                                  )
-                              })}
-                              </>
-                          </CollapsibleContent>
-                        </>
-                      </Collapsible>
-                    </React.Fragment>
+                    <Collapsible asChild key={item.groupId} open={openGroups[item.groupId] || false} onOpenChange={() => toggleGroup(item.groupId)}>
+                        <React.Fragment>
+                            <TableRow className="bg-muted/50 hover:bg-muted/80 data-[state=open]:bg-muted">
+                                <TableCell className="font-medium">
+                                    <CollapsibleTrigger asChild>
+                                        <button className="flex items-center w-full gap-2 cursor-pointer">
+                                            {openGroups[item.groupId] ? <ChevronDown className="w-4 h-4"/> : <ChevronRight className="w-4 h-4"/>}
+                                            {item.groupId}
+                                        </button>
+                                    </CollapsibleTrigger>
+                                </TableCell>
+                                <TableCell>{item.groupName}</TableCell>
+                                <TableCell>Group</TableCell>
+                                <TableCell>₹{item.totalAmount.toLocaleString('en-IN')}</TableCell>
+                                <TableCell>
+                                    <Badge variant={
+                                        item.status === 'Active' ? 'secondary' :
+                                        item.status === 'Overdue' ? 'destructive' :
+                                        item.status === 'Closed' ? 'default' :
+                                        'outline'
+                                    } className={item.status === 'Closed' ? 'bg-green-600 text-white' : ''}>
+                                    {item.status}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell>₹{item.totalOutstanding.toLocaleString('en-IN')}</TableCell>
+                                <TableCell>&nbsp;</TableCell>
+                            </TableRow>
+                            <CollapsibleContent asChild>
+                                <React.Fragment>
+                                {item.loans.map(loan => {
+                                    const isLeader = loan.customerName === loan.groupLeaderName;
+                                    return (
+                                    <TableRow key={loan.id} className={cn("bg-background hover:bg-muted/50", isLeader && "bg-primary/10 hover:bg-primary/20")}>
+                                    <TableCell className="pl-12 text-xs font-mono text-muted-foreground">{loan.id}</TableCell>
+                                    <TableCell>
+                                        <div className='flex items-center gap-2'>
+                                        {loan.customerName}
+                                        {isLeader && <Badge variant="secondary" size="sm">Leader</Badge>}
+                                        </div>
+                                        </TableCell>
+                                    <TableCell className="text-muted-foreground">Member</TableCell>
+                                    <TableCell>₹{loan.amount.toLocaleString('en-IN')}</TableCell>
+                                    <TableCell>
+                                        <Badge variant={
+                                            loan.status === 'Active' ? 'secondary' :
+                                            loan.status === 'Overdue' ? 'destructive' :
+                                            loan.status === 'Closed' ? 'default' :
+                                            'outline'
+                                        } className={loan.status === 'Closed' ? 'bg-green-600 text-white' : ''}>
+                                        {loan.status}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell>₹{loan.outstandingAmount.toLocaleString('en-IN')}</TableCell>
+                                    <TableCell>
+                                            <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                <MoreHorizontal className="w-4 h-4" />
+                                                <span className="sr-only">Toggle menu</span>
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                {loan.status === 'Pending' && user?.role === 'Admin' && (
+                                                <DropdownMenuItem onSelect={() => handleApprove(loan.id)}>
+                                                    Approve Loan
+                                                </DropdownMenuItem>
+                                                )}
+                                                {(loan.status === 'Active' || loan.status === 'Overdue') && user?.role === 'Admin' && (
+                                                <DropdownMenuItem onSelect={() => handlePreclose(loan.id)}>
+                                                    Preclose Loan
+                                                </DropdownMenuItem>
+                                                )}
+                                                <DropdownMenuItem onSelect={() => router.push(`/dashboard/customers/${loan.customerId}`)}>
+                                                    View Customer
+                                                </DropdownMenuItem>
+                                                {(loan.status === 'Active' || loan.status === 'Overdue') &&
+                                                <DropdownMenuItem onSelect={() => router.push(`/dashboard/collections?loanId=${loan.id}`)}>
+                                                    Record Payment
+                                                </DropdownMenuItem>
+                                                }
+                                            </DropdownMenuContent>
+                                            </DropdownMenu>
+                                    </TableCell>
+                                    </TableRow>
+                                    )
+                                })}
+                                </React.Fragment>
+                            </CollapsibleContent>
+                        </React.Fragment>
+                    </Collapsible>
                 ) : ( // Personal Loan
                     <TableRow key={item.loan.id}>
                         <TableCell className="font-mono text-xs">{item.loan.id}</TableCell>
@@ -375,7 +373,7 @@ export default function LoansPage() {
       <CardContent>
         <Tabs defaultValue="active">
             <TabsList>
-                <TabsTrigger value="active">Active & Overdue</TabsTrigger>
+                <TabsTrigger value="active">Active &amp; Overdue</TabsTrigger>
                 <TabsTrigger value="closed">Closed</TabsTrigger>
             </TabsList>
             <TabsContent value="active">
@@ -389,3 +387,5 @@ export default function LoansPage() {
     </Card>
   )
 }
+
+    
