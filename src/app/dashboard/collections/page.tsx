@@ -1,7 +1,7 @@
 
 'use client'
 
-import React, { useState, useEffect, Suspense } from 'react'
+import React, { useState, useEffect, Suspense, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -45,8 +45,6 @@ function CollectionsPageContent() {
     return loans.filter(l => l.status === 'Active' || l.status === 'Overdue')
   }, [loans]);
 
-  const loanIdFromQuery = searchParams.get('loanId');
-
   const form = useForm<CollectionFormValues>({
     resolver: zodResolver(collectionSchema),
     defaultValues: {
@@ -62,20 +60,7 @@ function CollectionsPageContent() {
   
   // Effect to handle setting loan details when the form's loanId changes
   useEffect(() => {
-    if (!selectedLoanIdInForm) {
-      setSelectedLoan(null);
-      setDueDates({ current: null, next: null });
-      form.reset({
-        loanId: '',
-        amount: '' as any,
-        paymentMethod: 'Cash',
-        collectionDate: new Date(),
-    });
-      return;
-    }
-
     const loan = loans.find(l => l.id === selectedLoanIdInForm);
-
     if (loan) {
         setSelectedLoan(loan);
         form.setValue('amount', loan.weeklyRepayment, { shouldValidate: true });
@@ -99,7 +84,12 @@ function CollectionsPageContent() {
     } else {
       setSelectedLoan(null);
       setDueDates({ current: null, next: null });
-      form.resetField('amount');
+      form.reset({
+        loanId: '',
+        amount: '' as any,
+        paymentMethod: 'Cash',
+        collectionDate: new Date(),
+      });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLoanIdInForm, loans]);
@@ -107,6 +97,7 @@ function CollectionsPageContent() {
 
   // Effect to sync URL query param to form state, but only when the page loads with it.
   useEffect(() => {
+    const loanIdFromQuery = searchParams.get('loanId');
     if (loanIdFromQuery) {
       if (loanIdFromQuery !== form.getValues('loanId')) {
         form.setValue('loanId', loanIdFromQuery, { shouldValidate: true });
@@ -116,7 +107,7 @@ function CollectionsPageContent() {
       router.replace(currentPathname, { scroll: false });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loanIdFromQuery]);
+  }, [searchParams]);
 
 
   const handlePhoneSearch = () => {
