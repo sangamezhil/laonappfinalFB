@@ -131,19 +131,21 @@ function CollectionsPageContent() {
     const loanId = loanIdFromQuery || selectedLoanIdInForm;
 
     if (loanId) {
-        updateLoanDetails(loanId);
+        if (loanId !== (selectedLoan?.id ?? '')) {
+            updateLoanDetails(loanId);
+        }
         if (loanIdFromQuery) {
             form.setValue('loanId', loanIdFromQuery, { shouldValidate: true, shouldDirty: true });
-            // Clean up URL by removing the query parameter after processing
-             const currentPath = window.location.pathname;
-             window.history.replaceState({ ...window.history.state, as: currentPath, url: currentPath }, '', currentPath);
+            const currentPath = window.location.pathname;
+            window.history.replaceState({ ...window.history.state, as: currentPath, url: currentPath }, '', currentPath);
         }
     } else {
-      // Clear details if no loan is selected
-      setSelectedLoan(null);
-      setDueDates({ current: null, next: null });
+      if (selectedLoan) {
+        setSelectedLoan(null);
+        setDueDates({ current: null, next: null });
+      }
     }
-  }, [loanIdFromQuery, selectedLoanIdInForm, updateLoanDetails, form]);
+  }, [loanIdFromQuery, selectedLoanIdInForm, updateLoanDetails, form, selectedLoan]);
 
 
   const handlePhoneSearch = () => {
@@ -164,6 +166,17 @@ function CollectionsPageContent() {
     }
   };
 
+  const handleClear = () => {
+    form.reset({
+      loanId: '',
+      amount: '' as any,
+      paymentMethod: 'Cash',
+      collectionDate: format(new Date(), 'ddMMyyyy'),
+    });
+    setSelectedLoan(null);
+    setPhoneSearch('');
+    setDueDates({ current: null, next: null });
+  }
 
   function onSubmit(data: { loanId: string; amount: number; collectionDate: Date; paymentMethod: 'Cash' | 'Bank Transfer' | 'UPI' }) {
     const loan = loans.find(l => l.id === data.loanId);
@@ -188,15 +201,7 @@ function CollectionsPageContent() {
       description: `Payment of ₹${data.amount.toLocaleString('en-IN')} for loan ${data.loanId} has been recorded.`,
     });
 
-    form.reset({
-        loanId: '',
-        amount: '' as any,
-        paymentMethod: 'Cash',
-        collectionDate: format(new Date(), 'ddMMyyyy'),
-    });
-    setSelectedLoan(null);
-    setPhoneSearch('');
-    setDueDates({ current: null, next: null });
+    handleClear();
   }
   
   const confirmDelete = () => {
@@ -339,8 +344,9 @@ function CollectionsPageContent() {
                 )} />
                  <CardDescription>Any overdue or missed dues will be automatically tracked.</CardDescription>
               </CardContent>
-              <CardFooter>
-                <Button type="submit" className="w-full" disabled={!selectedLoanIdInForm}>Record Collection</Button>
+              <CardFooter className="flex justify-end gap-2">
+                <Button variant="outline" type="button" onClick={handleClear}>Clear</Button>
+                <Button type="submit" disabled={!selectedLoanIdInForm}>Record Collection</Button>
               </CardFooter>
             </Card>
           </form>
@@ -436,6 +442,8 @@ export default function CollectionsPage() {
     </Suspense>
   )
 }
+
+    
 
     
 
