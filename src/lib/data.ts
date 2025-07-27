@@ -53,6 +53,7 @@ export type Collection = {
     customer: string;
     amount: number;
     date: string;
+    paymentMethod: 'Cash' | 'Bank Transfer' | 'UPI';
 };
 
 export type CompanyProfile = {
@@ -94,9 +95,9 @@ const initialLoans: Loan[] = [
 ];
 
 const initialCollections: Collection[] = [
-  { id: 'COLL001', loanId: '239847298347', customer: 'Ravi Kumar', amount: 5000, date: '2024-07-28' },
-  { id: 'COLL002', loanId: '498729384729', customer: 'Sahara Group', amount: 5000, date: '2024-07-27' },
-  { id: 'COLL003', loanId: '987234987234', customer: 'Priya Sharma', amount: 2500, date: '2024-07-25' },
+  { id: 'COLL001', loanId: '239847298347', customer: 'Ravi Kumar', amount: 5000, date: '2024-07-28', paymentMethod: 'UPI' },
+  { id: 'COLL002', loanId: '498729384729', customer: 'Sahara Group', amount: 5000, date: '2024-07-27', paymentMethod: 'Cash' },
+  { id: 'COLL003', loanId: '987234987234', customer: 'Priya Sharma', amount: 2500, date: '2024-07-25', paymentMethod: 'Bank Transfer' },
 ];
 
 const getFromStorage = <T>(key: string, initialData: T): T => {

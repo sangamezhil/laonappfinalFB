@@ -150,6 +150,7 @@ function CollectionsPageContent() {
       customer: loan.loanType === 'Group' ? `${loan.groupName} (${loan.customerName})` : loan.customerName,
       amount: data.amount,
       date: format(data.collectionDate, 'yyyy-MM-dd'),
+      paymentMethod: data.paymentMethod
     });
 
     toast({
@@ -320,6 +321,7 @@ function CollectionsPageContent() {
                 <TableRow>
                   <TableHead>Customer / Group</TableHead>
                   <TableHead>Amount (₹)</TableHead>
+                  <TableHead>Method</TableHead>
                   <TableHead>Loan ID</TableHead>
                   <TableHead>Date</TableHead>
                 </TableRow>
@@ -331,6 +333,7 @@ function CollectionsPageContent() {
                       <div className="font-medium">{c.customer}</div>
                     </TableCell>
                     <TableCell className="flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{c.amount.toLocaleString('en-IN')}</TableCell>
+                    <TableCell>{c.paymentMethod}</TableCell>
                     <TableCell className="font-mono text-xs">{c.loanId}</TableCell>
                     <TableCell>{format(new Date(c.date), 'dd MMM yyyy')}</TableCell>
                   </TableRow>
