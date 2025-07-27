@@ -37,7 +37,7 @@ export type Loan = {
   weeklyRepayment: number; 
   totalPaid: number;
   outstandingAmount: number;
-  collectionFrequency?: 'Daily' | 'Weekly' | 'Monthly';
+  collectionFrequency: 'Daily' | 'Weekly' | 'Monthly';
   members?: string[]; // Kept for historical data if needed, but new logic won't heavily rely on it
 };
 
@@ -296,12 +296,14 @@ export const useCollections = () => {
 }
 
 
-export function getCustomerById(id: string) {
+export function getCustomerById(id: string): Customer | undefined {
   const customers = getFromStorage('customers', initialCustomers);
   return customers.find(c => c.id === id);
 }
 
-export function getLoansByCustomerId(customerId: string) {
+export function getLoansByCustomerId(customerId: string): Loan[] {
   const loans = getFromStorage('loans', initialLoans);
   return loans.filter(l => l.customerId === customerId);
 }
+
+    

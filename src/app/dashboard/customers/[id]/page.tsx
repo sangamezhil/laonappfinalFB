@@ -2,23 +2,32 @@
 'use client'
 
 import { useState, useEffect, use } from 'react';
-import { notFound } from 'next/navigation';
-import { getCustomerById, getLoansByCustomerId, Customer, Loan } from '@/lib/data'
+import { notFound, useRouter } from 'next/navigation';
+import { getCustomerById, getLoansByCustomerId, Customer, Loan, useCollections, Collection } from '@/lib/data'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { User, Briefcase, IndianRupee, Hash, Calendar, Phone, Cake, VenetianMask } from 'lucide-react'
+import { User, Briefcase, IndianRupee, Hash, Calendar, Phone, Cake, VenetianMask, FileText, Wallet, Percent, CalendarClock } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton';
-import { format } from 'date-fns';
+import { format, addDays, addWeeks, addMonths } from 'date-fns';
 import { cn, getAvatarColor } from '@/lib/utils';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
+
+type LoanWithDetails = Loan & {
+  nextDueDate: Date | null;
+  collections: Collection[];
+};
 
 export default function CustomerProfilePage({ params }: { params: { id: string } }) {
   const resolvedParams = use(params);
   const customerId = resolvedParams.id;
+  const router = useRouter();
 
   const [customer, setCustomer] = useState<Customer | null | undefined>(undefined);
-  const [loans, setLoans] = useState<Loan[]>([]);
+  const [loansWithDetails, setLoansWithDetails] = useState<LoanWithDetails[]>([]);
+  const { collections } = useCollections();
   
   useEffect(() => {
     if (customerId) {
@@ -26,12 +35,33 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
       if (cust) {
         setCustomer(cust);
         const customerLoans = getLoansByCustomerId(customerId);
-        setLoans(customerLoans);
+        
+        const detailedLoans = customerLoans.map(loan => {
+          const installmentsPaid = loan.totalPaid > 0 && loan.weeklyRepayment > 0 ? Math.floor(loan.totalPaid / loan.weeklyRepayment) : 0;
+          const startDate = new Date(loan.disbursalDate);
+          let nextDueDate: Date | null = null;
+          
+          if (loan.status === 'Active' || loan.status === 'Overdue') {
+            if (loan.collectionFrequency === 'Daily') {
+              nextDueDate = addDays(startDate, installmentsPaid + 1);
+            } else if (loan.collectionFrequency === 'Weekly') {
+              nextDueDate = addWeeks(startDate, installmentsPaid + 1);
+            } else if (loan.collectionFrequency === 'Monthly') {
+              nextDueDate = addMonths(startDate, installmentsPaid + 1);
+            }
+          }
+
+          const loanCollections = collections.filter(c => c.loanId === loan.id).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+          return { ...loan, nextDueDate, collections: loanCollections };
+        });
+
+        setLoansWithDetails(detailedLoans);
       } else {
         setCustomer(null);
       }
     }
-  }, [customerId]);
+  }, [customerId, collections]);
 
   if (customer === undefined) {
     return (
@@ -62,24 +92,11 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
                   <CardDescription>A complete record of all loans taken by this customer.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Loan ID</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Disbursal Date</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center">
-                          <Skeleton className="h-5 w-1/2 mx-auto" />
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
+                    <div className="space-y-2">
+                        <Skeleton className="h-12 w-full" />
+                        <Skeleton className="h-12 w-full" />
+                        <Skeleton className="h-12 w-full" />
+                    </div>
                 </CardContent>
             </Card>
         </div>
@@ -150,54 +167,109 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
           <CardDescription>A complete record of all loans taken by {customer.name}.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Loan ID</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>
-                  <div className="flex items-center gap-1">
-                    <IndianRupee className="w-4 h-4" />
-                    Amount
-                  </div>
-                </TableHead>
-                <TableHead>Disbursal Date</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loans.length > 0 ? (
-                loans.map((loan) => (
-                  <TableRow key={loan.id}>
-                    <TableCell className="font-mono text-xs">{loan.id}</TableCell>
-                    <TableCell>{loan.loanType}</TableCell>
-                    <TableCell className="flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{loan.amount.toLocaleString('en-IN')}</TableCell>
-                    <TableCell>{loan.disbursalDate}</TableCell>
-                    <TableCell>
-                      <Badge variant={
-                        loan.status === 'Active' ? 'secondary' :
-                        loan.status === 'Overdue' ? 'destructive' :
-                        loan.status === 'Closed' ? 'default' :
-                        'outline'
-                      }
-                      className={loan.status === 'Closed' ? 'bg-green-600 text-white' : ''}
-                      >
-                        {loan.status}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center">
-                    No loan history found for this customer.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+          {loansWithDetails.length > 0 ? (
+            <Accordion type="single" collapsible className="w-full">
+              {loansWithDetails.map((loan) => (
+                <AccordionItem value={loan.id} key={loan.id}>
+                  <AccordionTrigger>
+                    <div className="flex justify-between w-full pr-4">
+                      <div className="flex items-center gap-4">
+                        <span className="font-mono text-xs">{loan.id}</span>
+                        <span>{loan.loanType === 'Group' ? `${loan.groupName}` : 'Personal Loan'}</span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className="flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{loan.amount.toLocaleString('en-IN')}</span>
+                         <Badge variant={
+                            loan.status === 'Active' ? 'secondary' :
+                            loan.status === 'Overdue' ? 'destructive' :
+                            loan.status === 'Closed' ? 'default' :
+                            'outline'
+                         } className={loan.status === 'Closed' ? 'bg-green-600 text-white' : ''}>
+                          {loan.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="p-4 space-y-6 rounded-md bg-muted/50">
+                        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                            <div className="flex flex-col gap-1">
+                                <span className="text-sm text-muted-foreground">Disbursal Date</span>
+                                <span className="font-semibold flex items-center gap-1"><Calendar className="w-4 h-4" /> {format(new Date(loan.disbursalDate), 'PPP')}</span>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <span className="text-sm text-muted-foreground">Total Paid</span>
+                                <span className="font-semibold text-green-600 flex items-center gap-1"><Wallet className="w-4 h-4" /> <IndianRupee className="w-4 h-4" />{loan.totalPaid.toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <span className="text-sm text-muted-foreground">Outstanding</span>
+                                <span className="font-semibold text-destructive flex items-center gap-1"><IndianRupee className="w-4 h-4" /> <IndianRupee className="w-4 h-4" />{loan.outstandingAmount.toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <span className="text-sm text-muted-foreground">Next Due Date</span>
+                                <span className="font-semibold flex items-center gap-1"><CalendarClock className="w-4 h-4" /> {loan.nextDueDate ? format(loan.nextDueDate, 'PPP') : 'N/A'}</span>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <span className="text-sm text-muted-foreground">{loan.collectionFrequency} Repayment</span>
+                                <span className="font-semibold flex items-center gap-1"><IndianRupee className="w-4 h-4" /> {loan.weeklyRepayment.toLocaleString('en-IN')}</span>
+                            </div>
+                             <div className="flex flex-col gap-1">
+                                <span className="text-sm text-muted-foreground">Interest Rate</span>
+                                <span className="font-semibold flex items-center gap-1"><Percent className="w-4 h-4" /> {loan.interestRate}%</span>
+                            </div>
+                             <div className="flex flex-col gap-1">
+                                <span className="text-sm text-muted-foreground">Term</span>
+                                <span className="font-semibold flex items-center gap-1"><CalendarClock className="w-4 h-4" /> {loan.term} {loan.collectionFrequency === 'Daily' ? 'Days' : loan.collectionFrequency === 'Weekly' ? 'Weeks' : 'Months'}</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 className="mb-2 font-semibold">Payment History</h4>
+                            {loan.collections.length > 0 ? (
+                            <Table>
+                                <TableHeader>
+                                <TableRow>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Amount</TableHead>
+                                    <TableHead>Method</TableHead>
+                                </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                {loan.collections.map(c => (
+                                    <TableRow key={c.id}>
+                                        <TableCell>{format(new Date(c.date), 'PPP')}</TableCell>
+                                        <TableCell><IndianRupee className="inline w-3 h-3 mr-1"/>{c.amount.toLocaleString('en-IN')}</TableCell>
+                                        <TableCell>{c.paymentMethod}</TableCell>
+                                    </TableRow>
+                                ))}
+                                </TableBody>
+                            </Table>
+                            ) : (
+                                <div className="text-sm text-center text-muted-foreground py-4">No payments recorded for this loan yet.</div>
+                            )}
+                        </div>
+                        
+                        {(loan.status === 'Active' || loan.status === 'Overdue') &&
+                          <div className="flex justify-end">
+                            <Button onClick={() => router.push(`/dashboard/collections?loanId=${loan.id}`)}>Record Payment</Button>
+                          </div>
+                        }
+
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          ) : (
+             <div className="text-center text-muted-foreground py-8">
+                <FileText className="mx-auto w-12 h-12 mb-4" />
+                <p>No loan history found for this customer.</p>
+             </div>
+          )}
         </CardContent>
       </Card>
     </div>
   )
 }
+
+    
