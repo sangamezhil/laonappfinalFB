@@ -93,7 +93,7 @@ export default function LoginPage() {
              {profileLoaded ? <Logo logoUrl={profile.logoUrl} /> : <Skeleton className="w-8 h-8 rounded-full" /> }
           </div>
           {profileLoaded ? (
-            <CardTitle className="text-2xl font-headline">{profile.name} Staff Portal</CardTitle>
+            <CardTitle className="text-2xl font-headline">{profile.name}</CardTitle>
           ) : (
             <Skeleton className="w-48 h-8 mx-auto" />
           )}
