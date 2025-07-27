@@ -363,10 +363,10 @@ export default function UsersPage() {
             <FormField control={editForm.control} name="role" render={({ field }) => (
               <FormItem>
                 <FormLabel>Role</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
+                <Select onValueChange={field.onChange} value={field.value} disabled={field.value === 'Admin'}>
                   <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
                   <SelectContent>
-                    <SelectItem value="Admin">Admin</SelectItem>
+                    {userToEdit?.role === 'Admin' && <SelectItem value="Admin">Admin</SelectItem>}
                     <SelectItem value="Collection Agent">Collection Agent</SelectItem>
                   </SelectContent>
                 </Select>
