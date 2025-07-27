@@ -122,14 +122,14 @@ const LoanTable = ({ loans, user, handleApprove, handlePreclose }: { loans: Loan
               {groupedLoans.map((item) => (
                 item.isGroup ? (
                     <Collapsible asChild key={item.groupId} open={openGroups[item.groupId] || false} onOpenChange={() => toggleGroup(item.groupId)}>
-                        <React.Fragment key={item.groupId}>
+                        <>
                             <TableRow className="bg-muted/50 hover:bg-muted/80 data-[state=open]:bg-muted">
                                 <TableCell className="font-medium">
                                     <CollapsibleTrigger asChild>
-                                        <div className="flex items-center gap-2 w-full cursor-pointer">
+                                        <button className="flex items-center gap-2 w-full cursor-pointer">
                                             {openGroups[item.groupId] ? <ChevronDown className="w-4 h-4"/> : <ChevronRight className="w-4 h-4"/>}
                                             {item.groupId}
-                                        </div>
+                                        </button>
                                     </CollapsibleTrigger>
                                 </TableCell>
                                 <TableCell>{item.groupName}</TableCell>
@@ -210,7 +210,7 @@ const LoanTable = ({ loans, user, handleApprove, handlePreclose }: { loans: Loan
                                 })}
                                 </>
                             </CollapsibleContent>
-                        </React.Fragment>
+                        </>
                     </Collapsible>
                 ) : ( // Personal Loan
                     <TableRow key={item.loan.id}>
