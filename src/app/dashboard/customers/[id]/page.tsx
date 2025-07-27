@@ -117,7 +117,7 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
             </div>
             <div className="flex items-center gap-2">
               <IndianRupee className="w-4 h-4" />
-              <span>Monthly Income: <strong>₹{customer.monthlyIncome.toLocaleString('en-IN')}</strong></span>
+              <span>Monthly Income: <strong className="flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{customer.monthlyIncome.toLocaleString('en-IN')}</strong></span>
             </div>
              <div className="flex items-center gap-2">
               <Hash className="w-4 h-4" />
@@ -146,7 +146,12 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
               <TableRow>
                 <TableHead>Loan ID</TableHead>
                 <TableHead>Type</TableHead>
-                <TableHead>Amount (₹)</TableHead>
+                <TableHead>
+                  <div className="flex items-center gap-1">
+                    <IndianRupee className="w-4 h-4" />
+                    Amount
+                  </div>
+                </TableHead>
                 <TableHead>Disbursal Date</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
@@ -157,7 +162,7 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
                   <TableRow key={loan.id}>
                     <TableCell className="font-mono text-xs">{loan.id}</TableCell>
                     <TableCell>{loan.loanType}</TableCell>
-                    <TableCell>₹{loan.amount.toLocaleString('en-IN')}</TableCell>
+                    <TableCell className="flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{loan.amount.toLocaleString('en-IN')}</TableCell>
                     <TableCell>{loan.disbursalDate}</TableCell>
                     <TableCell>
                       <Badge variant={
