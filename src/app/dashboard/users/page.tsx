@@ -80,6 +80,14 @@ const userSchema = z.object({
 
 const editUserSchema = userSchema.omit({ password: true });
 
+const resetPasswordSchema = z.object({
+  password: z.string().min(6, "Password must be at least 6 characters."),
+  confirmPassword: z.string(),
+}).refine(data => data.password === data.confirmPassword, {
+  message: "Passwords do not match.",
+  path: ["confirmPassword"],
+});
+
 
 const initialUsers: User[] = [
   { id: 'USR001', username: 'admin', role: 'Admin', lastLogin: '2024-07-29 10:00 AM' },
@@ -102,6 +110,7 @@ export default function UsersPage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
+  const [isResetPasswordOpen, setResetPasswordOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const { logActivity } = useUserActivity();
@@ -125,6 +134,12 @@ export default function UsersPage() {
   const editForm = useForm<z.infer<typeof editUserSchema>>({
     resolver: zodResolver(editUserSchema),
   });
+
+  const resetPasswordForm = useForm<z.infer<typeof resetPasswordSchema>>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: { password: '', confirmPassword: '' },
+  });
+
 
   function handleCreateUser(data: z.infer<typeof userSchema>) {
     const newUser: User = {
@@ -160,6 +175,20 @@ export default function UsersPage() {
     setUserToEdit(null);
   }
 
+  function handleResetPassword(data: z.infer<typeof resetPasswordSchema>) {
+    if (!userToEdit) return;
+    // In a real app, you would now make an API call to update the password.
+    logActivity('Reset Password', `Reset password for user ${userToEdit.username}.`);
+    toast({
+      title: 'Password Reset',
+      description: `Password for ${userToEdit.username} has been updated.`,
+    });
+    setResetPasswordOpen(false);
+    setUserToEdit(null);
+    resetPasswordForm.reset();
+  }
+
+
   function handleDeleteUser() {
     if (!userToDelete) return;
     const updatedUsers = users.filter(u => u.id !== userToDelete.id);
@@ -181,6 +210,11 @@ export default function UsersPage() {
         role: user.role,
     });
     setEditDialogOpen(true);
+  }
+
+  function openResetPasswordDialog(user: User) {
+    setUserToEdit(user);
+    setResetPasswordOpen(true);
   }
 
 
@@ -276,6 +310,7 @@ export default function UsersPage() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
                       <DropdownMenuItem onSelect={() => openEditDialog(user)}>Edit User</DropdownMenuItem>
+                       <DropdownMenuItem onSelect={() => openResetPasswordDialog(user)}>Reset Password</DropdownMenuItem>
                       <DropdownMenuItem onSelect={() => setUserToDelete(user)} className="text-destructive">Delete User</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -326,6 +361,39 @@ export default function UsersPage() {
       </DialogContent>
     </Dialog>
 
+    <Dialog open={isResetPasswordOpen} onOpenChange={setResetPasswordOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+            <DialogTitle>Reset Password for {userToEdit?.username}</DialogTitle>
+            <DialogDescription>
+                Enter a new password for the user.
+            </DialogDescription>
+            </DialogHeader>
+            <Form {...resetPasswordForm}>
+            <form onSubmit={resetPasswordForm.handleSubmit(handleResetPassword)} className="space-y-4 py-4">
+                <FormField control={resetPasswordForm.control} name="password" render={({ field }) => (
+                <FormItem>
+                    <FormLabel>New Password</FormLabel>
+                    <FormControl><Input type="password" placeholder="Enter new password" {...field} /></FormControl>
+                    <FormMessage />
+                </FormItem>
+                )} />
+                <FormField control={resetPasswordForm.control} name="confirmPassword" render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Confirm New Password</FormLabel>
+                    <FormControl><Input type="password" placeholder="Confirm new password" {...field} /></FormControl>
+                    <FormMessage />
+                </FormItem>
+                )} />
+                <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setResetPasswordOpen(false)}>Cancel</Button>
+                    <Button type="submit">Reset Password</Button>
+                </DialogFooter>
+            </form>
+            </Form>
+        </DialogContent>
+    </Dialog>
+
     <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
         <AlertDialogContent>
             <AlertDialogHeader>
@@ -343,3 +411,5 @@ export default function UsersPage() {
     </>
   )
 }
+
+    
