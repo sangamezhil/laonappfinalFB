@@ -98,7 +98,7 @@ function CollectionsPageContent() {
     },
   });
   
-  const { formState } = form;
+  const { formState, setValue } = form;
 
   const selectedLoanIdInForm = form.watch('loanId');
 
@@ -107,7 +107,7 @@ function CollectionsPageContent() {
     setSelectedLoan(loan || null);
 
     if (loan) {
-      form.setValue('amount', loan.weeklyRepayment, { shouldValidate: true });
+      setValue('amount', loan.weeklyRepayment, { shouldValidate: true });
 
       const installmentsPaid = loan.totalPaid > 0 ? Math.floor(loan.totalPaid / loan.weeklyRepayment) : 0;
       const startDate = new Date(loan.disbursalDate);
@@ -127,27 +127,23 @@ function CollectionsPageContent() {
     } else {
       setDueDates({ current: null, next: null });
     }
-  }, [loans, form]);
+  }, [loans, setValue]);
 
   useEffect(() => {
     const loanId = loanIdFromQuery || selectedLoanIdInForm;
 
-    if (loanId) {
-        if (loanId !== (selectedLoan?.id ?? '')) {
-            updateLoanDetails(loanId);
-        }
+    if (loanId && loanId !== (selectedLoan?.id ?? '')) {
+        updateLoanDetails(loanId);
         if (loanIdFromQuery) {
-            form.setValue('loanId', loanIdFromQuery, { shouldValidate: true, shouldDirty: true });
+            setValue('loanId', loanIdFromQuery, { shouldValidate: true, shouldDirty: true });
             const currentPath = window.location.pathname;
             window.history.replaceState({ ...window.history.state, as: currentPath, url: currentPath }, '', currentPath);
         }
-    } else {
-      if (selectedLoan) {
-        setSelectedLoan(null);
-        setDueDates({ current: null, next: null });
-      }
+    } else if (!loanId && selectedLoan) {
+      setSelectedLoan(null);
+      setDueDates({ current: null, next: null });
     }
-  }, [loanIdFromQuery, selectedLoanIdInForm, updateLoanDetails, form, selectedLoan]);
+  }, [loanIdFromQuery, selectedLoanIdInForm, updateLoanDetails, setValue, selectedLoan]);
 
 
   const handlePhoneSearch = () => {
@@ -162,7 +158,7 @@ function CollectionsPageContent() {
     }
     const activeLoan = loans.find(l => l.customerId === customer.id && (l.status === 'Active' || l.status === 'Overdue'));
     if (activeLoan) {
-      form.setValue('loanId', activeLoan.id, { shouldValidate: true });
+      setValue('loanId', activeLoan.id, { shouldValidate: true });
     } else {
       toast({ title: 'No Active Loan', description: `${customer.name} does not have an active loan.` });
     }
@@ -175,6 +171,7 @@ function CollectionsPageContent() {
       paymentMethod: 'Cash',
       collectionDate: format(new Date(), 'ddMMyyyy'),
     });
+    setValue('loanId', '');
     setSelectedLoan(null);
     setPhoneSearch('');
     setDueDates({ current: null, next: null });
@@ -444,13 +441,3 @@ export default function CollectionsPage() {
     </Suspense>
   )
 }
-
-    
-
-    
-
-    
-
-    
-
-    
