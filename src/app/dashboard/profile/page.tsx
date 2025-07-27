@@ -13,7 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Upload } from 'lucide-react'
+import { Upload, Trash2 } from 'lucide-react'
 
 const profileSchema = z.object({
   name: z.string().min(3, { message: "Company name must be at least 3 characters." }),
@@ -61,6 +61,15 @@ export default function CompanyProfilePage() {
       reader.readAsDataURL(file);
     }
   };
+
+  const handleDeleteLogo = () => {
+    setLogoPreview(null);
+    form.setValue('logoUrl', '', { shouldValidate: true });
+    toast({
+        title: "Logo Removed",
+        description: "The logo has been cleared. Click 'Save Changes' to confirm.",
+    });
+  }
 
   function onSubmit(data: ProfileFormValues) {
     const updatedData = {
@@ -179,15 +188,23 @@ export default function CompanyProfilePage() {
                       <span className="text-xs text-muted-foreground">Preview</span>
                     )}
                   </div>
-                  <FormControl>
-                    <Button asChild variant="outline">
-                      <label htmlFor="logo-upload" className="cursor-pointer">
-                        <Upload className="mr-2 h-4 w-4" />
-                        Upload Logo
-                        <input id="logo-upload" type="file" className="sr-only" accept="image/png, image/jpeg, image/gif" onChange={handleLogoChange} />
-                      </label>
-                    </Button>
-                  </FormControl>
+                  <div className="flex flex-col gap-2">
+                    <FormControl>
+                      <Button asChild variant="outline">
+                        <label htmlFor="logo-upload" className="cursor-pointer">
+                          <Upload className="mr-2 h-4 w-4" />
+                          Upload Logo
+                          <input id="logo-upload" type="file" className="sr-only" accept="image/png, image/jpeg, image/gif" onChange={handleLogoChange} />
+                        </label>
+                      </Button>
+                    </FormControl>
+                    {logoPreview && (
+                        <Button variant="destructive" type="button" onClick={handleDeleteLogo}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete Logo
+                        </Button>
+                    )}
+                  </div>
                 </div>
                 <FormDescription>Upload a logo for your company (PNG, JPG, GIF, max 1MB).</FormDescription>
               </FormItem>
