@@ -140,7 +140,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-1">
         <Card className="col-span-full">
           <CardHeader>
             <CardTitle>Financial Summary</CardTitle>
