@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
-import { useCustomers, useLoans, useUserActivity } from '@/lib/data'
+import { useCustomers, useLoans, useUserActivity, Customer } from '@/lib/data'
 import { IndianRupee } from 'lucide-react'
 
 const personalLoanSchema = z.object({
@@ -119,13 +119,18 @@ export default function NewLoanPage() {
   const selectedMembers = useWatch({ control: groupForm.control, name: 'members' });
   const groupLeaderId = useWatch({ control: groupForm.control, name: 'groupLeaderId' });
 
-  const availableCustomers = React.useMemo(() => {
+  const eligibleCustomers = React.useMemo(() => {
     const activeLoanCustomerIds = new Set(loans.filter(l => l.status === 'Active' || l.status === 'Overdue').map(l => l.customerId));
-    const selectedMemberIds = new Set(selectedMembers?.map(m => m.customerId).filter(Boolean));
-    if(groupLeaderId) selectedMemberIds.add(groupLeaderId);
-    
-    return customers.filter(c => !activeLoanCustomerIds.has(c.id) && !selectedMemberIds.has(c.id));
-  }, [customers, loans, selectedMembers, groupLeaderId]);
+    return customers.filter(c => !activeLoanCustomerIds.has(c.id));
+  }, [customers, loans]);
+  
+  const getAvailableMembers = (currentIndex: number): Customer[] => {
+      const selectedMemberIds = new Set(selectedMembers?.map((m, i) => i === currentIndex ? null : m.customerId).filter(Boolean));
+      if (groupLeaderId) selectedMemberIds.add(groupLeaderId);
+      
+      return eligibleCustomers.filter(c => !selectedMemberIds.has(c.id));
+  }
+
 
   React.useEffect(() => {
     const size = parseInt(groupSize) -1; // -1 because leader is separate
@@ -268,7 +273,7 @@ export default function NewLoanPage() {
                       <FormLabel>Customer</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Select a registered customer" /></SelectTrigger></FormControl>
-                        <SelectContent>{customers.filter(c => !loans.some(l => l.customerId === c.id && l.status !== 'Closed')).map(c => <SelectItem key={c.id} value={c.id}>{c.name} - {c.id}</SelectItem>)}</SelectContent>
+                        <SelectContent>{eligibleCustomers.map(c => <SelectItem key={c.id} value={c.id}>{c.name} - {c.id}</SelectItem>)}</SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
@@ -357,7 +362,10 @@ export default function NewLoanPage() {
                         <FormLabel>Group Leader</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl><SelectTrigger><SelectValue placeholder="Select a group leader" /></SelectTrigger></FormControl>
-                           <SelectContent>{customers.filter(c => !loans.some(l => (l.customerId === c.id) && (l.status === 'Active' || l.status === 'Overdue'))).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                           <SelectContent>{eligibleCustomers.filter(c => {
+                               const selectedMemberIds = new Set(selectedMembers?.map(m => m.customerId).filter(Boolean));
+                               return !selectedMemberIds.has(c.id);
+                           }).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                         </Select>
                         <FormMessage />
                       </FormItem>
@@ -372,7 +380,7 @@ export default function NewLoanPage() {
                                <Select onValueChange={field.onChange} value={field.value}>
                                   <FormControl><SelectTrigger><SelectValue placeholder={`Select Member ${index + 1}`} /></SelectTrigger></FormControl>
                                   <SelectContent>
-                                    {availableCustomers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                    {getAvailableMembers(index).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                   </SelectContent>
                                 </Select>
                                <FormMessage />
@@ -392,3 +400,5 @@ export default function NewLoanPage() {
     </Card>
   )
 }
+
+    
