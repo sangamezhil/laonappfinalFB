@@ -67,11 +67,11 @@ export type CompanyProfile = {
 };
 
 const initialCompanyProfile: CompanyProfile = {
-    name: 'Your Company Name',
+    name: 'LoanTrack Lite',
     address: '123 Business Avenue, Suite 100, City, State 12345',
-    phone: '123-456-7890',
-    email: 'contact@yourcompany.com',
-    logoUrl: 'https://placehold.co/150x50'
+    phone: '1234567890',
+    email: 'contact@loantracklite.com',
+    logoUrl: ''
 }
 
 const initialCustomers: Customer[] = [];
@@ -111,6 +111,7 @@ export const useCompanyProfile = () => {
     const updateProfile = (newProfile: CompanyProfile) => {
         setInStorage('companyProfile', newProfile);
         setProfile(newProfile);
+        window.dispatchEvent(new Event('storage'));
     };
 
     return { profile, updateProfile, isLoaded };

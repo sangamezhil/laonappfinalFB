@@ -80,9 +80,8 @@ export default function CompanyProfilePage() {
     logActivity('Update Company Profile', 'Updated company profile details.')
     toast({
       title: 'Profile Updated',
-      description: 'Your company profile has been successfully updated. The page will now reload.',
+      description: 'Your company profile has been successfully updated.',
     })
-    setTimeout(() => window.location.reload(), 1500)
   }
 
   if (!isLoaded) {
