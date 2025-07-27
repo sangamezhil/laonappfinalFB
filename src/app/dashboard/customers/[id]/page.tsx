@@ -89,18 +89,12 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
     notFound()
   }
 
-  const avatarHint = 
-    customer.gender === 'Male' ? 'male avatar' :
-    customer.gender === 'Female' ? 'female avatar' :
-    'person avatar';
-
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
           <div className="flex items-center gap-4">
             <Avatar className="w-20 h-20">
-              <AvatarImage src={customer.profilePicture} alt={customer.name} data-ai-hint={avatarHint} />
               <AvatarFallback>{customer.name.substring(0, 2)}</AvatarFallback>
             </Avatar>
             <div>
