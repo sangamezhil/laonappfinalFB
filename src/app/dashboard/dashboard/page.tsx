@@ -2,7 +2,7 @@
 'use client'
 
 import * as React from 'react'
-import { TrendingUp, Users, Landmark, AlertCircle, CheckCircle, Wallet, FileText, Trash2 } from 'lucide-react'
+import { TrendingUp, Users, Landmark, AlertCircle, CheckCircle, Wallet, FileText, Trash2, IndianRupee } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
@@ -166,7 +166,7 @@ export default function DashboardPage() {
                     <div className="p-2 rounded-full bg-primary/20 text-primary"><TrendingUp/></div>
                     <div>
                         <p className="text-sm text-muted-foreground">Total Disbursed</p>
-                        <p className="text-xl font-bold">₹{summary.totalDisbursed.toLocaleString('en-IN')}</p>
+                        <p className="text-xl font-bold flex items-center"><IndianRupee className="w-5 h-5 mr-1" />{summary.totalDisbursed.toLocaleString('en-IN')}</p>
                     </div>
                 </div>
             </div>
@@ -175,7 +175,7 @@ export default function DashboardPage() {
                     <div className="p-2 rounded-full bg-accent/20 text-accent"><Wallet/></div>
                     <div>
                         <p className="text-sm text-muted-foreground">Total Outstanding</p>
-                        <p className="text-xl font-bold">₹{summary.totalOutstanding.toLocaleString('en-IN')}</p>
+                        <p className="text-xl font-bold flex items-center"><IndianRupee className="w-5 h-5 mr-1" />{summary.totalOutstanding.toLocaleString('en-IN')}</p>
                     </div>
                 </div>
             </div>
@@ -184,7 +184,7 @@ export default function DashboardPage() {
                     <div className="p-2 text-green-700 bg-green-500/20"><FileText/></div>
                     <div>
                         <p className="text-sm text-muted-foreground">Total Collected</p>
-                        <p className="text-xl font-bold">₹{summary.totalCollected.toLocaleString('en-IN')}</p>
+                        <p className="text-xl font-bold flex items-center"><IndianRupee className="w-5 h-5 mr-1" />{summary.totalCollected.toLocaleString('en-IN')}</p>
                     </div>
                 </div>
             </div>
@@ -212,7 +212,7 @@ export default function DashboardPage() {
                 <TableRow key={loan.id}>
                   <TableCell className="font-mono text-xs">{loan.id}</TableCell>
                   <TableCell>{loan.customerName}</TableCell>
-                  <TableCell>₹{loan.amount.toLocaleString('en-IN')}</TableCell>
+                  <TableCell className="flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{loan.amount.toLocaleString('en-IN')}</TableCell>
                   <TableCell>
                     <Badge variant={
                       loan.status === 'Active' ? 'secondary' :
