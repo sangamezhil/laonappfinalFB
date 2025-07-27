@@ -40,6 +40,11 @@ const collectionSchema = z.object({
 
 type CollectionFormValues = z.infer<typeof collectionSchema>;
 
+type User = {
+  username: string;
+  role: string;
+}
+
 function CollectionsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -52,6 +57,16 @@ function CollectionsPageContent() {
   const [phoneSearch, setPhoneSearch] = useState('');
   const [dueDates, setDueDates] = useState<{ current: Date | null, next: Date | null }>({ current: null, next: null });
   const [collectionToDelete, setCollectionToDelete] = useState<Collection | null>(null);
+  const [user, setUser] = React.useState<User | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedUser = localStorage.getItem('loggedInUser');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+    }
+  }, []);
 
   const activeAndOverdueLoans = React.useMemo(() => {
     return loans.filter(l => l.status === 'Active' || l.status === 'Overdue')
@@ -374,10 +389,12 @@ function CollectionsPageContent() {
                             <TableCell className="font-mono text-xs">{c.loanId}</TableCell>
                             <TableCell>{format(new Date(c.date), 'dd MMM yyyy')}</TableCell>
                              <TableCell>
-                                <Button variant="ghost" size="icon" onClick={() => setCollectionToDelete(c)}>
-                                    <Trash2 className="w-4 h-4 text-destructive" />
-                                    <span className="sr-only">Delete</span>
-                                </Button>
+                                {user?.role === 'Admin' && (
+                                  <Button variant="ghost" size="icon" onClick={() => setCollectionToDelete(c)}>
+                                      <Trash2 className="w-4 h-4 text-destructive" />
+                                      <span className="sr-only">Delete</span>
+                                  </Button>
+                                )}
                             </TableCell>
                         </TableRow>
                     )
