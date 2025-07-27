@@ -71,6 +71,11 @@ type User = {
     lastLogin: string;
 }
 
+type LoggedInUser = {
+  username: string;
+  role: string;
+}
+
 const userSchema = z.object({
   id: z.string().optional(),
   username: z.string().min(3, 'Username must be at least 3 characters.'),
@@ -113,6 +118,7 @@ export default function UsersPage() {
   const [isResetPasswordOpen, setResetPasswordOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
+  const [loggedInUser, setLoggedInUser] = useState<LoggedInUser | null>(null);
   const { logActivity } = useUserActivity();
 
   const { toast } = useToast();
@@ -123,6 +129,10 @@ export default function UsersPage() {
       setUsersInStorage(data);
     }
     setUsers(data);
+    const storedUser = localStorage.getItem('loggedInUser');
+    if (storedUser) {
+        setLoggedInUser(JSON.parse(storedUser));
+    }
     setIsLoaded(true);
   }, []);
   
@@ -311,7 +321,9 @@ export default function UsersPage() {
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
                       <DropdownMenuItem onSelect={() => openEditDialog(user)}>Edit User</DropdownMenuItem>
                        <DropdownMenuItem onSelect={() => openResetPasswordDialog(user)}>Reset Password</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => setUserToDelete(user)} className="text-destructive">Delete User</DropdownMenuItem>
+                       {loggedInUser?.role === 'Admin' && user.username !== loggedInUser.username && (
+                        <DropdownMenuItem onSelect={() => setUserToDelete(user)} className="text-destructive">Delete User</DropdownMenuItem>
+                       )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
@@ -399,7 +411,7 @@ export default function UsersPage() {
             <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete the user account for <span className="font-bold">{userToDelete?.username}</span>.
+                This action cannot be undone. This will permanently delete the user account for <span className="font-bold">{userToDelete?.username}</span>. You cannot delete your own account.
             </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -411,5 +423,3 @@ export default function UsersPage() {
     </>
   )
 }
-
-    
