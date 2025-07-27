@@ -78,34 +78,32 @@ function CollectionsPageContent() {
     const loan = loans.find(l => l.id === loanIdToProcess);
 
     if (loan) {
-      if(loan.id !== selectedLoan?.id) {
-          setSelectedLoan(loan);
-          form.setValue('amount', loan.weeklyRepayment, { shouldValidate: true });
+        setSelectedLoan(loan);
+        form.setValue('amount', loan.weeklyRepayment, { shouldValidate: true });
 
-          const installmentsPaid = loan.totalPaid > 0 ? Math.floor(loan.totalPaid / loan.weeklyRepayment) : 0;
-          const startDate = new Date(loan.disbursalDate);
-          let currentDueDate: Date | null = null;
-          let nextDueDate: Date | null = null;
-          
-          if (loan.collectionFrequency === 'Daily') {
-            currentDueDate = addDays(startDate, installmentsPaid + 1);
-            nextDueDate = addDays(startDate, installmentsPaid + 2);
-          } else if (loan.collectionFrequency === 'Weekly') {
-            currentDueDate = addWeeks(startDate, installmentsPaid + 1);
-            nextDueDate = addWeeks(startDate, installmentsPaid + 2);
-          } else if (loan.collectionFrequency === 'Monthly') {
-            currentDueDate = addMonths(startDate, installmentsPaid + 1);
-            nextDueDate = addMonths(startDate, installmentsPaid + 2);
-          }
-          setDueDates({ current: currentDueDate, next: nextDueDate });
-      }
+        const installmentsPaid = loan.totalPaid > 0 ? Math.floor(loan.totalPaid / loan.weeklyRepayment) : 0;
+        const startDate = new Date(loan.disbursalDate);
+        let currentDueDate: Date | null = null;
+        let nextDueDate: Date | null = null;
+        
+        if (loan.collectionFrequency === 'Daily') {
+          currentDueDate = addDays(startDate, installmentsPaid + 1);
+          nextDueDate = addDays(startDate, installmentsPaid + 2);
+        } else if (loan.collectionFrequency === 'Weekly') {
+          currentDueDate = addWeeks(startDate, installmentsPaid + 1);
+          nextDueDate = addWeeks(startDate, installmentsPaid + 2);
+        } else if (loan.collectionFrequency === 'Monthly') {
+          currentDueDate = addMonths(startDate, installmentsPaid + 1);
+          nextDueDate = addMonths(startDate, installmentsPaid + 2);
+        }
+        setDueDates({ current: currentDueDate, next: nextDueDate });
     } else {
       setSelectedLoan(null);
       setDueDates({ current: null, next: null });
       form.resetField('amount');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedLoanIdInForm, loanIdFromQuery, loans, form.setValue, selectedLoan]);
+  }, [selectedLoanIdInForm, loanIdFromQuery, loans, form.setValue]);
 
 
   // Effect to sync URL query param to form state, and then clear the URL.
@@ -117,13 +115,10 @@ function CollectionsPageContent() {
         }
         // Use replace with the current pathname to remove query params
         const currentPathname = window.location.pathname;
-        if(router.replace && searchParams.has('loanId')){
-            router.replace(currentPathname, { scroll: false });
-        }
-
+        router.replace(currentPathname, { scroll: false });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loanIdFromQuery, router, searchParams]);
+  }, [loanIdFromQuery]);
 
 
   const handlePhoneSearch = () => {
