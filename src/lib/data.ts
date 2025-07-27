@@ -437,6 +437,7 @@ const initialCustomers: Customer[] = [
   },
 ];
 
+
 const initialLoans: Loan[] = [];
 
 const initialCollections: Collection[] = [];
