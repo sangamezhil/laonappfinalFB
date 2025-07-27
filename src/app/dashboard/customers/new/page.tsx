@@ -108,14 +108,20 @@ export default function NewCustomerPage() {
   })
 
   function onSubmit(data: KycFormValues) {
-    const {fullName, dob, ...rest} = data
     const newCustomer = addCustomer({
-      name: fullName, 
-      dob: format(dob, 'yyyy-MM-dd'),
-      ...rest, 
-      monthlyIncome: data.monthlyIncome || 0, 
+      name: data.fullName, 
+      dob: format(data.dob, 'yyyy-MM-dd'),
+      gender: data.gender,
+      email: data.email || '',
+      phone: data.phone,
+      secondaryPhone: data.secondaryPhone,
+      address: data.address,
+      idType: data.idType,
+      idNumber: data.idNumber,
+      secondaryIdType: data.secondaryIdType,
+      secondaryIdNumber: data.secondaryIdNumber,
       occupation: data.occupation || '', 
-      email: data.email || ''
+      monthlyIncome: data.monthlyIncome || 0, 
     });
     logActivity('Create Customer', `Registered new customer: ${newCustomer.name} (${newCustomer.id})`);
     toast({
