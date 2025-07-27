@@ -34,23 +34,8 @@ const chartConfig = {
 } satisfies ChartConfig
 
 export default function DashboardPage() {
-  const { toast } = useToast()
   const { loans, isLoaded: loansLoaded } = useLoans()
   const { customers, isLoaded: customersLoaded } = useCustomers()
-
-  const handleClearData = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('customers')
-      localStorage.removeItem('loans')
-      // Add other keys to remove here, like 'collections' when implemented
-      toast({
-        title: 'Data Cleared',
-        description: 'All customer and loan data has been reset.',
-      })
-      // Use a short timeout to allow the toast to appear before reload
-      setTimeout(() => window.location.reload(), 500)
-    }
-  }
 
   const summary = React.useMemo(() => {
     if (!loansLoaded) return {
@@ -92,12 +77,6 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-end">
-        <Button variant="destructive" onClick={handleClearData}>
-          <Trash2 className="w-4 h-4 mr-2" />
-          Clear All Data
-        </Button>
-      </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
