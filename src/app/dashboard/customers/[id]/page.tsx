@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { User, Briefcase, IndianRupee, Hash, Calendar } from 'lucide-react'
+import { User, Briefcase, IndianRupee, Hash, Calendar, Phone } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function CustomerProfilePage({ params }: { params: { id: string } }) {
@@ -101,7 +101,7 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
             </Avatar>
             <div>
               <CardTitle className="text-3xl font-headline">{customer.name}</CardTitle>
-              <CardDescription>{customer.email} • {customer.phone}</CardDescription>
+              <CardDescription>{customer.email} • {customer.phone} / {customer.secondaryPhone}</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -119,9 +119,13 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
               <IndianRupee className="w-4 h-4" />
               <span>Monthly Income: <strong>₹{customer.monthlyIncome.toLocaleString('en-IN')}</strong></span>
             </div>
-            <div className="flex items-center gap-2">
+             <div className="flex items-center gap-2">
               <Hash className="w-4 h-4" />
               <span>{customer.idType}: <strong>{customer.idNumber}</strong></span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Hash className="w-4 h-4" />
+              <span>{customer.secondaryIdType}: <strong>{customer.secondaryIdNumber}</strong></span>
             </div>
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4" />

@@ -7,9 +7,12 @@ export type Customer = {
   name: string;
   email: string;
   phone: string;
+  secondaryPhone: string;
   address: string;
   idType: 'Aadhaar Card' | 'PAN Card' | 'Ration Card' | 'Voter ID' | 'Bank Passbook' | 'Gas Book';
   idNumber: string;
+  secondaryIdType: 'Aadhaar Card' | 'PAN Card' | 'Ration Card' | 'Voter ID' | 'Bank Passbook' | 'Gas Book';
+  secondaryIdNumber: string;
   occupation: string;
   monthlyIncome: number;
   profilePicture: string;
@@ -69,14 +72,14 @@ const initialCompanyProfile: CompanyProfile = {
 }
 
 const initialCustomers: Customer[] = [
-  { id: 'CUST001', name: 'Ravi Kumar', email: 'ravi.kumar@example.com', phone: '9876543210', address: '123, MG Road, Bangalore', idType: 'Aadhaar Card', idNumber: '1234 5678 9012', occupation: 'Software Engineer', monthlyIncome: 80000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-01-15' },
-  { id: 'CUST002', name: 'Priya Sharma', email: 'priya.sharma@example.com', phone: '8765432109', address: '456, Main Street, Mumbai', idType: 'PAN Card', idNumber: 'ABCDE1234F', occupation: 'Graphic Designer', monthlyIncome: 65000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-02-20' },
-  { id: 'CUST003', name: 'Amit Singh', email: 'amit.singh@example.com', phone: '7654321098', address: '789, Park Avenue, Delhi', idType: 'Voter ID', idNumber: 'XYZ1234567', occupation: 'Marketing Manager', monthlyIncome: 95000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-03-10' },
-  { id: 'CUST004', name: 'Sunita Devi', email: 'sunita.devi@example.com', phone: '6543210987', address: '101, Civil Lines, Pune', idType: 'Aadhaar Card', idNumber: '9876 5432 1098', occupation: 'Teacher', monthlyIncome: 50000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-04-05' },
-  { id: 'CUST005', name: 'Rajesh Verma', email: 'rajesh.verma@example.com', phone: '5432109876', address: '202, JVPD Scheme, Mumbai', idType: 'PAN Card', idNumber: 'FGHIJ5678K', occupation: 'Businessman', monthlyIncome: 120000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-05-12' },
-  { id: 'CUST006', name: 'Anita Desai', email: 'anita.desai@example.com', phone: '4321098765', address: '303, Koramangala, Bangalore', idType: 'Voter ID', idNumber: 'LMN8765432', occupation: 'Doctor', monthlyIncome: 150000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-06-18' },
-  { id: 'CUST007', name: 'Sanjay Gupta', email: 'sanjay.gupta@example.com', phone: '3210987654', address: '404, Salt Lake, Kolkata', idType: 'Aadhaar Card', idNumber: '8765 4321 0987', occupation: 'Architect', monthlyIncome: 110000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-07-22' },
-  { id: 'CUST008', name: 'Meena Kumari', email: 'meena.kumari@example.com', phone: '2109876543', address: '505, Anna Nagar, Chennai', idType: 'Bank Passbook', idNumber: '9988776655', occupation: 'Homemaker', monthlyIncome: 25000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-08-01' },
+  { id: 'CUST001', name: 'Ravi Kumar', email: 'ravi.kumar@example.com', phone: '9876543210', secondaryPhone: '9876543211', address: '123, MG Road, Bangalore', idType: 'Aadhaar Card', idNumber: '1234 5678 9012', secondaryIdType: 'PAN Card', secondaryIdNumber: 'ABCDE1234F', occupation: 'Software Engineer', monthlyIncome: 80000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-01-15' },
+  { id: 'CUST002', name: 'Priya Sharma', email: 'priya.sharma@example.com', phone: '8765432109', secondaryPhone: '8765432108', address: '456, Main Street, Mumbai', idType: 'PAN Card', idNumber: 'ABCDE1234F', secondaryIdType: 'Aadhaar Card', secondaryIdNumber: '2345 6789 0123', occupation: 'Graphic Designer', monthlyIncome: 65000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-02-20' },
+  { id: 'CUST003', name: 'Amit Singh', email: 'amit.singh@example.com', phone: '7654321098', secondaryPhone: '7654321097', address: '789, Park Avenue, Delhi', idType: 'Voter ID', idNumber: 'XYZ1234567', secondaryIdType: 'Aadhaar Card', secondaryIdNumber: '3456 7890 1234', occupation: 'Marketing Manager', monthlyIncome: 95000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-03-10' },
+  { id: 'CUST004', name: 'Sunita Devi', email: 'sunita.devi@example.com', phone: '6543210987', secondaryPhone: '6543210986', address: '101, Civil Lines, Pune', idType: 'Aadhaar Card', idNumber: '9876 5432 1098', secondaryIdType: 'Ration Card', secondaryIdNumber: 'RATION5678', occupation: 'Teacher', monthlyIncome: 50000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-04-05' },
+  { id: 'CUST005', name: 'Rajesh Verma', email: 'rajesh.verma@example.com', phone: '5432109876', secondaryPhone: '5432109875', address: '202, JVPD Scheme, Mumbai', idType: 'PAN Card', idNumber: 'FGHIJ5678K', secondaryIdType: 'Bank Passbook', secondaryIdNumber: 'BANKPASS123', occupation: 'Businessman', monthlyIncome: 120000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-05-12' },
+  { id: 'CUST006', name: 'Anita Desai', email: 'anita.desai@example.com', phone: '4321098765', secondaryPhone: '4321098764', address: '303, Koramangala, Bangalore', idType: 'Voter ID', idNumber: 'LMN8765432', secondaryIdType: 'Aadhaar Card', secondaryIdNumber: '4567 8901 2345', occupation: 'Doctor', monthlyIncome: 150000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-06-18' },
+  { id: 'CUST007', name: 'Sanjay Gupta', email: 'sanjay.gupta@example.com', phone: '3210987654', secondaryPhone: '3210987653', address: '404, Salt Lake, Kolkata', idType: 'Aadhaar Card', idNumber: '8765 4321 0987', secondaryIdType: 'PAN Card', secondaryIdNumber: 'GHIJK2345L', occupation: 'Architect', monthlyIncome: 110000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-07-22' },
+  { id: 'CUST008', name: 'Meena Kumari', email: 'meena.kumari@example.com', phone: '2109876543', secondaryPhone: '2109876542', address: '505, Anna Nagar, Chennai', idType: 'Bank Passbook', idNumber: '9988776655', secondaryIdType: 'Gas Book', secondaryIdNumber: 'GASBOOK987', occupation: 'Homemaker', monthlyIncome: 25000, profilePicture: 'https://placehold.co/100x100', registrationDate: '2023-08-01' },
 ];
 
 const initialLoans: Loan[] = [

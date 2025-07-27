@@ -32,9 +32,12 @@ const kycFormSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Please enter a valid email address.' }).optional().or(z.literal('')),
   phone: z.string().regex(/^\d{10}$/, { message: 'Phone number must be 10 digits.' }),
+  secondaryPhone: z.string().regex(/^\d{10}$/, { message: 'Secondary phone number must be 10 digits.' }),
   address: z.string().min(10, { message: 'Address is too short.' }),
   idType: z.enum(['Aadhaar Card', 'PAN Card', 'Ration Card', 'Voter ID', 'Bank Passbook', 'Gas Book']),
   idNumber: z.string().min(5, { message: 'ID number is required.' }),
+  secondaryIdType: z.enum(['Aadhaar Card', 'PAN Card', 'Ration Card', 'Voter ID', 'Bank Passbook', 'Gas Book']),
+  secondaryIdNumber: z.string().min(5, { message: 'Secondary ID number is required.' }),
   occupation: z.string().optional(),
   monthlyIncome: z.coerce.number().positive().optional(),
 }).superRefine((data, ctx) => {
@@ -46,6 +49,29 @@ const kycFormSchema = z.object({
         path: ['idNumber'],
       });
     }
+  }
+   if (data.secondaryIdType === 'Aadhaar Card') {
+    if (!/^\d{12}$/.test(data.secondaryIdNumber)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Aadhaar number must be 12 numeric digits.",
+        path: ['secondaryIdNumber'],
+      });
+    }
+  }
+  if (data.idType === data.secondaryIdType) {
+     ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Secondary ID type must be different from the primary ID type.",
+        path: ['secondaryIdType'],
+      });
+  }
+  if (data.phone === data.secondaryPhone) {
+     ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Secondary phone number must be different from the primary phone number.",
+        path: ['secondaryPhone'],
+      });
   }
 });
 
@@ -63,10 +89,13 @@ export default function NewCustomerPage() {
       fullName: '',
       email: '',
       phone: '',
+      secondaryPhone: '',
       address: '',
       occupation: '',
       idNumber: '',
       idType: 'Aadhaar Card',
+      secondaryIdType: 'PAN Card',
+      secondaryIdNumber: ''
     },
   })
 
@@ -122,7 +151,20 @@ export default function NewCustomerPage() {
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone Number</FormLabel>
+                    <FormLabel>Primary Phone Number</FormLabel>
+                    <FormControl>
+                      <Input type="tel" placeholder="10-digit mobile number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="secondaryPhone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Secondary Phone Number</FormLabel>
                     <FormControl>
                       <Input type="tel" placeholder="10-digit mobile number" {...field} />
                     </FormControl>
@@ -134,7 +176,7 @@ export default function NewCustomerPage() {
                 control={form.control}
                 name="address"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="md:col-span-2">
                     <FormLabel>Full Address</FormLabel>
                     <FormControl>
                       <Input placeholder="Enter full address" {...field} />
@@ -148,7 +190,7 @@ export default function NewCustomerPage() {
                 name="idType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>ID Type</FormLabel>
+                    <FormLabel>Primary ID Type</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -173,9 +215,47 @@ export default function NewCustomerPage() {
                 name="idNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>ID Number</FormLabel>
+                    <FormLabel>Primary ID Number</FormLabel>
                     <FormControl>
                       <Input placeholder="Enter ID number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="secondaryIdType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Secondary ID Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select an ID type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Aadhaar Card">Aadhaar Card</SelectItem>
+                        <SelectItem value="PAN Card">PAN Card</SelectItem>
+                        <SelectItem value="Ration Card">Ration Card</SelectItem>
+                        <SelectItem value="Voter ID">Voter ID</SelectItem>
+                        <SelectItem value="Bank Passbook">Bank Passbook</SelectItem>
+                        <SelectItem value="Gas Book">Gas Book</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="secondaryIdNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Secondary ID Number</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter secondary ID number" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
