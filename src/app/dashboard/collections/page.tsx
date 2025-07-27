@@ -137,6 +137,10 @@ function CollectionsPageContent() {
             // Clean up URL by removing the query parameter after processing
              window.history.replaceState({ ...window.history.state, as: currentPath, url: currentPath }, '', currentPath);
         }
+    } else {
+      // Clear details if no loan is selected
+      setSelectedLoan(null);
+      setDueDates({ current: null, next: null });
     }
   }, [loanIdFromQuery, selectedLoanIdInForm, updateLoanDetails, form]);
 
@@ -431,5 +435,7 @@ export default function CollectionsPage() {
     </Suspense>
   )
 }
+
+    
 
     
