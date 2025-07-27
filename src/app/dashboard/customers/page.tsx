@@ -41,6 +41,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useCustomers, useLoans, Customer } from '@/lib/data'
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { cn, getAvatarColor } from '@/lib/utils';
 
 type User = {
   username: string;
@@ -125,28 +126,38 @@ export default function CustomersPage() {
                Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
                   <TableCell>
-                    <div className="grid gap-1">
-                      <Skeleton className="w-24 h-4" />
-                      <Skeleton className="w-32 h-3" />
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="w-10 h-10 rounded-full" />
+                      <div className="grid gap-1">
+                        <Skeleton className="w-24 h-4" />
+                        <Skeleton className="w-32 h-3" />
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell><Skeleton className="w-24 h-5" /></TableCell>
                   <TableCell><Skeleton className="w-20 h-5" /></TableCell>
                   <TableCell><Skeleton className="w-28 h-5" /></TableCell>
                   <TableCell><Skeleton className="w-24 h-5" /></TableCell>
-                  <TableCell><Skeleton className="w-8 h-8 rounded-full" /></TableCell>
+                  <TableCell><Skeleton className="w-8 h-8 rounded-md" /></TableCell>
                 </TableRow>
               ))
             ) : (
               customers.map((customer) => (
                 <TableRow key={customer.id}>
                   <TableCell>
-                    <div className="grid gap-0.5">
-                      <Link href={`/dashboard/customers/${customer.id}`} className="font-medium hover:underline">
-                        {customer.name}
-                      </Link>
-                      <div className="text-sm text-muted-foreground">{customer.email}</div>
-                    </div>
+                     <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarFallback className={getAvatarColor(customer.name)}>
+                            {customer.name.substring(0, 2)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="grid gap-0.5">
+                          <Link href={`/dashboard/customers/${customer.id}`} className="font-medium hover:underline">
+                            {customer.name}
+                          </Link>
+                          <div className="text-sm text-muted-foreground">{customer.email}</div>
+                        </div>
+                      </div>
                   </TableCell>
                   <TableCell>{customer.phone}</TableCell>
                   <TableCell>{customer.idType}</TableCell>

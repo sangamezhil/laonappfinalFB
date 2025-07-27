@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { User, Briefcase, IndianRupee, Hash, Calendar, Phone, Cake, VenetianMask } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
+import { cn, getAvatarColor } from '@/lib/utils';
 
 export default function CustomerProfilePage({ params }: { params: { id: string } }) {
   const resolvedParams = use(params);
@@ -95,7 +96,9 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
         <CardHeader>
           <div className="flex items-center gap-4">
             <Avatar className="w-20 h-20">
-              <AvatarFallback>{customer.name.substring(0, 2)}</AvatarFallback>
+              <AvatarFallback className={cn("text-xl font-bold", getAvatarColor(customer.name))}>
+                {customer.name.substring(0, 2)}
+              </AvatarFallback>
             </Avatar>
             <div>
               <CardTitle className="text-3xl font-headline">{customer.name}</CardTitle>
