@@ -22,8 +22,8 @@ const personalLoanSchema = z.object({
   collectionFrequency: z.enum(['Weekly']),
   repaymentTerm: z.literal(40),
   interestRate: z.literal(30),
-  docCharges: z.coerce.number().nonnegative().optional(),
-  insuranceCharges: z.coerce.number().nonnegative().optional(),
+  docCharges: z.coerce.number().nonnegative(),
+  insuranceCharges: z.coerce.number().nonnegative(),
 });
 
 const groupLoanSchema = z.object({
@@ -33,8 +33,8 @@ const groupLoanSchema = z.object({
   loanAmount: z.coerce.number().positive(), // This is the total loan amount for the group
   interestRate: z.coerce.number().min(10).max(20),
   repaymentTerm: z.literal(40),
-  docCharges: z.coerce.number().nonnegative().optional(),
-  insuranceCharges: z.coerce.number().nonnegative().optional(),
+  docCharges: z.coerce.number().nonnegative(),
+  insuranceCharges: z.coerce.number().nonnegative(),
   members: z.array(z.object({ customerId: z.string().nonempty("Please select a member") })).min(1, 'Please add members'),
 });
 
@@ -315,10 +315,10 @@ export default function NewLoanPage() {
                   )} />
                   
                   <FormField control={personalForm.control} name="docCharges" render={({ field }) => (
-                    <FormItem><FormLabel className="flex items-center gap-1">Documentation Charges <IndianRupee className="w-4 h-4" /></FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel className="flex items-center gap-1">Documentation Charges <IndianRupee className="w-4 h-4" /></FormLabel><FormControl><Input type="number" placeholder="Enter doc charges" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={personalForm.control} name="insuranceCharges" render={({ field }) => (
-                    <FormItem><FormLabel className="flex items-center gap-1">Insurance Charges <IndianRupee className="w-4 h-4" /></FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel className="flex items-center gap-1">Insurance Charges <IndianRupee className="w-4 h-4" /></FormLabel><FormControl><Input type="number" placeholder="Enter insurance charges" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                   )} />
                 </div>
                 <DisbursalCalculator control={personalForm.control} loanType="personal" />
@@ -364,10 +364,10 @@ export default function NewLoanPage() {
                         </FormItem>
                     )} />
                      <FormField control={groupForm.control} name="docCharges" render={({ field }) => (
-                        <FormItem><FormLabel className="flex items-center gap-1">Total Documentation Charges <IndianRupee className="w-4 h-4" /></FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel className="flex items-center gap-1">Total Documentation Charges <IndianRupee className="w-4 h-4" /></FormLabel><FormControl><Input type="number" placeholder="Enter doc charges" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={groupForm.control} name="insuranceCharges" render={({ field }) => (
-                        <FormItem><FormLabel className="flex items-center gap-1">Total Insurance Charges <IndianRupee className="w-4 h-4" /></FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel className="flex items-center gap-1">Total Insurance Charges <IndianRupee className="w-4 h-4" /></FormLabel><FormControl><Input type="number" placeholder="Enter insurance charges" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                     )} />
                 </div>
                 <div className="space-y-4">
@@ -415,4 +415,5 @@ export default function NewLoanPage() {
   )
 }
 
+    
     
