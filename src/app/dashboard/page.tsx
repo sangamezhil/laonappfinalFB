@@ -6,7 +6,7 @@ import { TrendingUp, Users, Landmark, AlertCircle, CheckCircle, Wallet, FileText
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from 'recharts'
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Text } from 'recharts'
 import type { ChartConfig } from '@/components/ui/chart'
 import { Badge } from '@/components/ui/badge'
 import { useLoans, useCustomers, useCollections } from '@/lib/data'
@@ -23,6 +23,25 @@ const chartConfig = {
     color: 'hsl(var(--accent))',
   },
 } satisfies ChartConfig
+
+const CustomYAxisTick = (props: any) => {
+    const { x, y, payload } = props;
+    const formattedValue = new Intl.NumberFormat('en-IN', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(payload.value);
+
+    return (
+        <g transform={`translate(${x},${y})`}>
+            <foreignObject x={-70} y={-10} width={65} height={20} className="overflow-visible">
+                <div className="flex items-center justify-end w-full gap-1 text-xs text-muted-foreground">
+                    <IndianRupee className="w-3 h-3" />
+                    <span>{formattedValue}</span>
+                </div>
+            </foreignObject>
+        </g>
+    );
+};
 
 export default function DashboardPage() {
   const { loans, isLoaded: loansLoaded } = useLoans()
@@ -191,7 +210,7 @@ export default function DashboardPage() {
                           axisLine={false}
                       />
                       <YAxis 
-                        tickFormatter={(value) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Number(value))}
+                        tick={<CustomYAxisTick />}
                       />
                       <ChartTooltip content={<ChartTooltipContent />} />
                       <Bar dataKey="disbursed" fill="var(--color-disbursed)" radius={4} />
