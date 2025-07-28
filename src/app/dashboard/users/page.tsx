@@ -300,6 +300,7 @@ export default function UsersPage() {
     const updatedHistory = [newHistoryItem, ...downloadHistory].slice(0, 5);
     setDownloadHistory(updatedHistory);
     setHistoryInStorage(updatedHistory);
+    setDateRange(undefined);
   };
 
 
