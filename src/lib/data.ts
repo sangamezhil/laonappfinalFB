@@ -306,5 +306,3 @@ export function getLoansByCustomerId(customerId: string): Loan[] {
   const loans = getFromStorage('loans', initialLoans);
   return loans.filter(l => l.customerId === customerId);
 }
-
-    

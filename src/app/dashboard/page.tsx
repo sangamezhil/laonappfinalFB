@@ -6,13 +6,12 @@ import { TrendingUp, Users, Landmark, AlertCircle, CheckCircle, Wallet, FileText
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from 'recharts'
 import type { ChartConfig } from '@/components/ui/chart'
 import { Badge } from '@/components/ui/badge'
-import { useLoans, useCustomers } from '@/lib/data'
+import { useLoans, useCustomers, useCollections } from '@/lib/data'
+import { format, parseISO } from 'date-fns'
 
-const chartData = [
-]
 
 const chartConfig = {
   disbursed: {
@@ -28,6 +27,37 @@ const chartConfig = {
 export default function DashboardPage() {
   const { loans, isLoaded: loansLoaded } = useLoans()
   const { customers, isLoaded: customersLoaded } = useCustomers()
+  const { collections, isLoaded: collectionsLoaded } = useCollections();
+
+  const chartData = React.useMemo(() => {
+    if (!loansLoaded || !collectionsLoaded) return [];
+
+    const monthlyData: { [key: string]: { month: string; disbursed: number; collected: number } } = {};
+
+    // Process disbursements from loans
+    loans.forEach(loan => {
+      if (loan.status !== 'Pending') {
+          const month = format(parseISO(loan.disbursalDate), 'yyyy-MM');
+          if (!monthlyData[month]) {
+            monthlyData[month] = { month: format(parseISO(loan.disbursalDate), 'MMM yyyy'), disbursed: 0, collected: 0 };
+          }
+          monthlyData[month].disbursed += loan.amount;
+      }
+    });
+    
+    // Process collections
+    collections.forEach(collection => {
+        const month = format(parseISO(collection.date), 'yyyy-MM');
+        if (!monthlyData[month]) {
+            monthlyData[month] = { month: format(parseISO(collection.date), 'MMM yyyy'), disbursed: 0, collected: 0 };
+        }
+        monthlyData[month].collected += collection.amount;
+    });
+
+    return Object.values(monthlyData).sort((a,b) => a.month.localeCompare(b.month));
+
+  }, [loans, collections, loansLoaded, collectionsLoaded]);
+
 
   const summary = React.useMemo(() => {
     if (!loansLoaded) return {
@@ -108,8 +138,8 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
-        <Card className="col-span-3">
+      <div className="grid gap-4 md:grid-cols-1">
+        <Card className="col-span-full">
           <CardHeader>
             <CardTitle>Financial Summary</CardTitle>
           </CardHeader>
@@ -147,6 +177,33 @@ export default function DashboardPage() {
 
       <Card>
         <CardHeader>
+            <CardTitle>Monthly Cash Flow</CardTitle>
+        </CardHeader>
+        <CardContent>
+            <ChartContainer config={chartConfig} className="h-[250px]">
+              <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                      <CartesianGrid vertical={false} />
+                      <XAxis
+                          dataKey="month"
+                          tickLine={false}
+                          tickMargin={10}
+                          axisLine={false}
+                      />
+                      <YAxis 
+                        tickFormatter={(value) => `₹${Number(value) / 1000}k`}
+                      />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar dataKey="disbursed" fill="var(--color-disbursed)" radius={4} />
+                      <Bar dataKey="collected" fill="var(--color-collected)" radius={4} />
+                  </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Recent Loan Activity</CardTitle>
         </CardHeader>
         <CardContent>
@@ -178,7 +235,7 @@ export default function DashboardPage() {
                       {loan.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>{loan.disbursalDate}</TableCell>
+                  <TableCell>{format(parseISO(loan.disbursalDate), 'PPP')}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

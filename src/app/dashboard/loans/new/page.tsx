@@ -400,10 +400,7 @@ export default function NewLoanPage() {
                         <FormLabel>Group Leader</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl><SelectTrigger><SelectValue placeholder="Select a group leader" /></SelectTrigger></FormControl>
-                           <SelectContent>{eligibleCustomers.filter(c => {
-                               const selectedMemberIds = new Set(selectedMembers?.map(m => m.customerId).filter(Boolean));
-                               return !selectedMemberIds.has(c.id);
-                           }).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                           <SelectContent>{getAvailableMembers(-1).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                         </Select>
                         <FormMessage />
                       </FormItem>
