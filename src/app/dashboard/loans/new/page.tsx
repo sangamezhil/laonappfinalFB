@@ -30,7 +30,7 @@ const groupLoanSchema = z.object({
   groupName: z.string().min(3, { message: 'Group name is required.' }),
   groupLeaderId: z.string().nonempty({ message: 'Please select a group leader.' }),
   groupSize: z.enum(['5', '10', '15', '20']),
-  loanAmount: z.coerce.number().positive(), // This is the total loan amount for the group
+  loanAmount: z.coerce.number().positive(),
   interestRate: z.literal(30),
   repaymentTerm: z.literal(40),
   docCharges: z.coerce.number().positive({ message: 'Documentation charges are required.' }),
@@ -82,7 +82,7 @@ const DisbursalCalculator = ({ control, loanType }: { control: any; loanType: 'p
           )}
           <div className="flex justify-between pt-2 mt-2 font-bold border-t"><span>Total Repayable per Member (Principal + Interest):</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{totalRepayablePerMember.toLocaleString('en-IN')}</span></div>
           <div className="flex justify-between pt-2 mt-2 font-bold text-green-700 border-t border-green-300">
-              <span>Weekly Repayment Amount:</span> 
+              <span>Weekly Repayment Amount per Member:</span> 
               <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{repaymentAmountPerMember.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
         </div>
@@ -438,5 +438,3 @@ export default function NewLoanPage() {
     </Card>
   )
 }
-
-    
