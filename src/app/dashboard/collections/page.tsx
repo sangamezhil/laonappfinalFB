@@ -59,6 +59,7 @@ function CollectionsPageContent() {
   const [phoneSearch, setPhoneSearch] = useState('');
   const [dueDates, setDueDates] = useState<{ current: Date | null, next: Date | null }>({ current: null, next: null });
   const [collectionToDelete, setCollectionToDelete] = useState<Collection | null>(null);
+  const [collectionToConfirm, setCollectionToConfirm] = useState<CollectionFormValues | null>(null);
   const [user, setUser] = React.useState<User | null>(null);
   
   const loanIdFromQuery = searchParams.get('loanId');
@@ -123,16 +124,13 @@ function CollectionsPageContent() {
     if (loanIdToProcess && loanIdToProcess !== (selectedLoan?.id ?? '')) {
       updateLoanDetails(loanIdToProcess);
       
-      // If the loanId came from the query, set it in the form.
       if (loanIdFromQuery) {
         setValue('loanId', loanIdFromQuery, { shouldValidate: true, shouldDirty: true });
         
-        // Clean the URL to avoid reprocessing on re-renders
         const currentPath = window.location.pathname;
         window.history.replaceState({ ...window.history.state, as: currentPath, url: currentPath }, '', currentPath);
       }
     } else if (!loanIdToProcess && selectedLoan) {
-        // This handles clearing the form when the loan selection is removed.
         handleClear();
     }
   }, [loanIdFromQuery, selectedLoanIdInForm, updateLoanDetails, setValue, selectedLoan]);
@@ -163,13 +161,20 @@ function CollectionsPageContent() {
       paymentMethod: 'Cash',
       collectionDate: new Date(),
     });
-    setValue('loanId', ''); // Explicitly clear loanId
+    setValue('loanId', '');
     setSelectedLoan(null);
     setPhoneSearch('');
     setDueDates({ current: null, next: null });
   }
 
-  function onSubmit(data: CollectionFormValues) {
+  function onAttemptSubmit(data: CollectionFormValues) {
+    setCollectionToConfirm(data);
+  }
+
+  function handleConfirmCollection() {
+    if (!collectionToConfirm) return;
+    const data = collectionToConfirm;
+
     const loan = loans.find(l => l.id === data.loanId);
     if (!loan) {
         toast({ variant: 'destructive', title: 'Error', description: 'Selected loan not found.' });
@@ -189,9 +194,10 @@ function CollectionsPageContent() {
 
     toast({
       title: 'Collection Recorded',
-      description: `Payment of ${data.amount.toLocaleString('en-IN')} for loan ${data.loanId} has been recorded.`,
+      description: <>Payment of <IndianRupee className="inline-block w-4 h-4" /> {data.amount.toLocaleString('en-IN')} for loan {data.loanId} has been recorded.</>,
     });
 
+    setCollectionToConfirm(null);
     handleClear();
   }
   
@@ -221,7 +227,7 @@ function CollectionsPageContent() {
     <div className="grid gap-6 md:grid-cols-5">
       <div className="md:col-span-2">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
+          <form onSubmit={form.handleSubmit(onAttemptSubmit)}>
             <Card>
               <CardHeader>
                 <CardTitle>Collection Entry</CardTitle>
@@ -443,6 +449,41 @@ function CollectionsPageContent() {
         </Card>
       </div>
     </div>
+    
+    <AlertDialog open={!!collectionToConfirm} onOpenChange={(open) => !open && setCollectionToConfirm(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Confirm Collection</AlertDialogTitle>
+          <AlertDialogDescription>
+            Please review the details before confirming the collection.
+            <div className="py-4 space-y-2">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Customer:</span>
+                <span className="font-semibold">{selectedLoan?.customerName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Loan ID:</span>
+                <span className="font-semibold font-mono text-xs">{selectedLoan?.id}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Amount:</span>
+                <span className="font-semibold flex items-center"><IndianRupee className="w-4 h-4 mr-1" /> {collectionToConfirm?.amount.toLocaleString('en-IN')}</span>
+              </div>
+               <div className="flex justify-between">
+                <span className="text-muted-foreground">Due Date:</span>
+                <span className="font-semibold">{dueDates.current ? format(dueDates.current, 'PPP') : 'N/A'}</span>
+              </div>
+            </div>
+            This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setCollectionToConfirm(null)}>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmCollection}>Confirm</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
     <AlertDialog open={!!collectionToDelete} onOpenChange={(open) => !open && setCollectionToDelete(null)}>
         <AlertDialogContent>
             <AlertDialogHeader>
