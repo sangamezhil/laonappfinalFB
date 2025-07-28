@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { PlusCircle, MoreHorizontal, FileDown } from 'lucide-react'
+import { PlusCircle, MoreHorizontal, FileDown, Calendar as CalendarIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -63,6 +63,11 @@ import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { useUserActivity, useCustomers, useLoans, useCollections } from '@/lib/data'
 import * as XLSX from 'xlsx';
+import { format, isWithinInterval, parseISO } from 'date-fns'
+import { DateRange } from "react-day-picker"
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { cn } from '@/lib/utils'
 
 
 type UserRole = 'Admin' | 'Collection Agent';
@@ -77,6 +82,11 @@ type User = {
 type LoggedInUser = {
   username: string;
   role: string;
+}
+
+type DownloadHistoryItem = {
+    filename: string;
+    date: string;
 }
 
 const userSchema = z.object({
@@ -116,6 +126,18 @@ const setUsersInStorage = (users: User[]) => {
     localStorage.setItem('users', JSON.stringify(users));
 }
 
+const getHistoryFromStorage = (): DownloadHistoryItem[] => {
+    if (typeof window === 'undefined') return [];
+    const stored = localStorage.getItem('downloadHistory');
+    return stored ? JSON.parse(stored) : [];
+}
+
+const setHistoryInStorage = (history: DownloadHistoryItem[]) => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('downloadHistory', JSON.stringify(history));
+}
+
+
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -125,6 +147,8 @@ export default function UsersPage() {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [loggedInUser, setLoggedInUser] = useState<LoggedInUser | null>(null);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [downloadHistory, setDownloadHistory] = useState<DownloadHistoryItem[]>([]);
   const { logActivity } = useUserActivity();
   const { customers } = useCustomers();
   const { loans } = useLoans();
@@ -142,6 +166,7 @@ export default function UsersPage() {
     if (storedUser) {
         setLoggedInUser(JSON.parse(storedUser));
     }
+    setDownloadHistory(getHistoryFromStorage());
     setIsLoaded(true);
   }, []);
   
@@ -205,7 +230,6 @@ export default function UsersPage() {
 
   function handleResetPassword(data: z.infer<typeof resetPasswordSchema>) {
     if (!userToEdit) return;
-    // In a real app, you would now make an API call to update the password.
     logActivity('Reset Password', `Reset password for user ${userToEdit.username}.`);
     toast({
       title: 'Password Reset',
@@ -246,20 +270,36 @@ export default function UsersPage() {
   }
 
   const downloadAllData = () => {
-    const customerSheet = XLSX.utils.json_to_sheet(customers);
-    const loanSheet = XLSX.utils.json_to_sheet(loans);
-    const collectionSheet = XLSX.utils.json_to_sheet(collections);
+    const range = dateRange?.from && dateRange.to ? { start: dateRange.from, end: dateRange.to } : null;
+
+    const filteredCustomers = range ? customers.filter(c => isWithinInterval(parseISO(c.registrationDate), range)) : customers;
+    const filteredLoans = range ? loans.filter(l => isWithinInterval(parseISO(l.disbursalDate), range)) : loans;
+    const filteredCollections = range ? collections.filter(c => isWithinInterval(parseISO(c.date), range)) : collections;
+
+    const customerSheet = XLSX.utils.json_to_sheet(filteredCustomers);
+    const loanSheet = XLSX.utils.json_to_sheet(filteredLoans);
+    const collectionSheet = XLSX.utils.json_to_sheet(filteredCollections);
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, customerSheet, 'Customers');
     XLSX.utils.book_append_sheet(workbook, loanSheet, 'Loans');
     XLSX.utils.book_append_sheet(workbook, collectionSheet, 'Collections');
+    
+    const fromDate = range ? format(range.start, 'yyyy-MM-dd') : 'start';
+    const toDate = range ? format(range.end, 'yyyy-MM-dd') : 'end';
+    const filename = `LoanTrackLite_Data_${fromDate}_to_${toDate}.xlsx`;
 
-    XLSX.writeFile(workbook, 'LoanTrackLite_AllData.xlsx');
+    XLSX.writeFile(workbook, filename);
+    
     toast({
         title: 'Download Started',
-        description: `LoanTrackLite_AllData.xlsx is being downloaded.`,
+        description: `${filename} is being downloaded.`,
     });
+    
+    const newHistoryItem: DownloadHistoryItem = { filename, date: new Date().toISOString() };
+    const updatedHistory = [newHistoryItem, ...downloadHistory].slice(0, 5);
+    setDownloadHistory(updatedHistory);
+    setHistoryInStorage(updatedHistory);
   };
 
 
@@ -369,12 +409,69 @@ export default function UsersPage() {
       </CardContent>
       <CardFooter>
           {loggedInUser?.role === 'Admin' && (
-            <div className="pt-4 border-t w-full">
-              <h3 className="text-lg font-semibold mb-2">Data Exports</h3>
-               <Button variant="outline" onClick={downloadAllData}>
-                  <FileDown className="w-4 h-4 mr-2" />
-                  Download All Data
-                </Button>
+            <div className="pt-4 border-t w-full space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Data Exports</h3>
+                 <div className="flex flex-col sm:flex-row gap-2 items-center">
+                    <Popover>
+                        <PopoverTrigger asChild>
+                        <Button
+                            id="date"
+                            variant={"outline"}
+                            className={cn(
+                            "w-[300px] justify-start text-left font-normal",
+                            !dateRange && "text-muted-foreground"
+                            )}
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dateRange?.from ? (
+                            dateRange.to ? (
+                                <>
+                                {format(dateRange.from, "LLL dd, y")} -{" "}
+                                {format(dateRange.to, "LLL dd, y")}
+                                </>
+                            ) : (
+                                format(dateRange.from, "LLL dd, y")
+                            )
+                            ) : (
+                            <span>Pick a date range</span>
+                            )}
+                        </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                            initialFocus
+                            mode="range"
+                            defaultMonth={dateRange?.from}
+                            selected={dateRange}
+                            onSelect={setDateRange}
+                            numberOfMonths={2}
+                        />
+                        </PopoverContent>
+                    </Popover>
+                    <Button variant="outline" onClick={downloadAllData}>
+                        <FileDown className="w-4 h-4 mr-2" />
+                        Download All Data
+                    </Button>
+                 </div>
+                 <p className="text-sm text-muted-foreground mt-2">Select a date range to export filtered data. If no range is selected, all data will be exported.</p>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Last 5 Downloads</h3>
+                {downloadHistory.length > 0 ? (
+                    <ul className="space-y-2">
+                        {downloadHistory.map((item, index) => (
+                            <li key={index} className="text-sm flex justify-between items-center p-2 rounded-md bg-muted/50">
+                                <span>{item.filename}</span>
+                                <span className="text-muted-foreground">{format(parseISO(item.date), 'dd MMM yyyy, HH:mm')}</span>
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
+                    <p className="text-sm text-muted-foreground">No download history yet.</p>
+                )}
+              </div>
             </div>
           )}
       </CardFooter>
