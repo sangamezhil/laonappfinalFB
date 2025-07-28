@@ -277,7 +277,7 @@ function CollectionsPageContent() {
                           <IndianRupee className="w-4 h-4" />
                           Due Amount
                         </span>
-                        <span className="font-semibold flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{selectedLoan.weeklyRepayment.toLocaleString('en-IN')}</span>
+                        <span className="font-semibold flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{selectedLoan.weeklyRepayment.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                       </div>
                        <div className="flex justify-between">
                         <span className="text-muted-foreground flex items-center gap-1">
@@ -295,7 +295,7 @@ function CollectionsPageContent() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground flex items-center gap-1"><Landmark className="w-4 h-4" /> Outstanding</span>
-                        <span className="font-semibold flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{selectedLoan.outstandingAmount.toLocaleString('en-IN')}</span>
+                        <span className="font-semibold flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{selectedLoan.outstandingAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                       </div>
                     </CardContent>
                   </Card>
