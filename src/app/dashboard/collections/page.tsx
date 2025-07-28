@@ -189,7 +189,7 @@ function CollectionsPageContent() {
 
     toast({
       title: 'Collection Recorded',
-      description: `Payment of ₹${data.amount.toLocaleString('en-IN')} for loan ${data.loanId} has been recorded.`,
+      description: `Payment of ${data.amount.toLocaleString('en-IN')} for loan ${data.loanId} has been recorded.`,
     });
 
     handleClear();
@@ -448,7 +448,7 @@ function CollectionsPageContent() {
             <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete the collection record for <span className="font-bold">{collectionToDelete?.customer}</span> of <span className="font-bold">₹{collectionToDelete?.amount.toLocaleString('en-IN')}</span>.
+                This action cannot be undone. This will permanently delete the collection record for <span className="font-bold">{collectionToDelete?.customer}</span> of <IndianRupee className="inline-block w-4 h-4 mx-1" /> <span className="font-bold">{collectionToDelete?.amount.toLocaleString('en-IN')}</span>.
             </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -469,3 +469,5 @@ export default function CollectionsPage() {
     </Suspense>
   )
 }
+
+    
