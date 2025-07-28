@@ -54,9 +54,9 @@ export default function LoginPage() {
           const stored = localStorage.getItem('users');
           const storedUsers: User[] = stored ? JSON.parse(stored) : [];
           
-          const foundUser = storedUsers.find(user => user.username === username);
+          // In this mock, we assume password is the same as username for demo purposes.
+          const foundUser = storedUsers.find(user => user.username === username && password === user.username);
 
-          // Note: We are not checking password for this mock implementation.
           if (foundUser) {
             userToLogin = foundUser;
           } else if (username === 'admin' && password === 'admin' && storedUsers.find(u => u.username === 'admin') === undefined) {
