@@ -420,7 +420,7 @@ function CollectionsPageContent() {
                             <TableCell>
                               <div className="items-center">
                                 <IndianRupee className="inline-block w-4 h-4 mr-1" />
-                                {c.amount.toLocaleString('en-IN')}
+                                {c.amount.toLocaleString('en-IN', {maximumFractionDigits: 0})}
                               </div>
                             </TableCell>
                             <TableCell>{c.paymentMethod}</TableCell>
