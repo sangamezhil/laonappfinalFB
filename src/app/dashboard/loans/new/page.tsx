@@ -39,7 +39,7 @@ const groupLoanSchema = z.object({
 });
 
 const DisbursalCalculator = ({ control, loanType }: { control: any; loanType: 'personal' | 'group' }) => {
-  const [loanAmount, interestRate, docCharges, insuranceCharges, groupSize, repaymentTerm, collectionFrequency] = useWatch({
+  const [loanAmount, interestRate, docCharges, insuranceCharges, groupSize, repaymentTerm] = useWatch({
     control,
     name: [
       'loanAmount',
@@ -48,36 +48,29 @@ const DisbursalCalculator = ({ control, loanType }: { control: any; loanType: 'p
       'insuranceCharges',
       'groupSize',
       'repaymentTerm',
-      'collectionFrequency',
     ],
   });
 
   const principal = parseFloat(loanAmount) || 0;
+  if (principal === 0) return null;
+
   const size = loanType === 'group' ? parseInt(groupSize) || 1 : 1;
   const perMemberPrincipal = principal / size;
 
-  const interest = (perMemberPrincipal * (parseFloat(interestRate) || 0)) / 100;
   const docs = (parseFloat(docCharges) || 0) / size;
   const insurance = (parseFloat(insuranceCharges) || 0) / size;
 
-  const totalDeductions = interest + docs + insurance;
+  // Calculate deductions from disbursal amount
+  const totalDeductions = docs + insurance;
   const disbursalAmount = perMemberPrincipal - totalDeductions;
   const totalGroupDisbursal = disbursalAmount * size;
 
+  // Calculate total repayable amount
+  const interest = (perMemberPrincipal * (parseFloat(interestRate) || 0)) / 100;
+  const totalRepayable = perMemberPrincipal + interest;
   const term = parseInt(repaymentTerm) || 1;
-  const repaymentAmount = perMemberPrincipal / term;
-  
-  if (principal === 0) return null;
+  const repaymentAmount = totalRepayable / term;
 
-  const getFrequencyLabel = () => {
-    if (loanType === 'group') return 'Weekly';
-    switch (collectionFrequency) {
-      case 'Daily': return 'Daily';
-      case 'Weekly': return 'Weekly';
-      case 'Monthly': return 'Monthly';
-      default: return 'per Term';
-    }
-  }
 
   return (
     <div className="p-4 mt-4 border rounded-lg bg-secondary/50">
@@ -85,15 +78,16 @@ const DisbursalCalculator = ({ control, loanType }: { control: any; loanType: 'p
       <div className="space-y-2 text-sm">
         {loanType === 'group' && <div className="flex justify-between"><span>Total Group Principal:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{principal.toLocaleString('en-IN')}</span></div>}
         <div className="flex justify-between"><span>Principal per Member:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{perMemberPrincipal.toLocaleString('en-IN')}</span></div>
-        <div className="flex justify-between text-muted-foreground"><span>Interest ({interestRate}%):</span> <span className='flex items-center'>- <IndianRupee className='w-4 h-4 mx-1'/>{interest.toLocaleString('en-IN')}</span></div>
         <div className="flex justify-between text-muted-foreground"><span>Doc Charges (per member):</span> <span className='flex items-center'>- <IndianRupee className='w-4 h-4 mx-1'/>{docs.toLocaleString('en-IN')}</span></div>
         <div className="flex justify-between text-muted-foreground"><span>Insurance (per member):</span> <span className='flex items-center'>- <IndianRupee className='w-4 h-4 mx-1'/>{insurance.toLocaleString('en-IN')}</span></div>
         <div className="flex justify-between pt-2 mt-2 font-bold border-t"><span>Net Disbursal per Member:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{disbursalAmount.toLocaleString('en-IN')}</span></div>
         {loanType === 'group' && size > 1 && (
             <div className="flex justify-between pt-2 mt-2 font-bold text-primary"><span>Total Net Disbursal for Group:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{totalGroupDisbursal.toLocaleString('en-IN')}</span></div>
         )}
+        <div className="flex justify-between pt-2 mt-2 font-bold border-t"><span>Total Repayable per Member:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{totalRepayable.toLocaleString('en-IN')}</span></div>
+
         <div className="flex justify-between pt-2 mt-2 font-bold text-green-700 border-t border-green-300">
-            <span>Repayment Amount ({getFrequencyLabel()}):</span> 
+            <span>Weekly Repayment Amount:</span> 
             <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{repaymentAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
         </div>
       </div>
@@ -183,8 +177,9 @@ export default function NewLoanPage() {
         return;
     }
 
-    const totalLoanValue = data.loanAmount;
-    const repaymentAmount = totalLoanValue / data.repaymentTerm;
+    const interest = (data.loanAmount * data.interestRate) / 100;
+    const totalRepayable = data.loanAmount + interest;
+    const repaymentAmount = totalRepayable / data.repaymentTerm;
 
     const newLoans = addLoan({
         customerId: data.customerId,
@@ -197,7 +192,7 @@ export default function NewLoanPage() {
         disbursalDate: new Date().toISOString().split('T')[0],
         weeklyRepayment: repaymentAmount,
         totalPaid: 0,
-        outstandingAmount: totalLoanValue,
+        outstandingAmount: totalRepayable,
         collectionFrequency: data.collectionFrequency,
     });
     const newLoan = Array.isArray(newLoans) ? newLoans[0] : newLoans;
@@ -226,7 +221,9 @@ export default function NewLoanPage() {
 
     const size = parseInt(data.groupSize);
     const perMemberAmount = data.loanAmount / size;
-    const weeklyRepayment = perMemberAmount / data.repaymentTerm;
+    const interest = (perMemberAmount * data.interestRate) / 100;
+    const totalRepayable = perMemberAmount + interest;
+    const weeklyRepayment = totalRepayable / data.repaymentTerm;
     const groupId = `GRP_${data.groupName.replace(/\s/g, '')}_${Date.now()}`;
 
     const loansToCreate = allMemberIds.map(memberId => {
@@ -245,7 +242,7 @@ export default function NewLoanPage() {
             disbursalDate: new Date().toISOString().split('T')[0],
             weeklyRepayment: weeklyRepayment,
             totalPaid: 0,
-            outstandingAmount: perMemberAmount,
+            outstandingAmount: totalRepayable,
             collectionFrequency: 'Weekly' as 'Weekly',
         };
     });
@@ -414,6 +411,3 @@ export default function NewLoanPage() {
     </Card>
   )
 }
-
-    
-    
