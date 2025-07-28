@@ -21,7 +21,7 @@ const personalLoanSchema = z.object({
   loanAmount: z.coerce.number().positive(),
   collectionFrequency: z.enum(['Weekly']),
   repaymentTerm: z.literal(40),
-  interestRate: z.coerce.number().min(12).max(20),
+  interestRate: z.literal(30),
   docCharges: z.coerce.number().nonnegative().optional(),
   insuranceCharges: z.coerce.number().nonnegative().optional(),
 });
@@ -113,7 +113,7 @@ export default function NewLoanPage() {
     resolver: zodResolver(personalLoanSchema),
     defaultValues: {
       collectionFrequency: 'Weekly',
-      interestRate: 12,
+      interestRate: 30,
       repaymentTerm: 40,
       loanAmount: '' as any,
       docCharges: '' as any,
@@ -305,11 +305,13 @@ export default function NewLoanPage() {
                     </FormItem>
                   )} />
                   <FormField control={personalForm.control} name="interestRate" render={({ field }) => (
-                    <FormItem><FormLabel>Interest Rate (%)</FormLabel>
-                     <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={String(field.value)}><FormControl><SelectTrigger><SelectValue placeholder="12% - 20%" /></SelectTrigger></FormControl>
-                        <SelectContent>{Array.from({ length: 9 }, (_, i) => 12 + i).map(rate => <SelectItem key={rate} value={String(rate)}>{rate}%</SelectItem>)}</SelectContent>
-                        </Select>
-                    <FormMessage /></FormItem>
+                    <FormItem>
+                        <FormLabel>Interest Rate (%)</FormLabel>
+                        <FormControl>
+                            <Input readOnly value="30%" className="bg-muted" />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
                   )} />
                   
                   <FormField control={personalForm.control} name="docCharges" render={({ field }) => (
@@ -412,3 +414,5 @@ export default function NewLoanPage() {
     </Card>
   )
 }
+
+    
