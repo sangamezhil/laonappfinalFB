@@ -19,7 +19,7 @@ import { IndianRupee } from 'lucide-react'
 const personalLoanSchema = z.object({
   customerId: z.string().nonempty({ message: 'Please select a customer.' }),
   loanAmount: z.coerce.number().positive(),
-  collectionFrequency: z.enum(['Daily', 'Weekly', 'Monthly']),
+  collectionFrequency: z.enum(['Weekly']),
   repaymentTerm: z.coerce.number().positive(),
   interestRate: z.coerce.number().min(12).max(20),
   docCharges: z.coerce.number().nonnegative().optional(),
@@ -170,25 +170,6 @@ export default function NewLoanPage() {
   }, [groupSize, fields, append, remove]);
 
 
-  const collectionFrequency = useWatch({
-      control: personalForm.control,
-      name: 'collectionFrequency',
-  });
-
-  React.useEffect(() => {
-      if (collectionFrequency === 'Daily') {
-          personalForm.setValue('interestRate', 20);
-          personalForm.setValue('repaymentTerm', 70);
-      } else if (collectionFrequency === 'Weekly') {
-          personalForm.setValue('interestRate', 12);
-          personalForm.setValue('repaymentTerm', 10);
-      } else if (collectionFrequency === 'Monthly') {
-          personalForm.setValue('interestRate', 20);
-          personalForm.setValue('repaymentTerm', 1);
-      }
-  }, [collectionFrequency, personalForm]);
-
-
   const onPersonalSubmit = (data: z.infer<typeof personalLoanSchema>) => {
     const customer = customers.find(c => c.id === data.customerId);
     if (!customer) {
@@ -306,27 +287,29 @@ export default function NewLoanPage() {
                     <FormItem><FormLabel className="flex items-center gap-1">Loan Amount <IndianRupee className="w-4 h-4" /></FormLabel><FormControl><Input type="number" placeholder="e.g., 50000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                   )} />
                    <FormField control={personalForm.control} name="collectionFrequency" render={({ field }) => (
-                    <FormItem><FormLabel>Collection Frequency</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Select frequency" /></SelectTrigger></FormControl>
-                        <SelectContent>
-                            <SelectItem value="Daily">Daily</SelectItem>
-                            <SelectItem value="Weekly">Weekly</SelectItem>
-                            <SelectItem value="Monthly">Monthly</SelectItem>
-                        </SelectContent>
+                    <FormItem>
+                      <FormLabel>Collection Frequency</FormLabel>
+                      <FormControl>
+                        <Input readOnly {...field} value="Weekly" className="bg-muted" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                   <FormField control={personalForm.control} name="repaymentTerm" render={({ field }) => (
+                    <FormItem><FormLabel>Repayment Term (Weeks)</FormLabel>
+                    <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={String(field.value)}><FormControl><SelectTrigger><SelectValue placeholder="10 - 50 Weeks" /></SelectTrigger></FormControl>
+                        <SelectContent>{[10, 12, 15, 20, 25, 30, 40, 50].map(term => <SelectItem key={term} value={String(term)}>{term} Weeks</SelectItem>)}</SelectContent>
                     </Select>
                     <FormMessage /></FormItem>
                   )} />
                   <FormField control={personalForm.control} name="interestRate" render={({ field }) => (
                     <FormItem><FormLabel>Interest Rate (%)</FormLabel>
-                    <FormControl><Input type="number" {...field} readOnly className="bg-muted" /></FormControl>
+                     <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={String(field.value)}><FormControl><SelectTrigger><SelectValue placeholder="12% - 20%" /></SelectTrigger></FormControl>
+                        <SelectContent>{Array.from({ length: 9 }, (_, i) => 12 + i).map(rate => <SelectItem key={rate} value={String(rate)}>{rate}%</SelectItem>)}</SelectContent>
+                        </Select>
                     <FormMessage /></FormItem>
                   )} />
-                  <FormField control={personalForm.control} name="repaymentTerm" render={({ field }) => (
-                    <FormItem><FormLabel>Repayment Term ({collectionFrequency === 'Daily' ? 'Days' : collectionFrequency === 'Weekly' ? 'Weeks' : 'Months'})</FormLabel>
-                    <FormControl><Input type="number" {...field} readOnly className="bg-muted" /></FormControl>
-                    <FormMessage /></FormItem>
-                  )} />
+                  
                   <FormField control={personalForm.control} name="docCharges" render={({ field }) => (
                     <FormItem><FormLabel className="flex items-center gap-1">Documentation Charges <IndianRupee className="w-4 h-4" /></FormLabel><FormControl><Input type="number" placeholder="Optional" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                   )} />
@@ -424,3 +407,5 @@ export default function NewLoanPage() {
     </Card>
   )
 }
+
+    
