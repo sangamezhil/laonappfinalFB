@@ -53,50 +53,62 @@ const DisbursalCalculator = ({ control, loanType }: { control: any; loanType: 'p
 
   const principal = parseFloat(loanAmount) || 0;
   if (principal === 0) return null;
-
-  const size = loanType === 'group' ? parseInt(groupSize) || 1 : 1;
-  const perMemberPrincipal = principal / size;
-
-  const docs = loanType === 'group' ? (parseFloat(docCharges) || 0) / size : parseFloat(docCharges) || 0;
-  const insurance = loanType === 'group' ? (parseFloat(insuranceCharges) || 0) / size : parseFloat(insuranceCharges) || 0;
-
-  const totalDeductions = docs + insurance;
-  const disbursalAmount = perMemberPrincipal - totalDeductions;
-  
-  const interest = (perMemberPrincipal * (parseFloat(interestRate) || 0)) / 100;
-  const totalRepayable = perMemberPrincipal + interest;
   const term = parseInt(repaymentTerm) || 1;
+
+  if (loanType === 'group') {
+    const size = parseInt(groupSize) || 1;
+    const perMemberPrincipal = principal / size;
+    const docs = (parseFloat(docCharges) || 0) / size;
+    const insurance = (parseFloat(insuranceCharges) || 0) / size;
+    const interest = (perMemberPrincipal * (parseFloat(interestRate) || 0)) / 100;
+    const totalDeductions = docs + insurance + interest;
+    const disbursalAmount = perMemberPrincipal - totalDeductions;
+    const totalRepayable = perMemberPrincipal;
+    const repaymentAmount = totalRepayable / term;
+    const totalGroupDisbursal = disbursalAmount * size;
+
+    return (
+      <div className="p-4 mt-4 border rounded-lg bg-secondary/50">
+        <h4 className="mb-2 font-semibold">Loan Calculation</h4>
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between"><span>Total Group Principal:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{principal.toLocaleString('en-IN')}</span></div>
+          <div className="flex justify-between"><span>Principal per Member:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{perMemberPrincipal.toLocaleString('en-IN')}</span></div>
+          <div className="flex justify-between text-muted-foreground"><span>Interest (per member):</span> <span className='flex items-center'>- <IndianRupee className='w-4 h-4 mx-1'/>{interest.toLocaleString('en-IN')}</span></div>
+          <div className="flex justify-between text-muted-foreground"><span>Doc Charges (per member):</span> <span className='flex items-center'>- <IndianRupee className='w-4 h-4 mx-1'/>{docs.toLocaleString('en-IN')}</span></div>
+          <div className="flex justify-between text-muted-foreground"><span>Insurance (per member):</span> <span className='flex items-center'>- <IndianRupee className='w-4 h-4 mx-1'/>{insurance.toLocaleString('en-IN')}</span></div>
+          <div className="flex justify-between pt-2 mt-2 font-bold border-t"><span>Net Disbursal per Member:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{disbursalAmount.toLocaleString('en-IN')}</span></div>
+          {size > 1 && (
+              <div className="flex justify-between pt-2 mt-2 font-bold text-primary"><span>Total Net Disbursal for Group:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{totalGroupDisbursal.toLocaleString('en-IN')}</span></div>
+          )}
+          <div className="flex justify-between pt-2 mt-2 font-bold border-t"><span>Total Repayable per Member:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{totalRepayable.toLocaleString('en-IN')}</span></div>
+          <div className="flex justify-between pt-2 mt-2 font-bold text-green-700 border-t border-green-300">
+              <span>Weekly Repayment Amount:</span> 
+              <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{repaymentAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Personal Loan Calculation
+  const docs = parseFloat(docCharges) || 0;
+  const insurance = parseFloat(insuranceCharges) || 0;
+  const totalDeductions = docs + insurance;
+  const disbursalAmount = principal - totalDeductions;
+  
+  const interest = (principal * (parseFloat(interestRate) || 0)) / 100;
+  const totalRepayable = principal + interest;
   const repaymentAmount = totalRepayable / term;
-
-  const totalGroupDisbursal = disbursalAmount * size;
-
-
+  
   return (
     <div className="p-4 mt-4 border rounded-lg bg-secondary/50">
       <h4 className="mb-2 font-semibold">Loan Calculation</h4>
       <div className="space-y-2 text-sm">
-        {loanType === 'group' ? (
-          <>
-            <div className="flex justify-between"><span>Total Group Principal:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{principal.toLocaleString('en-IN')}</span></div>
-            <div className="flex justify-between"><span>Principal per Member:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{perMemberPrincipal.toLocaleString('en-IN')}</span></div>
-            <div className="flex justify-between text-muted-foreground"><span>Doc Charges (per member):</span> <span className='flex items-center'>- <IndianRupee className='w-4 h-4 mx-1'/>{docs.toLocaleString('en-IN')}</span></div>
-            <div className="flex justify-between text-muted-foreground"><span>Insurance (per member):</span> <span className='flex items-center'>- <IndianRupee className='w-4 h-4 mx-1'/>{insurance.toLocaleString('en-IN')}</span></div>
-            <div className="flex justify-between pt-2 mt-2 font-bold border-t"><span>Net Disbursal per Member:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{disbursalAmount.toLocaleString('en-IN')}</span></div>
-            {size > 1 && (
-                <div className="flex justify-between pt-2 mt-2 font-bold text-primary"><span>Total Net Disbursal for Group:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{totalGroupDisbursal.toLocaleString('en-IN')}</span></div>
-            )}
-            <div className="flex justify-between pt-2 mt-2 font-bold border-t"><span>Total Repayable per Member:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{totalRepayable.toLocaleString('en-IN')}</span></div>
-          </>
-        ) : (
-          <>
-            <div className="flex justify-between"><span>Principal Amount:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{principal.toLocaleString('en-IN')}</span></div>
-            <div className="flex justify-between text-muted-foreground"><span>Doc Charges:</span> <span className='flex items-center'>- <IndianRupee className='w-4 h-4 mx-1'/>{docs.toLocaleString('en-IN')}</span></div>
-            <div className="flex justify-between text-muted-foreground"><span>Insurance:</span> <span className='flex items-center'>- <IndianRupee className='w-4 h-4 mx-1'/>{insurance.toLocaleString('en-IN')}</span></div>
-            <div className="flex justify-between pt-2 mt-2 font-bold border-t"><span>Net Disbursal Amount:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{disbursalAmount.toLocaleString('en-IN')}</span></div>
-            <div className="flex justify-between pt-2 mt-2 font-bold border-t"><span>Total Repayable Amount:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{totalRepayable.toLocaleString('en-IN')}</span></div>
-          </>
-        )}
-        
+        <div className="flex justify-between"><span>Principal Amount:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{principal.toLocaleString('en-IN')}</span></div>
+        <div className="flex justify-between text-muted-foreground"><span>Doc Charges:</span> <span className='flex items-center'>- <IndianRupee className='w-4 h-4 mx-1'/>{docs.toLocaleString('en-IN')}</span></div>
+        <div className="flex justify-between text-muted-foreground"><span>Insurance:</span> <span className='flex items-center'>- <IndianRupee className='w-4 h-4 mx-1'/>{insurance.toLocaleString('en-IN')}</span></div>
+        <div className="flex justify-between pt-2 mt-2 font-bold border-t"><span>Net Disbursal Amount:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{disbursalAmount.toLocaleString('en-IN')}</span></div>
+        <div className="flex justify-between pt-2 mt-2 font-bold border-t"><span>Total Repayable Amount:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{totalRepayable.toLocaleString('en-IN')}</span></div>
         <div className="flex justify-between pt-2 mt-2 font-bold text-green-700 border-t border-green-300">
             <span>Weekly Repayment Amount:</span> 
             <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{repaymentAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -232,8 +244,7 @@ export default function NewLoanPage() {
 
     const size = parseInt(data.groupSize);
     const perMemberAmount = data.loanAmount / size;
-    const interest = (perMemberAmount * data.interestRate) / 100;
-    const totalRepayable = perMemberAmount + interest;
+    const totalRepayable = perMemberAmount;
     const weeklyRepayment = totalRepayable / data.repaymentTerm;
     const groupId = `GRP_${data.groupName.replace(/\s/g, '')}_${Date.now()}`;
 
@@ -423,4 +434,5 @@ export default function NewLoanPage() {
   )
 }
 
+    
     
