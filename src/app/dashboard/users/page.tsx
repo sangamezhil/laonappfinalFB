@@ -451,7 +451,7 @@ export default function UsersPage() {
                     </Popover>
                     <Button variant="outline" onClick={downloadAllData}>
                         <FileDown className="w-4 h-4 mr-2" />
-                        Download All Data
+                        Download Data
                     </Button>
                  </div>
                  <p className="text-sm text-muted-foreground mt-2">Select a date range to export filtered data. If no range is selected, all data will be exported.</p>
@@ -565,3 +565,5 @@ export default function UsersPage() {
     </>
   )
 }
+
+    
