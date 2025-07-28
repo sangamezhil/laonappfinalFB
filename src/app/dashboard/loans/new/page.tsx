@@ -58,32 +58,32 @@ const DisbursalCalculator = ({ control, loanType }: { control: any; loanType: 'p
   if (loanType === 'group') {
     const size = parseInt(groupSize) || 1;
     const perMemberPrincipal = principal / size;
-    const docs = (parseFloat(docCharges) || 0) / size;
-    const insurance = (parseFloat(insuranceCharges) || 0) / size;
-    const interest = (perMemberPrincipal * (parseFloat(interestRate) || 0)) / 100;
-    const totalDeductions = docs + insurance + interest;
-    const disbursalAmount = perMemberPrincipal - totalDeductions;
-    const totalRepayable = perMemberPrincipal;
-    const repaymentAmount = totalRepayable / term;
-    const totalGroupDisbursal = disbursalAmount * size;
+    const docsPerMember = (parseFloat(docCharges) || 0) / size;
+    const insurancePerMember = (parseFloat(insuranceCharges) || 0) / size;
+    
+    const totalDeductionsPerMember = docsPerMember + insurancePerMember;
+    const disbursalAmountPerMember = perMemberPrincipal - totalDeductionsPerMember;
+    const totalGroupDisbursal = disbursalAmountPerMember * size;
+    
+    const interestPerMember = (perMemberPrincipal * (parseFloat(interestRate) || 0)) / 100;
+    const totalRepayablePerMember = perMemberPrincipal + interestPerMember;
+    const repaymentAmountPerMember = totalRepayablePerMember / term;
 
     return (
       <div className="p-4 mt-4 border rounded-lg bg-secondary/50">
-        <h4 className="mb-2 font-semibold">Loan Calculation</h4>
+        <h4 className="mb-2 font-semibold">Loan Calculation (per Member)</h4>
         <div className="space-y-2 text-sm">
-          <div className="flex justify-between"><span>Total Group Principal:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{principal.toLocaleString('en-IN')}</span></div>
           <div className="flex justify-between"><span>Principal per Member:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{perMemberPrincipal.toLocaleString('en-IN')}</span></div>
-          <div className="flex justify-between text-muted-foreground"><span>Interest (per member):</span> <span className='flex items-center'>- <IndianRupee className='w-4 h-4 mx-1'/>{interest.toLocaleString('en-IN')}</span></div>
-          <div className="flex justify-between text-muted-foreground"><span>Doc Charges (per member):</span> <span className='flex items-center'>- <IndianRupee className='w-4 h-4 mx-1'/>{docs.toLocaleString('en-IN')}</span></div>
-          <div className="flex justify-between text-muted-foreground"><span>Insurance (per member):</span> <span className='flex items-center'>- <IndianRupee className='w-4 h-4 mx-1'/>{insurance.toLocaleString('en-IN')}</span></div>
-          <div className="flex justify-between pt-2 mt-2 font-bold border-t"><span>Net Disbursal per Member:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{disbursalAmount.toLocaleString('en-IN')}</span></div>
+          <div className="flex justify-between text-muted-foreground"><span>Doc Charges (per member):</span> <span className='flex items-center'>- <IndianRupee className='w-4 h-4 mx-1'/>{docsPerMember.toLocaleString('en-IN')}</span></div>
+          <div className="flex justify-between text-muted-foreground"><span>Insurance (per member):</span> <span className='flex items-center'>- <IndianRupee className='w-4 h-4 mx-1'/>{insurancePerMember.toLocaleString('en-IN')}</span></div>
+          <div className="flex justify-between pt-2 mt-2 font-bold border-t"><span>Net Disbursal per Member:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{disbursalAmountPerMember.toLocaleString('en-IN')}</span></div>
           {size > 1 && (
               <div className="flex justify-between pt-2 mt-2 font-bold text-primary"><span>Total Net Disbursal for Group:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{totalGroupDisbursal.toLocaleString('en-IN')}</span></div>
           )}
-          <div className="flex justify-between pt-2 mt-2 font-bold border-t"><span>Total Repayable per Member:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{totalRepayable.toLocaleString('en-IN')}</span></div>
+          <div className="flex justify-between pt-2 mt-2 font-bold border-t"><span>Total Repayable per Member (Principal + Interest):</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{totalRepayablePerMember.toLocaleString('en-IN')}</span></div>
           <div className="flex justify-between pt-2 mt-2 font-bold text-green-700 border-t border-green-300">
               <span>Weekly Repayment Amount:</span> 
-              <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{repaymentAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{repaymentAmountPerMember.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
         </div>
       </div>
@@ -108,7 +108,7 @@ const DisbursalCalculator = ({ control, loanType }: { control: any; loanType: 'p
         <div className="flex justify-between text-muted-foreground"><span>Doc Charges:</span> <span className='flex items-center'>- <IndianRupee className='w-4 h-4 mx-1'/>{docs.toLocaleString('en-IN')}</span></div>
         <div className="flex justify-between text-muted-foreground"><span>Insurance:</span> <span className='flex items-center'>- <IndianRupee className='w-4 h-4 mx-1'/>{insurance.toLocaleString('en-IN')}</span></div>
         <div className="flex justify-between pt-2 mt-2 font-bold border-t"><span>Net Disbursal Amount:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{disbursalAmount.toLocaleString('en-IN')}</span></div>
-        <div className="flex justify-between pt-2 mt-2 font-bold border-t"><span>Total Repayable Amount:</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{totalRepayable.toLocaleString('en-IN')}</span></div>
+        <div className="flex justify-between pt-2 mt-2 font-bold border-t"><span>Total Repayable Amount (Principal + Interest):</span> <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{totalRepayable.toLocaleString('en-IN')}</span></div>
         <div className="flex justify-between pt-2 mt-2 font-bold text-green-700 border-t border-green-300">
             <span>Weekly Repayment Amount:</span> 
             <span className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{repaymentAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -243,9 +243,11 @@ export default function NewLoanPage() {
     }
 
     const size = parseInt(data.groupSize);
-    const perMemberAmount = data.loanAmount / size;
-    const totalRepayable = perMemberAmount;
-    const weeklyRepayment = totalRepayable / data.repaymentTerm;
+    const perMemberPrincipal = data.loanAmount / size;
+    const interestPerMember = (perMemberPrincipal * data.interestRate) / 100;
+    const totalRepayablePerMember = perMemberPrincipal + interestPerMember;
+    const weeklyRepayment = totalRepayablePerMember / data.repaymentTerm;
+
     const groupId = `GRP_${data.groupName.replace(/\s/g, '')}_${Date.now()}`;
 
     const loansToCreate = allMemberIds.map(memberId => {
@@ -257,14 +259,14 @@ export default function NewLoanPage() {
             groupId: groupId,
             groupLeaderName: leader.name,
             loanType: 'Group' as 'Group',
-            amount: perMemberAmount,
+            amount: perMemberPrincipal,
             interestRate: data.interestRate,
             term: data.repaymentTerm,
             status: 'Pending' as 'Pending',
             disbursalDate: new Date().toISOString().split('T')[0],
             weeklyRepayment: weeklyRepayment,
             totalPaid: 0,
-            outstandingAmount: totalRepayable,
+            outstandingAmount: totalRepayablePerMember,
             collectionFrequency: 'Weekly' as 'Weekly',
         };
     });
@@ -436,3 +438,5 @@ export default function NewLoanPage() {
     </Card>
   )
 }
+
+    
