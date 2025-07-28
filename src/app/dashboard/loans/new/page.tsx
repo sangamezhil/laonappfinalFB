@@ -31,7 +31,7 @@ const groupLoanSchema = z.object({
   groupLeaderId: z.string().nonempty({ message: 'Please select a group leader.' }),
   groupSize: z.enum(['5', '10', '15', '20']),
   loanAmount: z.coerce.number().positive(), // This is the total loan amount for the group
-  interestRate: z.coerce.number().min(10).max(20),
+  interestRate: z.literal(30),
   repaymentTerm: z.literal(40),
   docCharges: z.coerce.number().positive({ message: 'Documentation charges are required.' }),
   insuranceCharges: z.coerce.number().positive({ message: 'Insurance charges are required.' }),
@@ -143,7 +143,7 @@ export default function NewLoanPage() {
     defaultValues: {
       members: [],
       groupSize: '5',
-      interestRate: 10,
+      interestRate: 30,
       repaymentTerm: 40,
       loanAmount: '' as any,
       docCharges: '' as any,
@@ -368,10 +368,13 @@ export default function NewLoanPage() {
                         <FormItem><FormLabel className="flex items-center gap-1">Total Group Loan Amount <IndianRupee className="w-4 h-4" /></FormLabel><FormControl><Input type="number" placeholder="e.g., 200000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={groupForm.control} name="interestRate" render={({ field }) => (
-                        <FormItem><FormLabel>Interest Rate (%)</FormLabel>
-                        <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={String(field.value)}><FormControl><SelectTrigger><SelectValue placeholder="10% - 20%" /></SelectTrigger></FormControl>
-                        <SelectContent>{Array.from({ length: 11 }, (_, i) => 10 + i).map(rate => <SelectItem key={rate} value={String(rate)}>{rate}%</SelectItem>)}</SelectContent>
-                        </Select><FormMessage /></FormItem>
+                      <FormItem>
+                          <FormLabel>Interest Rate (%)</FormLabel>
+                          <FormControl>
+                              <Input readOnly value="30%" className="bg-muted" />
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
                     )} />
                     <FormField control={groupForm.control} name="repaymentTerm" render={({ field }) => (
                         <FormItem>
@@ -433,6 +436,3 @@ export default function NewLoanPage() {
     </Card>
   )
 }
-
-    
-    
