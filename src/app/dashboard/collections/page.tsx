@@ -454,27 +454,29 @@ function CollectionsPageContent() {
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Confirm Collection</AlertDialogTitle>
-          <AlertDialogDescription>
-            Please review the details before confirming the collection.
-            <div className="py-4 space-y-2">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Customer:</span>
-                <span className="font-semibold">{selectedLoan?.customerName}</span>
+          <AlertDialogDescription asChild>
+            <div>
+              Please review the details before confirming the collection.
+              <div className="py-4 space-y-2 text-foreground">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Customer:</span>
+                  <span className="font-semibold">{selectedLoan?.customerName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Loan ID:</span>
+                  <span className="font-semibold font-mono text-xs">{selectedLoan?.id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Amount:</span>
+                  <span className="font-semibold flex items-center"><IndianRupee className="w-4 h-4 mr-1" /> {collectionToConfirm?.amount.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Due Date:</span>
+                  <span className="font-semibold">{dueDates.current ? format(dueDates.current, 'PPP') : 'N/A'}</span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Loan ID:</span>
-                <span className="font-semibold font-mono text-xs">{selectedLoan?.id}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Amount:</span>
-                <span className="font-semibold flex items-center"><IndianRupee className="w-4 h-4 mr-1" /> {collectionToConfirm?.amount.toLocaleString('en-IN')}</span>
-              </div>
-               <div className="flex justify-between">
-                <span className="text-muted-foreground">Due Date:</span>
-                <span className="font-semibold">{dueDates.current ? format(dueDates.current, 'PPP') : 'N/A'}</span>
-              </div>
+              This action cannot be undone.
             </div>
-            This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
