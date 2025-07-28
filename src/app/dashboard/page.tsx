@@ -149,7 +149,7 @@ export default function DashboardPage() {
                     <div className="p-2 rounded-full bg-primary/20 text-primary"><TrendingUp/></div>
                     <div>
                         <p className="text-sm text-muted-foreground">Total Disbursed</p>
-                        <p className="text-xl font-bold flex items-center"><IndianRupee className="w-5 h-5 mr-1" />{summary.totalDisbursed.toLocaleString('en-IN')}</p>
+                        <p className="text-xl font-bold flex items-center"><IndianRupee className="w-5 h-5 mr-1" />{summary.totalDisbursed.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
                     </div>
                 </div>
             </div>
@@ -158,7 +158,7 @@ export default function DashboardPage() {
                     <div className="p-2 rounded-full bg-accent/20 text-accent"><Wallet/></div>
                     <div>
                         <p className="text-sm text-muted-foreground">Total Outstanding</p>
-                        <p className="text-xl font-bold flex items-center"><IndianRupee className="w-5 h-5 mr-1" />{summary.totalOutstanding.toLocaleString('en-IN')}</p>
+                        <p className="text-xl font-bold flex items-center"><IndianRupee className="w-5 h-5 mr-1" />{summary.totalOutstanding.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
                     </div>
                 </div>
             </div>
@@ -167,7 +167,7 @@ export default function DashboardPage() {
                     <div className="p-2 text-green-700 bg-green-500/20"><FileText/></div>
                     <div>
                         <p className="text-sm text-muted-foreground">Total Collected</p>
-                        <p className="text-xl font-bold flex items-center"><IndianRupee className="w-5 h-5 mr-1" />{summary.totalCollected.toLocaleString('en-IN')}</p>
+                        <p className="text-xl font-bold flex items-center"><IndianRupee className="w-5 h-5 mr-1" />{summary.totalCollected.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
                     </div>
                 </div>
             </div>
@@ -244,5 +244,7 @@ export default function DashboardPage() {
       </Card>
     </div>
   )
+
+    
 
     
