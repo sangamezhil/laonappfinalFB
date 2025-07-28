@@ -171,7 +171,7 @@ const LoanTable = ({
                           {item.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{item.totalOutstanding.toLocaleString('en-IN')}</TableCell>
+                      <TableCell className="flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{item.totalOutstanding.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</TableCell>
                       <TableCell>
                         {user?.role === 'Admin' && item.status === 'Pending' && (
                             <Button variant="outline" size="sm" onClick={() => handleApprove(item.groupId, item.groupId)}>
@@ -205,7 +205,7 @@ const LoanTable = ({
                                 {loan.status}
                             </Badge>
                             </TableCell>
-                            <TableCell className="flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{loan.outstandingAmount.toLocaleString('en-IN')}</TableCell>
+                            <TableCell className="flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{loan.outstandingAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</TableCell>
                             <TableCell>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -266,7 +266,7 @@ const LoanTable = ({
                             {item.loan.status}
                         </Badge>
                         </TableCell>
-                        <TableCell className="flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{item.loan.outstandingAmount.toLocaleString('en-IN')}</TableCell>
+                        <TableCell className="flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{item.loan.outstandingAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</TableCell>
                         <TableCell>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
