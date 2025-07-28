@@ -82,6 +82,10 @@ export default function CompanyProfilePage() {
       title: 'Profile Updated',
       description: 'Your company profile has been successfully updated.',
     })
+    
+    setTimeout(() => {
+        window.location.reload();
+    }, 1000)
   }
 
   if (!isLoaded) {
