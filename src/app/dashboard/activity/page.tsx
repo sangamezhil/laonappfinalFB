@@ -7,6 +7,27 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { useUserActivity } from '@/lib/data'
 import { format } from 'date-fns'
+import { IndianRupee } from 'lucide-react'
+
+const renderActivityDetails = (activity: { action: string, details: string }) => {
+  if (activity.action === 'Record Collection') {
+    const parts = activity.details.split(/₹(\d[\d,]*\.?\d*)/);
+    if (parts.length === 3) {
+      const [before, amount, after] = parts;
+      return (
+        <span>
+          {before}
+          <span className="inline-flex items-center">
+            <IndianRupee className="w-4 h-4 mx-1" />
+            {parseFloat(amount).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+          </span>
+          {after}
+        </span>
+      );
+    }
+  }
+  return activity.details;
+}
 
 export default function ActivityLogPage() {
   const { activities, isLoaded } = useUserActivity()
@@ -40,7 +61,7 @@ export default function ActivityLogPage() {
                     <Badge variant="outline">{activity.username}</Badge>
                   </TableCell>
                   <TableCell className="font-medium">{activity.action}</TableCell>
-                  <TableCell>{activity.details}</TableCell>
+                  <TableCell>{renderActivityDetails(activity)}</TableCell>
                 </TableRow>
               ))
             ) : (
