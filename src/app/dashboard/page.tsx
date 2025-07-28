@@ -191,7 +191,7 @@ export default function DashboardPage() {
                           axisLine={false}
                       />
                       <YAxis 
-                        tickFormatter={(value) => `₹${Number(value) / 1000}k`}
+                        tickFormatter={(value) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Number(value))}
                       />
                       <ChartTooltip content={<ChartTooltipContent />} />
                       <Bar dataKey="disbursed" fill="var(--color-disbursed)" radius={4} />
@@ -244,4 +244,5 @@ export default function DashboardPage() {
       </Card>
     </div>
   )
-}
+
+    
