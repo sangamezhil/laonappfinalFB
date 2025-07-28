@@ -8,12 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { User, Briefcase, IndianRupee, Hash, Calendar, Phone, Cake, VenetianMask, FileText, Wallet, Percent, CalendarClock } from 'lucide-react'
+import { User, Briefcase, IndianRupee, Hash, Calendar, Phone, Cake, VenetianMask, FileText, Wallet, Percent, CalendarClock, FileDown } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, addDays, addWeeks, addMonths } from 'date-fns';
 import { cn, getAvatarColor } from '@/lib/utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
+import * as XLSX from 'xlsx';
 
 type LoanWithDetails = Loan & {
   nextDueDate: Date | null;
@@ -60,6 +61,83 @@ export default function CustomerProfilePage({ params: { id: customerId } }: { pa
       }
     }
   }, [customerId, collections]);
+
+  const handleDownload = () => {
+    if (!customer) return;
+
+    // Sheet 1: Customer KYC Data
+    const kycData = [
+      { Field: 'Customer ID', Value: customer.id },
+      { Field: 'Name', Value: customer.name },
+      { Field: 'Date of Birth', Value: customer.dob ? format(new Date(customer.dob), 'PPP') : 'N/A' },
+      { Field: 'Gender', Value: customer.gender },
+      { Field: 'Email', Value: customer.email },
+      { Field: 'Primary Phone', Value: customer.phone },
+      { Field: 'Secondary Phone', Value: customer.secondaryPhone },
+      { Field: 'Address', Value: customer.address },
+      { Field: 'Occupation', Value: customer.occupation },
+      { Field: 'Monthly Income', Value: customer.monthlyIncome.toLocaleString('en-IN') },
+      { Field: 'Primary ID Type', Value: customer.idType },
+      { Field: 'Primary ID Number', Value: customer.idNumber },
+      { Field: 'Secondary ID Type', Value: customer.secondaryIdType },
+      { Field: 'Secondary ID Number', Value: customer.secondaryIdNumber },
+      { Field: 'Customer Since', Value: customer.registrationDate },
+    ];
+    const kycSheet = XLSX.utils.json_to_sheet(kycData);
+
+    // Sheet 2: Loan History
+    const loanHistoryData = loansWithDetails.flatMap(loan => {
+      const loanInfo = {
+        'Loan ID': loan.id,
+        'Loan Type': loan.loanType,
+        'Group Name': loan.groupName || 'N/A',
+        'Loan Amount': loan.amount,
+        'Interest Rate (%)': loan.interestRate,
+        'Term': `${loan.term} ${loan.collectionFrequency}s`,
+        'Status': loan.status,
+        'Disbursal Date': format(new Date(loan.disbursalDate), 'yyyy-MM-dd'),
+        'Total Paid': loan.totalPaid,
+        'Outstanding Amount': loan.outstandingAmount,
+        '-- Payment History --': '',
+        'Payment Date': '',
+        'Payment Amount': '',
+        'Payment Method': '',
+      };
+
+      if (loan.collections.length === 0) {
+        return loanInfo; // Return loan info even if no payments
+      }
+
+      // Map each collection to a row, including loan info for context
+      return loan.collections.map(c => ({
+        ...loanInfo,
+        '-- Payment History --': undefined, // No need for this header on each payment row
+        'Payment Date': format(new Date(c.date), 'yyyy-MM-dd'),
+        'Payment Amount': c.amount,
+        'Payment Method': c.paymentMethod,
+      }));
+    });
+    
+    const loanSheet = XLSX.utils.json_to_sheet(loanHistoryData, {
+       header: [
+        'Loan ID', 'Loan Type', 'Group Name', 'Loan Amount', 'Interest Rate (%)', 'Term', 'Status', 'Disbursal Date', 'Total Paid', 'Outstanding Amount',
+        'Payment Date', 'Payment Amount', 'Payment Method'
+       ]
+    });
+    
+    // Auto-fit columns
+    const kycWscols = [ { wch: 20 }, { wch: 30 } ];
+    kycSheet['!cols'] = kycWscols;
+
+    const loanWscols = Object.keys(loanHistoryData[0] || {}).map(key => ({ wch: key.length > 15 ? key.length + 2 : 15 }));
+    loanSheet['!cols'] = loanWscols;
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, kycSheet, "Customer KYC");
+    XLSX.utils.book_append_sheet(workbook, loanSheet, "Loan & Payment History");
+
+    XLSX.writeFile(workbook, `Customer_${customer.id}_${customer.name}.xlsx`);
+  };
 
   if (customer === undefined) {
     return (
@@ -109,16 +187,22 @@ export default function CustomerProfilePage({ params: { id: customerId } }: { pa
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-4">
-            <Avatar className="w-20 h-20 border">
-              <AvatarFallback className={cn("text-xl font-bold", getAvatarColor(customer.name))}>
-                {customer.name.substring(0, 2)}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <CardTitle className="text-3xl font-headline">{customer.name}</CardTitle>
-              <CardDescription>{customer.email} • {customer.phone} / {customer.secondaryPhone}</CardDescription>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+                <Avatar className="w-20 h-20 border">
+                <AvatarFallback className={cn("text-xl font-bold", getAvatarColor(customer.name))}>
+                    {customer.name.substring(0, 2)}
+                </AvatarFallback>
+                </Avatar>
+                <div>
+                <CardTitle className="text-3xl font-headline">{customer.name}</CardTitle>
+                <CardDescription>{customer.email} • {customer.phone} / {customer.secondaryPhone}</CardDescription>
+                </div>
             </div>
+            <Button variant="outline" onClick={handleDownload}>
+              <FileDown className="w-4 h-4 mr-2" />
+              Download
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
