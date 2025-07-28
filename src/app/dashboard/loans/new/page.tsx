@@ -386,10 +386,10 @@ export default function NewLoanPage() {
                         </FormItem>
                     )} />
                      <FormField control={groupForm.control} name="docCharges" render={({ field }) => (
-                        <FormItem><FormLabel className="flex items-center gap-1">Total Documentation Charges <IndianRupee className="w-4 h-4" /></FormLabel><FormControl><Input type="number" placeholder="Enter doc charges" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel className="flex items-center gap-1">Documentation Charges <IndianRupee className="w-4 h-4" /></FormLabel><FormControl><Input type="number" placeholder="Enter doc charges" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={groupForm.control} name="insuranceCharges" render={({ field }) => (
-                        <FormItem><FormLabel className="flex items-center gap-1">Total Insurance Charges <IndianRupee className="w-4 h-4" /></FormLabel><FormControl><Input type="number" placeholder="Enter insurance charges" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel className="flex items-center gap-1">Insurance Charges <IndianRupee className="w-4 h-4" /></FormLabel><FormControl><Input type="number" placeholder="Enter insurance charges" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                     )} />
                 </div>
                 <div className="space-y-4">
