@@ -27,6 +27,7 @@ import {
   SidebarFooter,
   SidebarTrigger,
   SidebarInset,
+  useSidebar,
 } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
 import {
@@ -55,12 +56,56 @@ type User = {
   role: string;
 }
 
+function DashboardSidebar() {
+    const pathname = usePathname();
+    const { setOpenMobile } = useSidebar();
+    const [user, setUser] = React.useState<User | null>(null);
+
+    React.useEffect(() => {
+        if (typeof window !== 'undefined') {
+        const storedUser = localStorage.getItem('loggedInUser');
+        if (storedUser) {
+            setUser(JSON.parse(storedUser));
+        }
+        }
+    }, []);
+
+    const menuItems = React.useMemo(() => {
+        if (!user) return [];
+        return allMenuItems.filter(item => item.roles.includes(user.role));
+    }, [user]);
+
+    const handleLinkClick = () => {
+        setOpenMobile(false);
+    }
+    
+    return (
+        <SidebarMenu>
+            {menuItems.map((item) => (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === item.href}
+                  tooltip={item.label}
+                  onClick={handleLinkClick}
+                >
+                  <Link href={item.href}>
+                    <item.icon />
+                    <span>{item.label}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+        </SidebarMenu>
+    )
+
+}
+
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const pathname = usePathname()
   const router = useRouter();
   const [user, setUser] = React.useState<User | null>(null);
   const { logActivity } = useUserActivity();
@@ -89,11 +134,6 @@ export default function DashboardLayout({
     router.push('/login');
   };
 
-  const menuItems = React.useMemo(() => {
-    if (!user) return [];
-    return allMenuItems.filter(item => item.roles.includes(user.role));
-  }, [user]);
-
   if (!user || !profileLoaded) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -112,22 +152,7 @@ export default function DashboardLayout({
           </div>
         </SidebarHeader>
         <SidebarContent>
-          <SidebarMenu>
-            {menuItems.map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === item.href}
-                  tooltip={item.label}
-                >
-                  <Link href={item.href}>
-                    <item.icon />
-                    <span>{item.label}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
+          <DashboardSidebar />
         </SidebarContent>
         <SidebarFooter>
           <SidebarMenuButton onClick={handleLogout}>
