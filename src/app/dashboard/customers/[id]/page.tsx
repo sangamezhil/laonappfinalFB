@@ -2,7 +2,7 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { notFound, useRouter } from 'next/navigation';
+import { notFound, useRouter, useParams } from 'next/navigation';
 import { getCustomerById, getLoansByCustomerId, Customer, Loan, useCollections, Collection } from '@/lib/data'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -21,8 +21,10 @@ type LoanWithDetails = Loan & {
   collections: Collection[];
 };
 
-export default function CustomerProfilePage({ params: { id: customerId } }: { params: { id: string } }) {
+export default function CustomerProfilePage() {
   const router = useRouter();
+  const params = useParams();
+  const customerId = params.id as string;
 
   const [customer, setCustomer] = useState<Customer | null | undefined>(undefined);
   const [loansWithDetails, setLoansWithDetails] = useState<LoanWithDetails[]>([]);
