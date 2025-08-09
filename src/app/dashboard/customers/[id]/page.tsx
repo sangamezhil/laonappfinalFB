@@ -65,78 +65,43 @@ export default function CustomerProfilePage({ params: { id: customerId } }: { pa
   const handleDownload = () => {
     if (!customer) return;
 
-    // Sheet 1: Customer KYC Data
-    const kycData = [
-      { Field: 'Customer ID', Value: customer.id },
-      { Field: 'Name', Value: customer.name },
-      { Field: 'Date of Birth', Value: customer.dob ? format(new Date(customer.dob), 'PPP') : 'N/A' },
-      { Field: 'Gender', Value: customer.gender },
-      { Field: 'Email', Value: customer.email },
-      { Field: 'Primary Phone', Value: customer.phone },
-      { Field: 'Secondary Phone', Value: customer.secondaryPhone },
-      { Field: 'Address', Value: customer.address },
-      { Field: 'Occupation', Value: customer.occupation },
-      { Field: 'Monthly Income', Value: customer.monthlyIncome.toLocaleString('en-IN') },
-      { Field: 'Primary ID Type', Value: customer.idType },
-      { Field: 'Primary ID Number', Value: customer.idNumber },
-      { Field: 'Secondary ID Type', Value: customer.secondaryIdType },
-      { Field: 'Secondary ID Number', Value: customer.secondaryIdNumber },
-      { Field: 'Customer Since', Value: customer.registrationDate },
-    ];
-    const kycSheet = XLSX.utils.json_to_sheet(kycData);
-
-    // Sheet 2: Loan History
-    const loanHistoryData = loansWithDetails.flatMap(loan => {
-      const loanInfo = {
-        'Loan ID': loan.id,
-        'Loan Type': loan.loanType,
-        'Group Name': loan.groupName || 'N/A',
-        'Loan Amount': loan.amount,
-        'Interest Rate (%)': loan.interestRate,
-        'Term': `${loan.term} ${loan.collectionFrequency}s`,
-        'Status': loan.status,
-        'Disbursal Date': format(new Date(loan.disbursalDate), 'yyyy-MM-dd'),
-        'Total Paid': loan.totalPaid,
-        'Outstanding Amount': loan.outstandingAmount,
-        '-- Payment History --': '',
-        'Payment Date': '',
-        'Payment Amount': '',
-        'Payment Method': '',
-      };
-
-      if (loan.collections.length === 0) {
-        return loanInfo; // Return loan info even if no payments
-      }
-
-      // Map each collection to a row, including loan info for context
-      return loan.collections.map(c => ({
-        ...loanInfo,
-        '-- Payment History --': undefined, // No need for this header on each payment row
-        'Payment Date': format(new Date(c.date), 'yyyy-MM-dd'),
-        'Payment Amount': c.amount,
-        'Payment Method': c.paymentMethod,
-      }));
-    });
+    const activeLoans = loansWithDetails.filter(loan => loan.status === 'Active' || loan.status === 'Overdue');
+    if (activeLoans.length === 0) {
+        alert('No active loans to download.');
+        return;
+    }
     
-    const loanSheet = XLSX.utils.json_to_sheet(loanHistoryData, {
-       header: [
-        'Loan ID', 'Loan Type', 'Group Name', 'Loan Amount', 'Interest Rate (%)', 'Term', 'Status', 'Disbursal Date', 'Total Paid', 'Outstanding Amount',
-        'Payment Date', 'Payment Amount', 'Payment Method'
-       ]
-    });
-    
-    // Auto-fit columns
-    const kycWscols = [ { wch: 20 }, { wch: 30 } ];
-    kycSheet['!cols'] = kycWscols;
-
-    const loanWscols = Object.keys(loanHistoryData[0] || {}).map(key => ({ wch: key.length > 15 ? key.length + 2 : 15 }));
-    loanSheet['!cols'] = loanWscols;
-
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, kycSheet, "Customer KYC");
-    XLSX.utils.book_append_sheet(workbook, loanSheet, "Loan & Payment History");
 
-    XLSX.writeFile(workbook, `Customer_${customer.id}_${customer.name}.xlsx`);
+    activeLoans.forEach(loan => {
+        const headerData = [
+            ['Customer Details', ''],
+            ['Customer ID', customer.id],
+            ['Customer Name', customer.name],
+            [],
+            ['Loan Details', ''],
+            ['Loan ID', loan.id],
+            ['Loan Type', loan.loanType],
+            ['Group Name', loan.groupName || 'N/A'],
+            ['Loan Amount', loan.amount],
+            ['Interest Rate (%)', loan.interestRate],
+            ['Term', `${loan.term} ${loan.collectionFrequency}s`],
+            ['Status', loan.status],
+            ['Disbursal Date', format(new Date(loan.disbursalDate), 'yyyy-MM-dd')],
+            [],
+            ['Loan Status Summary', ''],
+            ['Due Date', loan.nextDueDate ? format(loan.nextDueDate, 'PPP') : 'N/A'],
+            ['Installment Amount', loan.weeklyRepayment],
+            ['Paid Dues', loan.totalPaid],
+            ['Total Outstanding', loan.outstandingAmount],
+        ];
+
+        const sheet = XLSX.utils.aoa_to_sheet(headerData);
+        sheet['!cols'] = [{ wch: 25 }, { wch: 30 }];
+        XLSX.utils.book_append_sheet(workbook, sheet, `Loan_${loan.id}`);
+    });
+
+    XLSX.writeFile(workbook, `ActiveLoans_Statement_${customer.id}_${customer.name}.xlsx`);
   };
 
   if (customer === undefined) {
