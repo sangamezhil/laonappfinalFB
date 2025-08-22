@@ -2,7 +2,7 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { notFound, useRouter, useParams } from 'next/navigation';
+import { notFound, useParams } from 'next/navigation';
 import { getCustomerById, getLoansByCustomerId, Customer, Loan, useCollections, Collection } from '@/lib/data'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -15,7 +15,7 @@ import { cn, getAvatarColor } from '@/lib/utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 interface jsPDFWithAutoTable extends jsPDF {
   autoTable: (options: any) => jsPDF;
@@ -27,7 +27,6 @@ type LoanWithDetails = Loan & {
 };
 
 export default function CustomerProfilePage() {
-  const router = useRouter();
   const params = useParams();
   const customerId = params.id as string;
 
@@ -86,7 +85,7 @@ export default function CustomerProfilePage() {
         doc.setFontSize(10);
         doc.text(`Loan ID: ${loan.id}`, 14, 22);
 
-        doc.autoTable({
+        autoTable(doc, {
             startY: 30,
             head: [['Customer Details', '']],
             body: [
@@ -97,7 +96,7 @@ export default function CustomerProfilePage() {
             headStyles: { fillColor: [22, 163, 74] },
         });
         
-        doc.autoTable({
+        autoTable(doc, {
             head: [['Loan Details', '']],
             body: [
                 ['Loan Type', loan.loanType],
@@ -112,7 +111,7 @@ export default function CustomerProfilePage() {
             headStyles: { fillColor: [22, 163, 74] },
         });
 
-        doc.autoTable({
+        autoTable(doc, {
             head: [['Loan Status Summary', '']],
             body: [
                 ['Due Date', loan.nextDueDate ? format(loan.nextDueDate, 'PPP') : 'N/A'],
@@ -322,7 +321,7 @@ export default function CustomerProfilePage() {
                         
                         {(loan.status === 'Active' || loan.status === 'Overdue') &&
                           <div className="flex justify-end">
-                            <Button onClick={() => router.push(`/dashboard/collections?loanId=${loan.id}`)}>Record Payment</Button>
+                            <Button onClick={() => window.location.href = `/dashboard/collections?loanId=${loan.id}`}>Record Payment</Button>
                           </div>
                         }
 
@@ -342,3 +341,5 @@ export default function CustomerProfilePage() {
     </div>
   )
 }
+
+    
