@@ -80,22 +80,50 @@ export default function CustomerProfilePage() {
         const doc = new jsPDF();
         
         // Header
-        doc.setFontSize(16);
-        doc.setFont('helvetica', 'bold');
-        doc.text(companyProfile.name, 14, 20);
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        doc.text(companyProfile.address, 14, 26);
+        let headerCursorY = 20;
+        if (companyProfile.logoUrl) {
+            try {
+                doc.addImage(companyProfile.logoUrl, 'PNG', 14, 15, 20, 20);
+                doc.setFontSize(16);
+                doc.setFont('helvetica', 'bold');
+                doc.text(companyProfile.name, 40, 22);
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                doc.text(companyProfile.address, 40, 28);
+                headerCursorY = 40;
+            } catch (error) {
+                console.error("Error adding logo to PDF:", error);
+                // Fallback to text-only header if image fails
+                doc.setFontSize(16);
+                doc.setFont('helvetica', 'bold');
+                doc.text(companyProfile.name, 14, headerCursorY);
+                headerCursorY += 6;
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                doc.text(companyProfile.address, 14, headerCursorY);
+                headerCursorY += 10;
+            }
+        } else {
+            doc.setFontSize(16);
+            doc.setFont('helvetica', 'bold');
+            doc.text(companyProfile.name, 14, headerCursorY);
+            headerCursorY += 6;
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.text(companyProfile.address, 14, headerCursorY);
+            headerCursorY += 10;
+        }
+
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
-        doc.text('Repayment Schedule', doc.internal.pageSize.getWidth() / 2, 35, { align: 'center' });
+        doc.text('Repayment Schedule', doc.internal.pageSize.getWidth() / 2, headerCursorY, { align: 'center' });
 
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         doc.text(`Date : ${format(new Date(), 'dd/MM/yyyy')}`, 195, 20, { align: 'right' });
         doc.text(`Page : 1`, 195, 25, { align: 'right' });
 
-        let finalY = 45;
+        let finalY = headerCursorY + 10;
 
         // Loan Details in two columns
         autoTable(doc, {
