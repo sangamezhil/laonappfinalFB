@@ -3,7 +3,7 @@
 
 import React from 'react';
 import Link from 'next/link'
-import { PlusCircle, MoreHorizontal, ChevronDown, ChevronRight, IndianRupee, CheckCircle, Search } from 'lucide-react'
+import { PlusCircle, MoreHorizontal, ChevronDown, ChevronRight, IndianRupee, CheckCircle, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -353,7 +353,7 @@ const LoanCategoryTabs = ({
   const closedLoans = React.useMemo(() => loans.filter(l => l.status === 'Closed'), [loans]);
   
   return (
-    <Tabs defaultValue="active">
+    <Tabs defaultValue="active" className="w-full">
         <TabsList>
             <TabsTrigger value="active">Active &amp; Overdue</TabsTrigger>
             <TabsTrigger value="closed">Closed</TabsTrigger>
@@ -555,42 +555,52 @@ export default function LoansPage() {
   return (
     <>
     <Card>
-        <CardHeader className="space-y-4">
-            <div>
-                <CardTitle>Loans</CardTitle>
-                <CardDescription>
-                Track and manage all loan applications.
-                </CardDescription>
+      <CardHeader>
+        <div className="space-y-2">
+          <CardTitle>Loans</CardTitle>
+          <CardDescription>
+            Track and manage all loan applications.
+          </CardDescription>
+        </div>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4">
+          <Tabs value={currentTab} onValueChange={setCurrentTab}>
+            <TabsList>
+              <TabsTrigger value="all">All Loans</TabsTrigger>
+              <TabsTrigger value="personal">Personal Loans</TabsTrigger>
+              <TabsTrigger value="group">Group Loans</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <div className="flex w-full sm:w-auto items-center gap-2">
+            <div className="relative w-full sm:w-auto flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                type="tel"
+                placeholder="Search by mobile..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-8 w-full"
+              />
+              {searchQuery && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
+                  onClick={() => setSearchQuery('')}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
             </div>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                 <Tabs value={currentTab} onValueChange={setCurrentTab}>
-                    <TabsList>
-                        <TabsTrigger value="all">All Loans</TabsTrigger>
-                        <TabsTrigger value="personal">Personal Loans</TabsTrigger>
-                        <TabsTrigger value="group">Group Loans</TabsTrigger>
-                    </TabsList>
-                </Tabs>
-                <div className="flex w-full sm:w-auto items-center gap-2">
-                    <div className="relative w-full sm:w-auto flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input 
-                            type="tel" 
-                            placeholder="Search by mobile..." 
-                            value={searchQuery} 
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-9 w-full"
-                        />
-                    </div>
-                    {user?.role === 'Admin' && (
-                        <Link href="/dashboard/loans/new" passHref>
-                            <Button className="flex-shrink-0">
-                            <PlusCircle className="w-4 h-4 mr-2" />
-                            New Loan
-                            </Button>
-                        </Link>
-                    )}
-                </div>
-            </div>
+            {user?.role === 'Admin' && (
+              <Link href="/dashboard/loans/new" passHref>
+                <Button className="flex-shrink-0">
+                  <PlusCircle className="w-4 h-4 mr-2" />
+                  New Loan
+                </Button>
+              </Link>
+            )}
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         {renderLoans()}
