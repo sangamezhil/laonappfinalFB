@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { notFound, useParams } from 'next/navigation';
-import { getCustomerById, getLoansByCustomerId, Customer, Loan, useCollections, Collection } from '@/lib/data'
+import { getCustomerById, getLoansByCustomerId, Customer, Loan, useCollections, Collection, useCompanyProfile } from '@/lib/data'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -25,7 +25,7 @@ type LoanWithDetails = Loan & {
 export default function CustomerProfilePage() {
   const params = useParams();
   const customerId = params.id as string;
-
+  const { profile: companyProfile } = useCompanyProfile();
   const [customer, setCustomer] = useState<Customer | null | undefined>(undefined);
   const [loansWithDetails, setLoansWithDetails] = useState<LoanWithDetails[]>([]);
   const { collections } = useCollections();
@@ -80,47 +80,83 @@ export default function CustomerProfilePage() {
         const doc = new jsPDF();
         
         // Header
-        doc.setFontSize(20);
-        doc.text(`Loan Statement`, 14, 22);
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text(companyProfile.name, 14, 20);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(companyProfile.address, 14, 26);
         doc.setFontSize(12);
-        doc.text(`Customer: ${customer.name}`, 14, 30);
-        doc.text(`Loan ID: ${loan.id}`, 14, 36);
-        doc.text(`Date: ${format(new Date(), 'PPP')}`, 150, 22)
-        
+        doc.setFont('helvetica', 'bold');
+        doc.text('Repayment Schedule', doc.internal.pageSize.getWidth() / 2, 35, { align: 'center' });
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Date : ${format(new Date(), 'dd/MM/yyyy')}`, 195, 20, { align: 'right' });
+        doc.text(`Page : 1`, 195, 25, { align: 'right' });
+
         let finalY = 45;
 
-        // Loan Details
+        // Loan Details in two columns
         autoTable(doc, {
             startY: finalY,
-            head: [['Loan Details', '']],
             body: [
-                ['Loan Type', loan.loanType],
-                ['Group Name', loan.groupName || 'N/A'],
-                ['Loan Amount', `Rs. ${loan.amount.toLocaleString('en-IN')}`],
-                ['Interest Rate (%)', `${loan.interestRate}%`],
-                ['Term', `${loan.term} ${loan.collectionFrequency}s`],
-                ['Status', loan.status],
-                ['Disbursal Date', format(new Date(loan.disbursalDate), 'yyyy-MM-dd')],
-                 ['Installment Amount', `Rs. ${loan.weeklyRepayment.toLocaleString('en-IN')}`],
+                [
+                    { content: 'Customer:', styles: { fontStyle: 'bold' } },
+                    customer.name,
+                    { content: 'Loan Agreement Number:', styles: { fontStyle: 'bold' } },
+                    loan.id,
+                ],
+                [
+                    { content: 'Loan Application Number:', styles: { fontStyle: 'bold' } },
+                    loan.id,
+                    { content: 'Loan Type:', styles: { fontStyle: 'bold' } },
+                    `${loan.loanType} Loan`,
+                ],
+                [
+                    { content: 'Tenure:', styles: { fontStyle: 'bold' } },
+                    `${loan.term} ${loan.collectionFrequency}s`,
+                    { content: 'Amount Financed:', styles: { fontStyle: 'bold' } },
+                    `Rs. ${loan.amount.toLocaleString('en-IN')}`,
+                ],
+                 [
+                    { content: 'Installment Amount:', styles: { fontStyle: 'bold' } },
+                    `Rs. ${loan.weeklyRepayment.toLocaleString('en-IN')}`,
+                    { content: 'Frequency:', styles: { fontStyle: 'bold' } },
+                     loan.collectionFrequency,
+                ],
+                [
+                    { content: 'Currency:', styles: { fontStyle: 'bold' } },
+                    'Indian Rupee',
+                    { content: '', styles: { fontStyle: 'bold' } },
+                    '',
+                ],
             ],
-            theme: 'striped',
-            headStyles: { fillColor: [22, 163, 74] },
+            theme: 'plain',
+            styles: { fontSize: 9 },
+            columnStyles: {
+              0: { cellWidth: 40 },
+              1: { cellWidth: 'auto' },
+              2: { cellWidth: 40 },
+              3: { cellWidth: 'auto' },
+            }
         });
-
+        
         finalY = (doc as any).lastAutoTable.finalY + 10;
         
         // Payment History
         if (loan.collections.length > 0) {
             autoTable(doc, {
                 startY: finalY,
-                head: [['Date', 'Amount', 'Method']],
-                body: loan.collections.map(c => [
-                    format(new Date(c.date), 'PPP'), 
+                head: [['Instl No', 'Due Date', 'Installment Amount', 'Payment Method']],
+                body: loan.collections.map((c, index) => [
+                    index + 1,
+                    format(new Date(c.date), 'dd/MM/yyyy'), 
                     `Rs. ${c.amount.toLocaleString('en-IN')}`, 
                     c.paymentMethod
                 ]),
                 theme: 'striped',
-                headStyles: { fillColor: [22, 163, 74] },
+                headStyles: { fillColor: [41, 128, 185], textColor: 255 },
             });
             finalY = (doc as any).lastAutoTable.finalY + 10;
         } else {
@@ -131,17 +167,15 @@ export default function CustomerProfilePage() {
         // Summary at the bottom
         autoTable(doc, {
             startY: finalY,
-            head: [['Summary', '']],
+            theme: 'plain',
             body: [
-                ['Total Paid', `Rs. ${loan.totalPaid.toLocaleString('en-IN')}`],
-                ['Total Outstanding', `Rs. ${loan.outstandingAmount.toLocaleString('en-IN')}`],
+                ['Total Paid:', `Rs. ${loan.totalPaid.toLocaleString('en-IN')}`],
+                ['Balance Due:', `Rs. ${loan.outstandingAmount.toLocaleString('en-IN')}`],
             ],
-            theme: 'striped',
-            headStyles: { fillColor: [22, 163, 74] },
+            styles: { fontStyle: 'bold' }
         });
 
-
-        doc.save(`Loan_Statement_${loan.id}_${customer.name}.pdf`);
+        doc.save(`Repayment_Schedule_${loan.id}_${customer.name}.pdf`);
     });
   };
 
