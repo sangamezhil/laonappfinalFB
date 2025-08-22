@@ -314,6 +314,50 @@ const LoanTable = ({
     )
 }
 
+const LoanCategoryTabs = ({ 
+    loans, 
+    user, 
+    handleApprove, 
+    handlePreclose, 
+    handleDelete,
+}: { 
+    loans: Loan[], 
+    user: User | null, 
+    handleApprove: (id: string, groupId?: string) => void, 
+    handlePreclose: (id: string) => void,
+    handleDelete: (loan: Loan) => void,
+}) => {
+  const activeLoans = React.useMemo(() => loans.filter(l => l.status === 'Active' || l.status === 'Overdue' || l.status === 'Pending'), [loans]);
+  const closedLoans = React.useMemo(() => loans.filter(l => l.status === 'Closed'), [loans]);
+  
+  return (
+    <Tabs defaultValue="active">
+        <TabsList>
+            <TabsTrigger value="active">Active &amp; Overdue</TabsTrigger>
+            <TabsTrigger value="closed">Closed</TabsTrigger>
+        </TabsList>
+        <TabsContent value="active">
+            <LoanTable 
+                loans={activeLoans} 
+                user={user} 
+                handleApprove={handleApprove} 
+                handlePreclose={handlePreclose} 
+                handleDelete={handleDelete}
+            />
+        </TabsContent>
+        <TabsContent value="closed">
+            <LoanTable 
+                loans={closedLoans} 
+                user={user} 
+                handleApprove={handleApprove} 
+                handlePreclose={handlePreclose} 
+                handleDelete={handleDelete}
+            />
+        </TabsContent>
+    </Tabs>
+  )
+}
+
 export default function LoansPage() {
   const { loans, isLoaded, updateLoanStatus, deleteLoan } = useLoans();
   const { toast } = useToast();
@@ -321,8 +365,8 @@ export default function LoansPage() {
   const { logActivity } = useUserActivity();
   const [loanToDelete, setLoanToDelete] = React.useState<Loan | null>(null);
 
-  const activeLoans = React.useMemo(() => loans.filter(l => l.status === 'Active' || l.status === 'Overdue' || l.status === 'Pending'), [loans]);
-  const closedLoans = React.useMemo(() => loans.filter(l => l.status === 'Closed'), [loans]);
+  const personalLoans = React.useMemo(() => loans.filter(l => l.loanType === 'Personal'), [loans]);
+  const groupLoans = React.useMemo(() => loans.filter(l => l.loanType === 'Group'), [loans]);
 
 
   React.useEffect(() => {
@@ -445,28 +489,38 @@ export default function LoansPage() {
         </div>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="active">
+        <Tabs defaultValue="all">
             <TabsList>
-                <TabsTrigger value="active">Active &amp; Overdue</TabsTrigger>
-                <TabsTrigger value="closed">Closed</TabsTrigger>
+                <TabsTrigger value="all">All Loans</TabsTrigger>
+                <TabsTrigger value="personal">Personal Loans</TabsTrigger>
+                <TabsTrigger value="group">Group Loans</TabsTrigger>
             </TabsList>
-            <TabsContent value="active">
-                <LoanTable 
-                    loans={activeLoans} 
-                    user={user} 
-                    handleApprove={handleApprove} 
-                    handlePreclose={handlePreclose} 
+            <TabsContent value="all">
+                 <LoanCategoryTabs 
+                    loans={loans}
+                    user={user}
+                    handleApprove={handleApprove}
+                    handlePreclose={handlePreclose}
                     handleDelete={setLoanToDelete}
-                />
+                 />
             </TabsContent>
-            <TabsContent value="closed">
-                <LoanTable 
-                    loans={closedLoans} 
-                    user={user} 
-                    handleApprove={handleApprove} 
-                    handlePreclose={handlePreclose} 
+            <TabsContent value="personal">
+                 <LoanCategoryTabs 
+                    loans={personalLoans}
+                    user={user}
+                    handleApprove={handleApprove}
+                    handlePreclose={handlePreclose}
                     handleDelete={setLoanToDelete}
-                />
+                 />
+            </TabsContent>
+            <TabsContent value="group">
+                <LoanCategoryTabs 
+                    loans={groupLoans}
+                    user={user}
+                    handleApprove={handleApprove}
+                    handlePreclose={handlePreclose}
+                    handleDelete={setLoanToDelete}
+                 />
             </TabsContent>
         </Tabs>
       </CardContent>
@@ -488,3 +542,5 @@ export default function LoansPage() {
     </>
   )
 }
+
+    
