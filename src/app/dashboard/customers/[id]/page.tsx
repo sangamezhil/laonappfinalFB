@@ -81,29 +81,8 @@ export default function CustomerProfilePage() {
         
         // Header
         let headerCursorY = 20;
-        if (companyProfile.logoUrl) {
-            try {
-                doc.addImage(companyProfile.logoUrl, 'PNG', 14, 15, 18, 18);
-                doc.setFontSize(14);
-                doc.setFont('helvetica', 'bold');
-                doc.text(companyProfile.name, 38, 22);
-                doc.setFontSize(9);
-                doc.setFont('helvetica', 'normal');
-                doc.text(companyProfile.address, 38, 28);
-                headerCursorY = 40;
-            } catch (error) {
-                console.error("Error adding logo to PDF:", error);
-                // Fallback to text-only header if image fails
-                doc.setFontSize(14);
-                doc.setFont('helvetica', 'bold');
-                doc.text(companyProfile.name, 14, headerCursorY);
-                headerCursorY += 6;
-                doc.setFontSize(9);
-                doc.setFont('helvetica', 'normal');
-                doc.text(companyProfile.address, 14, headerCursorY);
-                headerCursorY += 8;
-            }
-        } else {
+        
+        const addTextHeader = () => {
             doc.setFontSize(14);
             doc.setFont('helvetica', 'bold');
             doc.text(companyProfile.name, 14, headerCursorY);
@@ -112,101 +91,128 @@ export default function CustomerProfilePage() {
             doc.setFont('helvetica', 'normal');
             doc.text(companyProfile.address, 14, headerCursorY);
             headerCursorY += 8;
-        }
+        };
 
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Repayment Schedule', doc.internal.pageSize.getWidth() / 2, headerCursorY, { align: 'center' });
-
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`Date : ${format(new Date(), 'dd/MM/yyyy')}`, 195, 20, { align: 'right' });
-        doc.text(`Page : 1`, 195, 25, { align: 'right' });
-
-        let finalY = headerCursorY + 8;
-
-        // Loan Details in two columns
-        autoTable(doc, {
-            startY: finalY,
-            body: [
-                [
-                    { content: 'Customer:', styles: { fontStyle: 'bold' } },
-                    customer.name,
-                    { content: 'Loan Agreement Number:', styles: { fontStyle: 'bold' } },
-                    loan.id,
-                ],
-                [
-                    { content: 'Loan Application Number:', styles: { fontStyle: 'bold' } },
-                    loan.id,
-                    { content: 'Loan Type:', styles: { fontStyle: 'bold' } },
-                    `${loan.loanType} Loan`,
-                ],
-                [
-                    { content: 'Tenure:', styles: { fontStyle: 'bold' } },
-                    `${loan.term} ${loan.collectionFrequency}s`,
-                    { content: 'Amount Financed:', styles: { fontStyle: 'bold' } },
-                    `Rs. ${loan.amount.toLocaleString('en-IN')}`,
-                ],
-                 [
-                    { content: 'Installment Amount:', styles: { fontStyle: 'bold' } },
-                    `Rs. ${loan.weeklyRepayment.toLocaleString('en-IN')}`,
-                    { content: 'Frequency:', styles: { fontStyle: 'bold' } },
-                     loan.collectionFrequency,
-                ],
-                [
-                    { content: 'Currency:', styles: { fontStyle: 'bold' } },
-                    'Indian Rupee',
-                    { content: '', styles: { fontStyle: 'bold' } },
-                    '',
-                ],
-            ],
-            theme: 'plain',
-            styles: { fontSize: 8 },
-            columnStyles: {
-              0: { cellWidth: 40 },
-              1: { cellWidth: 'auto' },
-              2: { cellWidth: 40 },
-              3: { cellWidth: 'auto' },
-            }
-        });
-        
-        finalY = (doc as any).lastAutoTable.finalY + 8;
-        
-        // Payment History
-        if (loan.collections.length > 0) {
-            autoTable(doc, {
-                startY: finalY,
-                head: [['Instl No', 'Due Date', 'Installment Amount', 'Payment Method']],
-                body: loan.collections.map((c, index) => [
-                    index + 1,
-                    format(new Date(c.date), 'dd/MM/yyyy'), 
-                    `Rs. ${c.amount.toLocaleString('en-IN')}`, 
-                    c.paymentMethod
-                ]),
-                theme: 'striped',
-                headStyles: { fillColor: [41, 128, 185], textColor: 255, fontSize: 8 },
-                styles: { fontSize: 8 },
-            });
-            finalY = (doc as any).lastAutoTable.finalY + 8;
+        if (companyProfile.logoUrl) {
+            const img = new Image();
+            img.crossOrigin = "Anonymous";
+            img.src = companyProfile.logoUrl;
+            img.onload = () => {
+                doc.addImage(img, 'PNG', 14, 15, 18, 18);
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'bold');
+                doc.text(companyProfile.name, 38, 22);
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'normal');
+                doc.text(companyProfile.address, 38, 28);
+                headerCursorY = 40;
+                generatePdfContent(doc, headerCursorY, loan);
+                doc.save(`Repayment_Schedule_${loan.id}_${customer.name}.pdf`);
+            };
+            img.onerror = () => {
+                console.error("Error loading logo, falling back to text header.");
+                addTextHeader();
+                generatePdfContent(doc, headerCursorY, loan);
+                doc.save(`Repayment_Schedule_${loan.id}_${customer.name}.pdf`);
+            };
         } else {
-            doc.text('No payment history for this loan.', 14, finalY);
-            finalY += 8;
+            addTextHeader();
+            generatePdfContent(doc, headerCursorY, loan);
+            doc.save(`Repayment_Schedule_${loan.id}_${customer.name}.pdf`);
         }
-
-        // Summary at the bottom
-        autoTable(doc, {
-            startY: finalY,
-            theme: 'plain',
-            body: [
-                ['Total Paid:', `Rs. ${loan.totalPaid.toLocaleString('en-IN')}`],
-                ['Balance Due:', `Rs. ${loan.outstandingAmount.toLocaleString('en-IN')}`],
-            ],
-            styles: { fontStyle: 'bold', fontSize: 8 }
-        });
-
-        doc.save(`Repayment_Schedule_${loan.id}_${customer.name}.pdf`);
     });
   };
+
+  const generatePdfContent = (doc: jsPDF, startY: number, loan: LoanWithDetails) => {
+    if (!customer) return;
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Repayment Schedule', doc.internal.pageSize.getWidth() / 2, startY, { align: 'center' });
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Date : ${format(new Date(), 'dd/MM/yyyy')}`, 195, 20, { align: 'right' });
+    doc.text(`Page : 1`, 195, 25, { align: 'right' });
+
+    let finalY = startY + 8;
+
+    autoTable(doc, {
+        startY: finalY,
+        body: [
+            [
+                { content: 'Customer:', styles: { fontStyle: 'bold' } },
+                customer.name,
+                { content: 'Loan Agreement Number:', styles: { fontStyle: 'bold' } },
+                loan.id,
+            ],
+            [
+                { content: 'Loan Application Number:', styles: { fontStyle: 'bold' } },
+                loan.id,
+                { content: 'Loan Type:', styles: { fontStyle: 'bold' } },
+                `${loan.loanType} Loan`,
+            ],
+            [
+                { content: 'Tenure:', styles: { fontStyle: 'bold' } },
+                `${loan.term} ${loan.collectionFrequency}s`,
+                { content: 'Amount Financed:', styles: { fontStyle: 'bold' } },
+                `Rs. ${loan.amount.toLocaleString('en-IN')}`,
+            ],
+             [
+                { content: 'Installment Amount:', styles: { fontStyle: 'bold' } },
+                `Rs. ${loan.weeklyRepayment.toLocaleString('en-IN')}`,
+                { content: 'Frequency:', styles: { fontStyle: 'bold' } },
+                 loan.collectionFrequency,
+            ],
+            [
+                { content: 'Currency:', styles: { fontStyle: 'bold' } },
+                'Indian Rupee',
+                { content: '', styles: { fontStyle: 'bold' } },
+                '',
+            ],
+        ],
+        theme: 'plain',
+        styles: { fontSize: 8 },
+        columnStyles: {
+          0: { cellWidth: 40 },
+          1: { cellWidth: 'auto' },
+          2: { cellWidth: 40 },
+          3: { cellWidth: 'auto' },
+        }
+    });
+    
+    finalY = (doc as any).lastAutoTable.finalY + 8;
+    
+    if (loan.collections.length > 0) {
+        autoTable(doc, {
+            startY: finalY,
+            head: [['Instl No', 'Due Date', 'Installment Amount', 'Payment Method']],
+            body: loan.collections.map((c, index) => [
+                index + 1,
+                format(new Date(c.date), 'dd/MM/yyyy'), 
+                `Rs. ${c.amount.toLocaleString('en-IN')}`, 
+                c.paymentMethod
+            ]),
+            theme: 'striped',
+            headStyles: { fillColor: [41, 128, 185], textColor: 255, fontSize: 8 },
+            styles: { fontSize: 8 },
+        });
+        finalY = (doc as any).lastAutoTable.finalY + 8;
+    } else {
+        doc.text('No payment history for this loan.', 14, finalY);
+        finalY += 8;
+    }
+
+    autoTable(doc, {
+        startY: finalY,
+        theme: 'plain',
+        body: [
+            ['Total Paid:', `Rs. ${loan.totalPaid.toLocaleString('en-IN')}`],
+            ['Balance Due:', `Rs. ${loan.outstandingAmount.toLocaleString('en-IN')}`],
+        ],
+        styles: { fontStyle: 'bold', fontSize: 8 }
+    });
+  }
 
   if (customer === undefined) {
     return (
@@ -422,3 +428,5 @@ export default function CustomerProfilePage() {
     </div>
   )
 }
+
+    

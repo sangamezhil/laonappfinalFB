@@ -65,12 +65,12 @@ export default function CustomersPage() {
   }, []);
 
   const handleDeleteClick = (customer: Customer) => {
-    const activeLoans = loans.filter(loan => loan.customerId === customer.id && (loan.status === 'Active' || loan.status === 'Overdue' || loan.status === 'Pending'));
+    const activeLoans = loans.filter(loan => loan.customerId === customer.id && loan.status !== 'Closed');
     if (activeLoans.length > 0) {
       toast({
         variant: "destructive",
         title: "Deletion Not Allowed",
-        description: `${customer.name} has active loans and cannot be deleted.`,
+        description: `${customer.name} has active, overdue, or pending loans and cannot be deleted.`,
       });
     } else {
       setCustomerToDelete(customer);
@@ -209,3 +209,5 @@ export default function CustomersPage() {
     </>
   )
 }
+
+    

@@ -256,7 +256,7 @@ const LoanTable = ({
                                     Record Payment
                                     </DropdownMenuItem>
                                 }
-                                 {loan.status === 'Closed' && user?.role === 'Admin' && (
+                                 {user?.role === 'Admin' && (
                                     <>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem onSelect={() => handleDelete(loan)} className="text-destructive">
@@ -322,7 +322,7 @@ const LoanTable = ({
                                 Record Payment
                                 </DropdownMenuItem>
                             }
-                            {item.loan.status === 'Closed' && user?.role === 'Admin' && (
+                            {user?.role === 'Admin' && (
                                 <>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onSelect={() => handleDelete(item.loan)} className="text-destructive">
@@ -360,7 +360,6 @@ export default function LoansPage() {
   }, [customers]);
 
   const filteredLoans = React.useMemo(() => {
-    // If no search query and status filter is 'All', return empty array.
     if (!searchQuery && statusFilter === 'All') {
         return [];
     }

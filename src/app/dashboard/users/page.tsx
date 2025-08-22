@@ -98,7 +98,7 @@ const userSchema = z.object({
 });
 
 const editUserSchema = userSchema.omit({ password: true }).extend({
-  role: z.enum(['Collection Agent']),
+  role: z.enum(['Collection Agent']), // Admins can only edit users to be collection agents
 });
 
 
@@ -219,6 +219,11 @@ export default function UsersPage() {
   function handleEditUser(data: z.infer<typeof editUserSchema>) {
     if (!userToEdit) return;
 
+    if (userToEdit.role === 'Admin' && data.role !== 'Admin') {
+        toast({ variant: 'destructive', title: 'Action not allowed', description: 'Admin role cannot be changed.' });
+        return;
+    }
+
     const updatedUsers = users.map(u => u.id === userToEdit.id ? {...u, username: data.username, role: data.role } : u);
     setUsers(updatedUsers);
     setUsersInStorage(updatedUsers);
@@ -262,7 +267,7 @@ export default function UsersPage() {
     editForm.reset({
         id: user.id,
         username: user.username,
-        role: 'Collection Agent',
+        role: user.role,
     });
     setEditDialogOpen(true);
   }
@@ -447,7 +452,7 @@ export default function UsersPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem onSelect={() => openEditDialog(user)}>Edit User</DropdownMenuItem>
+                      {user.role !== 'Admin' && <DropdownMenuItem onSelect={() => openEditDialog(user)}>Edit User</DropdownMenuItem>}
                        <DropdownMenuItem onSelect={() => openResetPasswordDialog(user)}>Reset Password</DropdownMenuItem>
                        {loggedInUser?.role === 'Admin' && user.username !== loggedInUser.username && (
                         <DropdownMenuItem onSelect={() => setUserToDelete(user)} className="text-destructive">Delete User</DropdownMenuItem>
@@ -550,7 +555,7 @@ export default function UsersPage() {
             <FormField control={editForm.control} name="role" render={({ field }) => (
               <FormItem>
                 <FormLabel>Role</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
+                <Select onValueChange={field.onChange} value={field.value} disabled={userToEdit?.role === 'Admin'}>
                   <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
                   <SelectContent>
                     <SelectItem value="Collection Agent">Collection Agent</SelectItem>
