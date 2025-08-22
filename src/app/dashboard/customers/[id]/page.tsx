@@ -52,7 +52,7 @@ export default function CustomerProfilePage() {
             }
           }
 
-          const loanCollections = collections.filter(c => c.loanId === loan.id).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          const loanCollections = collections.filter(c => c.id === loan.id).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
           return { ...loan, nextDueDate, collections: loanCollections };
         });
