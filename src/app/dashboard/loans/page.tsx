@@ -72,6 +72,7 @@ const LoanTable = ({
     handleApprove, 
     handlePreclose, 
     handleDelete,
+    hasSearched,
 }: { 
     loans: Loan[], 
     customers: Customer[],
@@ -79,6 +80,7 @@ const LoanTable = ({
     handleApprove: (id: string, groupId?: string) => void, 
     handlePreclose: (id: string) => void,
     handleDelete: (loan: Loan) => void,
+    hasSearched: boolean,
 }) => {
     const router = useRouter();
     const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>({});
@@ -134,7 +136,10 @@ const LoanTable = ({
     }, [loans]);
 
     if (groupedLoans.length === 0) {
-        return <div className="text-center text-muted-foreground p-8">No loans found.</div>
+        if (hasSearched) {
+            return <div className="text-center text-muted-foreground p-8">No loans found matching your search.</div>
+        }
+        return <div className="text-center text-muted-foreground p-8">Please enter a search query to see loans.</div>
     }
 
     return (
@@ -341,6 +346,7 @@ const LoanCategoryTabs = ({
     handleApprove, 
     handlePreclose, 
     handleDelete,
+    hasSearched
 }: { 
     loans: Loan[],
     customers: Customer[],
@@ -348,6 +354,7 @@ const LoanCategoryTabs = ({
     handleApprove: (id: string, groupId?: string) => void, 
     handlePreclose: (id: string) => void,
     handleDelete: (loan: Loan) => void,
+    hasSearched: boolean
 }) => {
   const activeLoans = React.useMemo(() => loans.filter(l => l.status === 'Active' || l.status === 'Overdue' || l.status === 'Pending'), [loans]);
   const closedLoans = React.useMemo(() => loans.filter(l => l.status === 'Closed'), [loans]);
@@ -366,6 +373,7 @@ const LoanCategoryTabs = ({
                 handleApprove={handleApprove} 
                 handlePreclose={handlePreclose} 
                 handleDelete={handleDelete}
+                hasSearched={hasSearched}
             />
         </TabsContent>
         <TabsContent value="closed">
@@ -376,6 +384,7 @@ const LoanCategoryTabs = ({
                 handleApprove={handleApprove} 
                 handlePreclose={handlePreclose} 
                 handleDelete={handleDelete}
+                hasSearched={hasSearched}
             />
         </TabsContent>
     </Tabs>
@@ -399,7 +408,7 @@ export default function LoansPage() {
   const filteredLoans = React.useMemo(() => {
     let loansToFilter = loans.filter(loan => loan.loanType.toLowerCase().includes(currentTab));
 
-    if (!searchQuery) return loansToFilter;
+    if (!searchQuery) return [];
 
     const lowercasedQuery = searchQuery.toLowerCase();
     
@@ -487,6 +496,7 @@ export default function LoansPage() {
             handleApprove={handleApprove}
             handlePreclose={handlePreclose}
             handleDelete={setLoanToDelete}
+            hasSearched={searchQuery.length > 0}
         />
     )
   }
