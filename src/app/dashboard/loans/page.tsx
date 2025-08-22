@@ -3,7 +3,7 @@
 
 import React from 'react';
 import Link from 'next/link'
-import { PlusCircle, MoreHorizontal, ChevronDown, ChevronRight, IndianRupee, CheckCircle } from 'lucide-react'
+import { PlusCircle, MoreHorizontal, ChevronDown, ChevronRight, IndianRupee, CheckCircle, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -45,6 +45,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useRouter } from 'next/navigation'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
 
 type User = {
   username: string;
@@ -131,6 +132,10 @@ const LoanTable = ({
 
         return [...Object.values(groups), ...personalLoans];
     }, [loans]);
+
+    if (groupedLoans.length === 0) {
+        return <div className="text-center text-muted-foreground p-8">No loans found.</div>
+    }
 
     return (
         <Table>
@@ -384,9 +389,41 @@ export default function LoansPage() {
   const [user, setUser] = React.useState<User | null>(null);
   const { logActivity } = useUserActivity();
   const [loanToDelete, setLoanToDelete] = React.useState<Loan | null>(null);
+  const [searchQuery, setSearchQuery] = React.useState('');
 
-  const personalLoans = React.useMemo(() => loans.filter(l => l.loanType === 'Personal'), [loans]);
-  const groupLoans = React.useMemo(() => loans.filter(l => l.loanType === 'Group'), [loans]);
+  const customerMap = React.useMemo(() => {
+    return new Map(customers.map(c => [c.id, c]));
+  }, [customers]);
+
+  const filteredLoans = React.useMemo(() => {
+    if (!searchQuery) return loans;
+
+    const lowercasedQuery = searchQuery.toLowerCase();
+    
+    const groupLoanIds = new Set<string>();
+
+    loans.forEach(loan => {
+        if(loan.groupId) {
+            const customer = customerMap.get(loan.customerId);
+            if(customer?.phone.includes(lowercasedQuery)) {
+                groupLoanIds.add(loan.groupId);
+            }
+        }
+    });
+
+    return loans.filter(loan => {
+        if (loan.groupId) {
+            return groupLoanIds.has(loan.groupId);
+        }
+        const customer = customerMap.get(loan.customerId);
+        return customer?.phone.includes(lowercasedQuery);
+    });
+
+  }, [searchQuery, loans, customerMap]);
+
+
+  const personalLoans = React.useMemo(() => filteredLoans.filter(l => l.loanType === 'Personal'), [filteredLoans]);
+  const groupLoans = React.useMemo(() => filteredLoans.filter(l => l.loanType === 'Group'), [filteredLoans]);
 
 
   React.useEffect(() => {
@@ -489,7 +526,7 @@ export default function LoansPage() {
     <>
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <div>
             <CardTitle>Loans</CardTitle>
             <CardDescription>
@@ -497,6 +534,16 @@ export default function LoansPage() {
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
+             <div className="relative w-full max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input 
+                    type="tel" 
+                    placeholder="Search by mobile number..." 
+                    value={searchQuery} 
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                />
+            </div>
             {user?.role === 'Admin' && (
                 <Link href="/dashboard/loans/new" passHref>
                     <Button>
@@ -517,7 +564,7 @@ export default function LoansPage() {
             </TabsList>
             <TabsContent value="all">
                  <LoanCategoryTabs 
-                    loans={loans}
+                    loans={filteredLoans}
                     customers={customers}
                     user={user}
                     handleApprove={handleApprove}
