@@ -3,7 +3,7 @@
 
 import React from 'react';
 import Link from 'next/link'
-import { PlusCircle, MoreHorizontal, ChevronDown, ChevronRight, IndianRupee, CheckCircle, Search, X } from 'lucide-react'
+import { PlusCircle, MoreHorizontal, ChevronDown, ChevronRight, IndianRupee, CheckCircle, Search, X, Filter } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -46,6 +46,8 @@ import { useRouter } from 'next/navigation'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 
 type User = {
   username: string;
@@ -339,57 +341,7 @@ const LoanTable = ({
     )
 }
 
-const LoanCategoryTabs = ({ 
-    loans,
-    customers,
-    user, 
-    handleApprove, 
-    handlePreclose, 
-    handleDelete,
-    hasSearched
-}: { 
-    loans: Loan[],
-    customers: Customer[],
-    user: User | null, 
-    handleApprove: (id: string, groupId?: string) => void, 
-    handlePreclose: (id: string) => void,
-    handleDelete: (loan: Loan) => void,
-    hasSearched: boolean
-}) => {
-  const activeLoans = React.useMemo(() => loans.filter(l => l.status === 'Active' || l.status === 'Overdue' || l.status === 'Pending'), [loans]);
-  const closedLoans = React.useMemo(() => loans.filter(l => l.status === 'Closed'), [loans]);
-  
-  return (
-    <Tabs defaultValue="active" className="w-full">
-        <TabsList>
-            <TabsTrigger value="active">Active &amp; Overdue</TabsTrigger>
-            <TabsTrigger value="closed">Closed</TabsTrigger>
-        </TabsList>
-        <TabsContent value="active">
-            <LoanTable 
-                loans={activeLoans} 
-                customers={customers}
-                user={user} 
-                handleApprove={handleApprove} 
-                handlePreclose={handlePreclose} 
-                handleDelete={handleDelete}
-                hasSearched={hasSearched}
-            />
-        </TabsContent>
-        <TabsContent value="closed">
-            <LoanTable 
-                loans={closedLoans} 
-                customers={customers}
-                user={user} 
-                handleApprove={handleApprove} 
-                handlePreclose={handlePreclose} 
-                handleDelete={handleDelete}
-                hasSearched={hasSearched}
-            />
-        </TabsContent>
-    </Tabs>
-  )
-}
+type StatusFilter = 'All' | Loan['status'];
 
 export default function LoansPage() {
   const { loans, isLoaded, updateLoanStatus, deleteLoan } = useLoans();
@@ -400,25 +352,30 @@ export default function LoansPage() {
   const [loanToDelete, setLoanToDelete] = React.useState<Loan | null>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [currentTab, setCurrentTab] = React.useState('personal');
+  const [statusFilter, setStatusFilter] = React.useState<StatusFilter>('All');
+
 
   const customerMap = React.useMemo(() => {
     return new Map(customers.map(c => [c.id, c]));
   }, [customers]);
 
   const filteredLoans = React.useMemo(() => {
-    let loansToFilter = loans.filter(loan => loan.loanType.toLowerCase().includes(currentTab));
+    let loansToFilter = loans.filter(loan => loan.loanType.toLowerCase() === currentTab);
 
-    if (!searchQuery) return [];
+    if (statusFilter !== 'All') {
+        loansToFilter = loansToFilter.filter(loan => loan.status === statusFilter);
+    }
+    
+    if (!searchQuery) return loansToFilter;
 
     const lowercasedQuery = searchQuery.toLowerCase();
     
-    // For group loans, if any member's phone matches, show the whole group.
     const groupLoanIds = new Set<string>();
     if (currentTab === 'group') {
         loansToFilter.forEach(loan => {
             if(loan.groupId) {
                 const customer = customerMap.get(loan.customerId);
-                if(customer?.phone.includes(lowercasedQuery)) {
+                if(customer?.phone.includes(lowercasedQuery) || loan.groupName?.toLowerCase().includes(lowercasedQuery) || loan.groupId.toLowerCase().includes(lowercasedQuery)) {
                     groupLoanIds.add(loan.groupId);
                 }
             }
@@ -430,10 +387,10 @@ export default function LoansPage() {
             return groupLoanIds.has(loan.groupId);
         }
         const customer = customerMap.get(loan.customerId);
-        return customer?.phone.includes(lowercasedQuery);
+        return customer?.phone.includes(lowercasedQuery) || customer?.name.toLowerCase().includes(lowercasedQuery) || loan.id.toLowerCase().includes(lowercasedQuery);
     });
 
-  }, [searchQuery, loans, customerMap, currentTab]);
+  }, [searchQuery, loans, customerMap, currentTab, statusFilter]);
 
 
   React.useEffect(() => {
@@ -487,20 +444,6 @@ export default function LoansPage() {
     }
   };
   
-  const renderLoans = () => {
-    return (
-        <LoanCategoryTabs 
-            loans={filteredLoans}
-            customers={customers}
-            user={user}
-            handleApprove={handleApprove}
-            handlePreclose={handlePreclose}
-            handleDelete={setLoanToDelete}
-            hasSearched={searchQuery.length > 0}
-        />
-    )
-  }
-
   if (!isLoaded || !customersLoaded) {
     return (
         <Card>
@@ -571,8 +514,8 @@ export default function LoansPage() {
             <div className="relative w-full sm:w-auto flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                type="tel"
-                placeholder="Search by mobile..."
+                type="text"
+                placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 pr-8 w-full"
@@ -588,6 +531,21 @@ export default function LoansPage() {
                 </Button>
               )}
             </div>
+             <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                    <div className="flex items-center gap-2">
+                        <Filter className="w-4 h-4" />
+                        <SelectValue placeholder="Filter by status" />
+                    </div>
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="All">All Statuses</SelectItem>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Overdue">Overdue</SelectItem>
+                    <SelectItem value="Pending">Pending</SelectItem>
+                    <SelectItem value="Closed">Closed</SelectItem>
+                </SelectContent>
+            </Select>
             {user?.role === 'Admin' && (
               <Link href="/dashboard/loans/new" passHref>
                 <Button className="flex-shrink-0">
@@ -600,7 +558,15 @@ export default function LoansPage() {
         </div>
       </CardHeader>
       <CardContent>
-        {renderLoans()}
+        <LoanTable 
+            loans={filteredLoans}
+            customers={customers}
+            user={user}
+            handleApprove={handleApprove}
+            handlePreclose={handlePreclose}
+            handleDelete={setLoanToDelete}
+            hasSearched={searchQuery.length > 0 || statusFilter !== 'All'}
+        />
       </CardContent>
     </Card>
      <AlertDialog open={!!loanToDelete} onOpenChange={(open) => !open && setLoanToDelete(null)}>

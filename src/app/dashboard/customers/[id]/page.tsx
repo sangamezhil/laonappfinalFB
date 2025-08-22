@@ -24,7 +24,7 @@ type LoanWithDetails = Loan & {
 
 export default function CustomerProfilePage() {
   const params = useParams();
-  const customerId = params.id as string;
+  const customerId = Array.isArray(params.id) ? params.id[0] : params.id;
   const { profile: companyProfile } = useCompanyProfile();
   const [customer, setCustomer] = useState<Customer | null | undefined>(undefined);
   const [loansWithDetails, setLoansWithDetails] = useState<LoanWithDetails[]>([]);
