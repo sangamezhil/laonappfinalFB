@@ -39,7 +39,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Badge } from '@/components/ui/badge'
-import { useLoans, useUserActivity, Loan } from '@/lib/data'
+import { useLoans, useUserActivity, Loan, useCustomers, Customer } from '@/lib/data'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
 import { useRouter } from 'next/navigation'
@@ -66,12 +66,14 @@ type GroupedLoan = {
 
 const LoanTable = ({ 
     loans, 
+    customers,
     user, 
     handleApprove, 
     handlePreclose, 
     handleDelete,
 }: { 
     loans: Loan[], 
+    customers: Customer[],
     user: User | null, 
     handleApprove: (id: string, groupId?: string) => void, 
     handlePreclose: (id: string) => void,
@@ -82,6 +84,11 @@ const LoanTable = ({
 
     const toggleGroup = (groupId: string) => {
         setOpenGroups(prev => ({...prev, [groupId]: !prev[groupId]}));
+    }
+
+    const getCustomerPhone = (customerId: string) => {
+        const customer = customers.find(c => c.id === customerId);
+        return customer ? customer.phone : '';
     }
 
     const groupedLoans = React.useMemo(() => {
@@ -188,10 +195,13 @@ const LoanTable = ({
                         <TableRow key={loan.id} className={cn("bg-background hover:bg-muted/50", isLeader && "bg-primary/10 hover:bg-primary/20" )}>
                             <TableCell className="pl-12 text-xs font-mono text-muted-foreground">{loan.id}</TableCell>
                             <TableCell>
-                            <div className='flex items-center gap-2'>
-                                {loan.customerName}
-                                {isLeader && <Badge variant="secondary" size="sm">Leader</Badge>}
-                            </div>
+                                <div className='flex flex-col'>
+                                    <div className='flex items-center gap-2'>
+                                        {loan.customerName}
+                                        {isLeader && <Badge variant="secondary" size="sm">Leader</Badge>}
+                                    </div>
+                                    <span className="text-xs text-muted-foreground">{getCustomerPhone(loan.customerId)}</span>
+                                </div>
                             </TableCell>
                             <TableCell className="text-muted-foreground">Member</TableCell>
                             <TableCell className="flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{loan.amount.toLocaleString('en-IN')}</TableCell>
@@ -253,7 +263,12 @@ const LoanTable = ({
                 <TableBody key={item.loan.id}>
                     <TableRow>
                         <TableCell className="font-mono text-xs">{item.loan.id}</TableCell>
-                        <TableCell>{item.loan.customerName}</TableCell>
+                        <TableCell>
+                            <div className='flex flex-col'>
+                                <span>{item.loan.customerName}</span>
+                                <span className="text-xs text-muted-foreground">{getCustomerPhone(item.loan.customerId)}</span>
+                            </div>
+                        </TableCell>
                         <TableCell>{item.loan.loanType}</TableCell>
                         <TableCell className="flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{item.loan.amount.toLocaleString('en-IN')}</TableCell>
                         <TableCell>
@@ -315,13 +330,15 @@ const LoanTable = ({
 }
 
 const LoanCategoryTabs = ({ 
-    loans, 
+    loans,
+    customers,
     user, 
     handleApprove, 
     handlePreclose, 
     handleDelete,
 }: { 
-    loans: Loan[], 
+    loans: Loan[],
+    customers: Customer[],
     user: User | null, 
     handleApprove: (id: string, groupId?: string) => void, 
     handlePreclose: (id: string) => void,
@@ -339,6 +356,7 @@ const LoanCategoryTabs = ({
         <TabsContent value="active">
             <LoanTable 
                 loans={activeLoans} 
+                customers={customers}
                 user={user} 
                 handleApprove={handleApprove} 
                 handlePreclose={handlePreclose} 
@@ -348,6 +366,7 @@ const LoanCategoryTabs = ({
         <TabsContent value="closed">
             <LoanTable 
                 loans={closedLoans} 
+                customers={customers}
                 user={user} 
                 handleApprove={handleApprove} 
                 handlePreclose={handlePreclose} 
@@ -360,6 +379,7 @@ const LoanCategoryTabs = ({
 
 export default function LoansPage() {
   const { loans, isLoaded, updateLoanStatus, deleteLoan } = useLoans();
+  const { customers, isLoaded: customersLoaded } = useCustomers();
   const { toast } = useToast();
   const [user, setUser] = React.useState<User | null>(null);
   const { logActivity } = useUserActivity();
@@ -420,7 +440,7 @@ export default function LoansPage() {
     }
   };
 
-  if (!isLoaded) {
+  if (!isLoaded || !customersLoaded) {
     return (
         <Card>
             <CardHeader>
@@ -498,6 +518,7 @@ export default function LoansPage() {
             <TabsContent value="all">
                  <LoanCategoryTabs 
                     loans={loans}
+                    customers={customers}
                     user={user}
                     handleApprove={handleApprove}
                     handlePreclose={handlePreclose}
@@ -507,6 +528,7 @@ export default function LoansPage() {
             <TabsContent value="personal">
                  <LoanCategoryTabs 
                     loans={personalLoans}
+                    customers={customers}
                     user={user}
                     handleApprove={handleApprove}
                     handlePreclose={handlePreclose}
@@ -516,6 +538,7 @@ export default function LoansPage() {
             <TabsContent value="group">
                 <LoanCategoryTabs 
                     loans={groupLoans}
+                    customers={customers}
                     user={user}
                     handleApprove={handleApprove}
                     handlePreclose={handlePreclose}
@@ -542,5 +565,3 @@ export default function LoansPage() {
     </>
   )
 }
-
-    
