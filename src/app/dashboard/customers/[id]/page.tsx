@@ -83,47 +83,47 @@ export default function CustomerProfilePage() {
         let headerCursorY = 20;
         if (companyProfile.logoUrl) {
             try {
-                doc.addImage(companyProfile.logoUrl, 'PNG', 14, 15, 20, 20);
-                doc.setFontSize(16);
+                doc.addImage(companyProfile.logoUrl, 'PNG', 14, 15, 18, 18);
+                doc.setFontSize(14);
                 doc.setFont('helvetica', 'bold');
-                doc.text(companyProfile.name, 40, 22);
-                doc.setFontSize(10);
+                doc.text(companyProfile.name, 38, 22);
+                doc.setFontSize(9);
                 doc.setFont('helvetica', 'normal');
-                doc.text(companyProfile.address, 40, 28);
+                doc.text(companyProfile.address, 38, 28);
                 headerCursorY = 40;
             } catch (error) {
                 console.error("Error adding logo to PDF:", error);
                 // Fallback to text-only header if image fails
-                doc.setFontSize(16);
+                doc.setFontSize(14);
                 doc.setFont('helvetica', 'bold');
                 doc.text(companyProfile.name, 14, headerCursorY);
                 headerCursorY += 6;
-                doc.setFontSize(10);
+                doc.setFontSize(9);
                 doc.setFont('helvetica', 'normal');
                 doc.text(companyProfile.address, 14, headerCursorY);
-                headerCursorY += 10;
+                headerCursorY += 8;
             }
         } else {
-            doc.setFontSize(16);
+            doc.setFontSize(14);
             doc.setFont('helvetica', 'bold');
             doc.text(companyProfile.name, 14, headerCursorY);
             headerCursorY += 6;
-            doc.setFontSize(10);
+            doc.setFontSize(9);
             doc.setFont('helvetica', 'normal');
             doc.text(companyProfile.address, 14, headerCursorY);
-            headerCursorY += 10;
+            headerCursorY += 8;
         }
 
-        doc.setFontSize(12);
+        doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
         doc.text('Repayment Schedule', doc.internal.pageSize.getWidth() / 2, headerCursorY, { align: 'center' });
 
-        doc.setFontSize(10);
+        doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.text(`Date : ${format(new Date(), 'dd/MM/yyyy')}`, 195, 20, { align: 'right' });
         doc.text(`Page : 1`, 195, 25, { align: 'right' });
 
-        let finalY = headerCursorY + 10;
+        let finalY = headerCursorY + 8;
 
         // Loan Details in two columns
         autoTable(doc, {
@@ -161,7 +161,7 @@ export default function CustomerProfilePage() {
                 ],
             ],
             theme: 'plain',
-            styles: { fontSize: 9 },
+            styles: { fontSize: 8 },
             columnStyles: {
               0: { cellWidth: 40 },
               1: { cellWidth: 'auto' },
@@ -170,7 +170,7 @@ export default function CustomerProfilePage() {
             }
         });
         
-        finalY = (doc as any).lastAutoTable.finalY + 10;
+        finalY = (doc as any).lastAutoTable.finalY + 8;
         
         // Payment History
         if (loan.collections.length > 0) {
@@ -184,12 +184,13 @@ export default function CustomerProfilePage() {
                     c.paymentMethod
                 ]),
                 theme: 'striped',
-                headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+                headStyles: { fillColor: [41, 128, 185], textColor: 255, fontSize: 8 },
+                styles: { fontSize: 8 },
             });
-            finalY = (doc as any).lastAutoTable.finalY + 10;
+            finalY = (doc as any).lastAutoTable.finalY + 8;
         } else {
             doc.text('No payment history for this loan.', 14, finalY);
-            finalY += 10;
+            finalY += 8;
         }
 
         // Summary at the bottom
@@ -200,7 +201,7 @@ export default function CustomerProfilePage() {
                 ['Total Paid:', `Rs. ${loan.totalPaid.toLocaleString('en-IN')}`],
                 ['Balance Due:', `Rs. ${loan.outstandingAmount.toLocaleString('en-IN')}`],
             ],
-            styles: { fontStyle: 'bold' }
+            styles: { fontStyle: 'bold', fontSize: 8 }
         });
 
         doc.save(`Repayment_Schedule_${loan.id}_${customer.name}.pdf`);
