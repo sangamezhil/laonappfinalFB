@@ -52,7 +52,7 @@ export default function CustomerProfilePage() {
             }
           }
 
-          const loanCollections = collections.filter(c => c.id === loan.id).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          const loanCollections = collections.filter(c => c.loanId === loan.id).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
           return { ...loan, nextDueDate, collections: loanCollections };
         });
@@ -93,6 +93,7 @@ export default function CustomerProfilePage() {
         });
         
         autoTable(doc, {
+            startY: (doc as any).lastAutoTable.finalY + 10,
             head: [['Loan Details', '']],
             body: [
                 ['Loan Type', loan.loanType],
@@ -108,6 +109,7 @@ export default function CustomerProfilePage() {
         });
 
         autoTable(doc, {
+            startY: (doc as any).lastAutoTable.finalY + 10,
             head: [['Loan Status Summary', '']],
             body: [
                 ['Due Date', loan.nextDueDate ? format(loan.nextDueDate, 'PPP') : 'N/A'],
@@ -118,6 +120,22 @@ export default function CustomerProfilePage() {
             theme: 'striped',
             headStyles: { fillColor: [22, 163, 74] },
         });
+        
+        if (loan.collections.length > 0) {
+            autoTable(doc, {
+                startY: (doc as any).lastAutoTable.finalY + 10,
+                head: [['Payment History', 'Date', 'Amount', 'Method']],
+                body: loan.collections.map(c => [
+                    '',
+                    format(new Date(c.date), 'PPP'), 
+                    `Rs. ${c.amount.toLocaleString('en-IN')}`, 
+                    c.paymentMethod
+                ]),
+                theme: 'striped',
+                headStyles: { fillColor: [22, 163, 74] },
+            });
+        }
+
 
         doc.save(`Loan_Statement_${loan.id}_${customer.name}.pdf`);
     });
@@ -337,5 +355,3 @@ export default function CustomerProfilePage() {
     </div>
   )
 }
-
-    
