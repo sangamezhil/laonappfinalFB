@@ -17,10 +17,6 @@ import { Button } from '@/components/ui/button';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-interface jsPDFWithAutoTable extends jsPDF {
-  autoTable: (options: any) => jsPDF;
-}
-
 type LoanWithDetails = Loan & {
   nextDueDate: Date | null;
   collections: Collection[];
@@ -78,7 +74,7 @@ export default function CustomerProfilePage() {
     }
 
     activeLoans.forEach(loan => {
-        const doc = new jsPDF() as jsPDFWithAutoTable;
+        const doc = new jsPDF();
         
         doc.setFontSize(16);
         doc.text(`Loan Statement for ${customer.name}`, 14, 16);
