@@ -67,13 +67,16 @@ export default function CustomerProfilePage() {
   const handleDownload = () => {
     if (!customer) return;
 
-    const activeLoans = loansWithDetails.filter(loan => loan.status === 'Active' || loan.status === 'Overdue');
-    if (activeLoans.length === 0) {
-        alert('No active loans to download.');
+    const downloadableLoans = loansWithDetails.filter(loan => 
+      loan.status === 'Active' || loan.status === 'Overdue' || loan.status === 'Closed'
+    );
+
+    if (downloadableLoans.length === 0) {
+        alert('No loans available to download.');
         return;
     }
 
-    activeLoans.forEach(loan => {
+    downloadableLoans.forEach(loan => {
         const doc = new jsPDF();
         
         doc.setFontSize(16);
@@ -133,9 +136,13 @@ export default function CustomerProfilePage() {
                 ]),
                 theme: 'striped',
                 headStyles: { fillColor: [22, 163, 74] },
+                didDrawCell: (data) => {
+                    if (data.section === 'head' && data.column.index === 0) {
+                        data.cell.text = 'Payment History';
+                    }
+                }
             });
         }
-
 
         doc.save(`Loan_Statement_${loan.id}_${customer.name}.pdf`);
     });
