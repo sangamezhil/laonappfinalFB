@@ -390,29 +390,33 @@ export default function LoansPage() {
   const { logActivity } = useUserActivity();
   const [loanToDelete, setLoanToDelete] = React.useState<Loan | null>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [currentTab, setCurrentTab] = React.useState('all');
+  const [currentTab, setCurrentTab] = React.useState('personal');
 
   const customerMap = React.useMemo(() => {
     return new Map(customers.map(c => [c.id, c]));
   }, [customers]);
 
   const filteredLoans = React.useMemo(() => {
-    if (!searchQuery) return loans;
+    let loansToFilter = loans.filter(loan => loan.loanType.toLowerCase().includes(currentTab));
+
+    if (!searchQuery) return loansToFilter;
 
     const lowercasedQuery = searchQuery.toLowerCase();
     
+    // For group loans, if any member's phone matches, show the whole group.
     const groupLoanIds = new Set<string>();
-
-    loans.forEach(loan => {
-        if(loan.groupId) {
-            const customer = customerMap.get(loan.customerId);
-            if(customer?.phone.includes(lowercasedQuery)) {
-                groupLoanIds.add(loan.groupId);
+    if (currentTab === 'group') {
+        loansToFilter.forEach(loan => {
+            if(loan.groupId) {
+                const customer = customerMap.get(loan.customerId);
+                if(customer?.phone.includes(lowercasedQuery)) {
+                    groupLoanIds.add(loan.groupId);
+                }
             }
-        }
-    });
+        });
+    }
 
-    return loans.filter(loan => {
+    return loansToFilter.filter(loan => {
         if (loan.groupId) {
             return groupLoanIds.has(loan.groupId);
         }
@@ -420,11 +424,7 @@ export default function LoansPage() {
         return customer?.phone.includes(lowercasedQuery);
     });
 
-  }, [searchQuery, loans, customerMap]);
-
-
-  const personalLoans = React.useMemo(() => filteredLoans.filter(l => l.loanType === 'Personal'), [filteredLoans]);
-  const groupLoans = React.useMemo(() => filteredLoans.filter(l => l.loanType === 'Group'), [filteredLoans]);
+  }, [searchQuery, loans, customerMap, currentTab]);
 
 
   React.useEffect(() => {
@@ -479,21 +479,9 @@ export default function LoansPage() {
   };
   
   const renderLoans = () => {
-    let loansToRender;
-    switch(currentTab) {
-        case 'personal':
-            loansToRender = personalLoans;
-            break;
-        case 'group':
-            loansToRender = groupLoans;
-            break;
-        default:
-            loansToRender = filteredLoans;
-            break;
-    }
     return (
         <LoanCategoryTabs 
-            loans={loansToRender}
+            loans={filteredLoans}
             customers={customers}
             user={user}
             handleApprove={handleApprove}
@@ -565,7 +553,6 @@ export default function LoansPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4">
           <Tabs value={currentTab} onValueChange={setCurrentTab}>
             <TabsList>
-              <TabsTrigger value="all">All Loans</TabsTrigger>
               <TabsTrigger value="personal">Personal Loans</TabsTrigger>
               <TabsTrigger value="group">Group Loans</TabsTrigger>
             </TabsList>
