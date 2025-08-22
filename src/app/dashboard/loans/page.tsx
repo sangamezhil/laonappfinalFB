@@ -141,7 +141,7 @@ const LoanTable = ({
         if (hasSearched) {
             return <div className="text-center text-muted-foreground p-8">No loans found matching your search.</div>
         }
-        return <div className="text-center text-muted-foreground p-8">Please enter a search query or select a filter to see loans.</div>
+        return <div className="text-center text-muted-foreground p-8">Please enter a search query to see loans.</div>
     }
 
     return (
@@ -256,7 +256,7 @@ const LoanTable = ({
                                     Record Payment
                                     </DropdownMenuItem>
                                 }
-                                 {user?.role === 'Admin' && (
+                                 {user?.role === 'Admin' && loan.status !== 'Active' && loan.status !== 'Overdue' && (
                                     <>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem onSelect={() => handleDelete(loan)} className="text-destructive">
@@ -322,7 +322,7 @@ const LoanTable = ({
                                 Record Payment
                                 </DropdownMenuItem>
                             }
-                            {user?.role === 'Admin' && (
+                            {user?.role === 'Admin' && item.loan.status !== 'Active' && item.loan.status !== 'Overdue' && (
                                 <>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onSelect={() => handleDelete(item.loan)} className="text-destructive">
@@ -352,7 +352,6 @@ export default function LoansPage() {
   const [loanToDelete, setLoanToDelete] = React.useState<Loan | null>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [currentTab, setCurrentTab] = React.useState('personal');
-  const [statusFilter, setStatusFilter] = React.useState<StatusFilter>('All');
 
 
   const customerMap = React.useMemo(() => {
@@ -360,15 +359,11 @@ export default function LoansPage() {
   }, [customers]);
 
   const filteredLoans = React.useMemo(() => {
-    if (!searchQuery && statusFilter === 'All') {
+    if (!searchQuery) {
         return [];
     }
 
     let loansToFilter = loans.filter(loan => loan.loanType.toLowerCase() === currentTab);
-
-    if (statusFilter !== 'All') {
-        loansToFilter = loansToFilter.filter(loan => loan.status === statusFilter);
-    }
     
     if (searchQuery) {
         const lowercasedQuery = searchQuery.toLowerCase();
@@ -396,7 +391,7 @@ export default function LoansPage() {
 
     return loansToFilter;
 
-  }, [searchQuery, loans, customerMap, currentTab, statusFilter]);
+  }, [searchQuery, loans, customerMap, currentTab]);
 
 
   React.useEffect(() => {
@@ -439,15 +434,22 @@ export default function LoansPage() {
   };
 
   const confirmDelete = () => {
-    if (loanToDelete) {
-      deleteLoan(loanToDelete.id);
-      logActivity('Delete Loan', `Deleted loan ${loanToDelete.id}.`);
-      toast({
-        title: 'Loan Deleted',
-        description: `Loan ${loanToDelete.id} for ${loanToDelete.customerName} has been deleted.`,
-      });
-      setLoanToDelete(null);
+    if (!loanToDelete) return;
+    if (loanToDelete.status === 'Active' || loanToDelete.status === 'Overdue') {
+        toast({
+            variant: "destructive",
+            title: "Deletion Not Allowed",
+            description: `Active or Overdue loans cannot be deleted.`,
+        });
+        return;
     }
+    deleteLoan(loanToDelete.id);
+    logActivity('Delete Loan', `Deleted loan ${loanToDelete.id}.`);
+    toast({
+    title: 'Loan Deleted',
+    description: `Loan ${loanToDelete.id} for ${loanToDelete.customerName} has been deleted.`,
+    });
+    setLoanToDelete(null);
   };
   
   if (!isLoaded || !customersLoaded) {
@@ -537,21 +539,6 @@ export default function LoansPage() {
                 </Button>
               )}
             </div>
-             <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                    <div className="flex items-center gap-2">
-                        <Filter className="w-4 h-4" />
-                        <SelectValue placeholder="Filter by status" />
-                    </div>
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="All">All Statuses</SelectItem>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Overdue">Overdue</SelectItem>
-                    <SelectItem value="Pending">Pending</SelectItem>
-                    <SelectItem value="Closed">Closed</SelectItem>
-                </SelectContent>
-            </Select>
             {user?.role === 'Admin' && (
               <Link href="/dashboard/loans/new" passHref>
                 <Button className="flex-shrink-0">
@@ -571,7 +558,7 @@ export default function LoansPage() {
             handleApprove={handleApprove}
             handlePreclose={handlePreclose}
             handleDelete={setLoanToDelete}
-            hasSearched={searchQuery.length > 0 || statusFilter !== 'All'}
+            hasSearched={searchQuery.length > 0}
         />
       </CardContent>
     </Card>
@@ -592,5 +579,3 @@ export default function LoansPage() {
     </>
   )
 }
-
-    
