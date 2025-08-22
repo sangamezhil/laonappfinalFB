@@ -61,7 +61,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
-import { useUserActivity, useCustomers, useLoans, useCollections } from '@/lib/data'
+import { useUserActivity, useCustomers, useLoans, useCollections, useCompanyProfile } from '@/lib/data'
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format, isWithinInterval, parseISO } from 'date-fns'
@@ -154,6 +154,8 @@ export default function UsersPage() {
   const { customers } = useCustomers();
   const { loans } = useLoans();
   const { collections } = useCollections();
+  const { profile: companyProfile } = useCompanyProfile();
+
 
   const { toast } = useToast();
 
@@ -281,7 +283,7 @@ export default function UsersPage() {
     let finalY = 20;
 
     doc.setFontSize(18);
-    doc.text('LoanTrack Lite - Data Export', 14, finalY);
+    doc.text(`${companyProfile.name} - Data Export`, 14, finalY);
     doc.setFontSize(10);
     doc.text(`Generated on: ${format(new Date(), 'PPP p')}`, 14, finalY + 5);
 
@@ -337,7 +339,7 @@ export default function UsersPage() {
     
     const fromDate = range ? format(range.start, 'yyyy-MM-dd') : 'start';
     const toDate = range ? format(range.end, 'yyyy-MM-dd') : 'end';
-    const filename = `LoanTrackLite_Data_${fromDate}_to_${toDate}.pdf`;
+    const filename = `${companyProfile.name}_Data_${fromDate}_to_${toDate}.pdf`;
 
     doc.save(filename);
     
@@ -616,3 +618,5 @@ export default function UsersPage() {
     </>
   )
 }
+
+    
