@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast'
 import { useLoans, Loan, useUserActivity, useCollections, Collection, useCustomers } from '@/lib/data'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { CalendarIcon, IndianRupee, Landmark, Users, Phone, Search, Trash2, MoreHorizontal } from 'lucide-react'
+import { CalendarIcon, IndianRupee, Landmark, Users, Phone, Search, Trash2, MoreHorizontal, X } from 'lucide-react'
 import { Calendar } from '@/components/ui/calendar'
 import { cn, getAvatarColor } from '@/lib/utils'
 import { format, addDays, addWeeks, addMonths } from 'date-fns'
@@ -247,11 +247,21 @@ function CollectionsPageContent() {
                             placeholder="Search by phone number..." 
                             value={phoneSearch} 
                             onChange={(e) => setPhoneSearch(e.target.value)}
-                            className="pl-9"
+                            className="pl-9 pr-8"
                             disabled={activeAndOverdueLoans.length === 0}
                         />
+                         {phoneSearch && (
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
+                                onClick={() => setPhoneSearch('')}
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        )}
                     </div>
-                    <Button type="button" onClick={handlePhoneSearch} disabled={activeAndOverdueLoans.length === 0}><Search className="w-4 h-4" /></Button>
+                    <Button type="button" onClick={handlePhoneSearch} disabled={activeAndOverdueLoans.length === 0 || !phoneSearch}><Search className="w-4 h-4" /></Button>
                 </div>
 
 
@@ -512,5 +522,7 @@ export default function CollectionsPage() {
     </Suspense>
   )
 }
+
+    
 
     
