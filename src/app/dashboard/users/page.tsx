@@ -62,7 +62,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { useUserActivity, useCustomers, useLoans, useCollections } from '@/lib/data'
-import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { format, isWithinInterval, parseISO } from 'date-fns'
 import { DateRange } from "react-day-picker"
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -276,20 +277,69 @@ export default function UsersPage() {
     const filteredLoans = range ? loans.filter(l => isWithinInterval(parseISO(l.disbursalDate), range)) : loans;
     const filteredCollections = range ? collections.filter(c => isWithinInterval(parseISO(c.date), range)) : collections;
 
-    const customerSheet = XLSX.utils.json_to_sheet(filteredCustomers);
-    const loanSheet = XLSX.utils.json_to_sheet(filteredLoans);
-    const collectionSheet = XLSX.utils.json_to_sheet(filteredCollections);
+    const doc = new jsPDF();
+    let finalY = 20;
 
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, customerSheet, 'Customers');
-    XLSX.utils.book_append_sheet(workbook, loanSheet, 'Loans');
-    XLSX.utils.book_append_sheet(workbook, collectionSheet, 'Collections');
+    doc.setFontSize(18);
+    doc.text('LoanTrack Lite - Data Export', 14, finalY);
+    doc.setFontSize(10);
+    doc.text(`Generated on: ${format(new Date(), 'PPP p')}`, 14, finalY + 5);
+
+    finalY += 15;
+
+    if (filteredCustomers.length > 0) {
+        doc.setFontSize(14);
+        doc.text('Customers', 14, finalY);
+        finalY += 5;
+        autoTable(doc, {
+            startY: finalY,
+            head: [['ID', 'Name', 'Phone', 'ID Type', 'ID Number', 'Registered']],
+            body: filteredCustomers.map(c => [
+                c.id, c.name, c.phone, c.idType, c.idNumber, c.registrationDate
+            ]),
+            theme: 'striped',
+            headStyles: { fillColor: [22, 163, 74] },
+        });
+        finalY = (doc as any).lastAutoTable.finalY + 10;
+    }
+
+    if (filteredLoans.length > 0) {
+        doc.setFontSize(14);
+        doc.text('Loans', 14, finalY);
+        finalY += 5;
+        autoTable(doc, {
+            startY: finalY,
+            head: [['ID', 'Customer', 'Amount', 'Status', 'Date']],
+            body: filteredLoans.map(l => [
+                l.id, l.customerName, l.amount.toLocaleString('en-IN'), l.status, l.disbursalDate
+            ]),
+            theme: 'striped',
+            headStyles: { fillColor: [22, 163, 74] },
+        });
+        finalY = (doc as any).lastAutoTable.finalY + 10;
+    }
+
+     if (filteredCollections.length > 0) {
+        doc.setFontSize(14);
+        doc.text('Collections', 14, finalY);
+        finalY += 5;
+        autoTable(doc, {
+            startY: finalY,
+            head: [['Loan ID', 'Customer', 'Amount', 'Method', 'Date']],
+            body: filteredCollections.map(c => [
+                c.loanId, c.customer, c.amount.toLocaleString('en-IN'), c.paymentMethod, c.date
+            ]),
+            theme: 'striped',
+            headStyles: { fillColor: [22, 163, 74] },
+        });
+    }
+
     
     const fromDate = range ? format(range.start, 'yyyy-MM-dd') : 'start';
     const toDate = range ? format(range.end, 'yyyy-MM-dd') : 'end';
-    const filename = `LoanTrackLite_Data_${fromDate}_to_${toDate}.xlsx`;
+    const filename = `LoanTrackLite_Data_${fromDate}_to_${toDate}.pdf`;
 
-    XLSX.writeFile(workbook, filename);
+    doc.save(filename);
     
     toast({
         title: 'Download Started',
@@ -566,5 +616,3 @@ export default function UsersPage() {
     </>
   )
 }
-
-    
