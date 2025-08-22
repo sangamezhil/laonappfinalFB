@@ -390,6 +390,7 @@ export default function LoansPage() {
   const { logActivity } = useUserActivity();
   const [loanToDelete, setLoanToDelete] = React.useState<Loan | null>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
+  const [currentTab, setCurrentTab] = React.useState('all');
 
   const customerMap = React.useMemo(() => {
     return new Map(customers.map(c => [c.id, c]));
@@ -476,17 +477,46 @@ export default function LoansPage() {
       setLoanToDelete(null);
     }
   };
+  
+  const renderLoans = () => {
+    let loansToRender;
+    switch(currentTab) {
+        case 'personal':
+            loansToRender = personalLoans;
+            break;
+        case 'group':
+            loansToRender = groupLoans;
+            break;
+        default:
+            loansToRender = filteredLoans;
+            break;
+    }
+    return (
+        <LoanCategoryTabs 
+            loans={loansToRender}
+            customers={customers}
+            user={user}
+            handleApprove={handleApprove}
+            handlePreclose={handlePreclose}
+            handleDelete={setLoanToDelete}
+        />
+    )
+  }
 
   if (!isLoaded || !customersLoaded) {
     return (
         <Card>
             <CardHeader>
-                <div className="flex items-center justify-between">
-                    <div>
-                        <Skeleton className="w-24 h-8 mb-2" />
-                        <Skeleton className="w-72 h-4" />
+                <div className="space-y-2">
+                    <Skeleton className="w-24 h-8" />
+                    <Skeleton className="w-72 h-4" />
+                </div>
+                <div className="flex justify-between items-center pt-4">
+                     <Skeleton className="h-10 w-[300px]" />
+                    <div className="flex items-center gap-2">
+                        <Skeleton className="w-44 h-10" />
+                        <Skeleton className="w-36 h-10" />
                     </div>
-                     <Skeleton className="w-44 h-10" />
                 </div>
             </CardHeader>
             <CardContent>
@@ -525,74 +555,45 @@ export default function LoansPage() {
   return (
     <>
     <Card>
-      <CardHeader>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <CardTitle>Loans</CardTitle>
-            <CardDescription>
-              Track and manage all loan applications.
-            </CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-             <div className="relative w-full max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input 
-                    type="tel" 
-                    placeholder="Search by mobile number..." 
-                    value={searchQuery} 
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
-                />
+        <CardHeader className="space-y-4">
+            <div>
+                <CardTitle>Loans</CardTitle>
+                <CardDescription>
+                Track and manage all loan applications.
+                </CardDescription>
             </div>
-            {user?.role === 'Admin' && (
-                <Link href="/dashboard/loans/new" passHref>
-                    <Button>
-                    <PlusCircle className="w-4 h-4 mr-2" />
-                    New Loan Application
-                    </Button>
-                </Link>
-            )}
-          </div>
-        </div>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                 <Tabs value={currentTab} onValueChange={setCurrentTab}>
+                    <TabsList>
+                        <TabsTrigger value="all">All Loans</TabsTrigger>
+                        <TabsTrigger value="personal">Personal Loans</TabsTrigger>
+                        <TabsTrigger value="group">Group Loans</TabsTrigger>
+                    </TabsList>
+                </Tabs>
+                <div className="flex w-full sm:w-auto items-center gap-2">
+                    <div className="relative w-full sm:w-auto flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input 
+                            type="tel" 
+                            placeholder="Search by mobile..." 
+                            value={searchQuery} 
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-9 w-full"
+                        />
+                    </div>
+                    {user?.role === 'Admin' && (
+                        <Link href="/dashboard/loans/new" passHref>
+                            <Button className="flex-shrink-0">
+                            <PlusCircle className="w-4 h-4 mr-2" />
+                            New Loan
+                            </Button>
+                        </Link>
+                    )}
+                </div>
+            </div>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="all" className="w-full">
-            <TabsList>
-                <TabsTrigger value="all">All Loans</TabsTrigger>
-                <TabsTrigger value="personal">Personal Loans</TabsTrigger>
-                <TabsTrigger value="group">Group Loans</TabsTrigger>
-            </TabsList>
-            <TabsContent value="all" className="pt-4">
-                 <LoanCategoryTabs 
-                    loans={filteredLoans}
-                    customers={customers}
-                    user={user}
-                    handleApprove={handleApprove}
-                    handlePreclose={handlePreclose}
-                    handleDelete={setLoanToDelete}
-                 />
-            </TabsContent>
-            <TabsContent value="personal" className="pt-4">
-                 <LoanCategoryTabs 
-                    loans={personalLoans}
-                    customers={customers}
-                    user={user}
-                    handleApprove={handleApprove}
-                    handlePreclose={handlePreclose}
-                    handleDelete={setLoanToDelete}
-                 />
-            </TabsContent>
-            <TabsContent value="group" className="pt-4">
-                <LoanCategoryTabs 
-                    loans={groupLoans}
-                    customers={customers}
-                    user={user}
-                    handleApprove={handleApprove}
-                    handlePreclose={handlePreclose}
-                    handleDelete={setLoanToDelete}
-                 />
-            </TabsContent>
-        </Tabs>
+        {renderLoans()}
       </CardContent>
     </Card>
      <AlertDialog open={!!loanToDelete} onOpenChange={(open) => !open && setLoanToDelete(null)}>
@@ -612,5 +613,3 @@ export default function LoansPage() {
     </>
   )
 }
-
-    
