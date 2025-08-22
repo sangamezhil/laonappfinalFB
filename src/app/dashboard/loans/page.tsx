@@ -141,7 +141,7 @@ const LoanTable = ({
         if (hasSearched) {
             return <div className="text-center text-muted-foreground p-8">No loans found matching your search.</div>
         }
-        return <div className="text-center text-muted-foreground p-8">Please enter a search query to see loans.</div>
+        return <div className="text-center text-muted-foreground p-8">Please enter a search query or select a filter to see loans.</div>
     }
 
     return (
@@ -360,35 +360,42 @@ export default function LoansPage() {
   }, [customers]);
 
   const filteredLoans = React.useMemo(() => {
+    // If no search query and status filter is 'All', return empty array.
+    if (!searchQuery && statusFilter === 'All') {
+        return [];
+    }
+
     let loansToFilter = loans.filter(loan => loan.loanType.toLowerCase() === currentTab);
 
     if (statusFilter !== 'All') {
         loansToFilter = loansToFilter.filter(loan => loan.status === statusFilter);
     }
     
-    if (!searchQuery) return loansToFilter;
-
-    const lowercasedQuery = searchQuery.toLowerCase();
-    
-    const groupLoanIds = new Set<string>();
-    if (currentTab === 'group') {
-        loansToFilter.forEach(loan => {
-            if(loan.groupId) {
-                const customer = customerMap.get(loan.customerId);
-                if(customer?.phone.includes(lowercasedQuery) || loan.groupName?.toLowerCase().includes(lowercasedQuery) || loan.groupId.toLowerCase().includes(lowercasedQuery)) {
-                    groupLoanIds.add(loan.groupId);
+    if (searchQuery) {
+        const lowercasedQuery = searchQuery.toLowerCase();
+        
+        const groupLoanIds = new Set<string>();
+        if (currentTab === 'group') {
+            loansToFilter.forEach(loan => {
+                if(loan.groupId) {
+                    const customer = customerMap.get(loan.customerId);
+                    if(customer?.phone.includes(lowercasedQuery) || loan.groupName?.toLowerCase().includes(lowercasedQuery) || loan.groupId.toLowerCase().includes(lowercasedQuery)) {
+                        groupLoanIds.add(loan.groupId);
+                    }
                 }
+            });
+        }
+
+        loansToFilter = loansToFilter.filter(loan => {
+            if (loan.groupId) {
+                return groupLoanIds.has(loan.groupId);
             }
+            const customer = customerMap.get(loan.customerId);
+            return customer?.phone.includes(lowercasedQuery) || customer?.name.toLowerCase().includes(lowercasedQuery) || loan.id.toLowerCase().includes(lowercasedQuery);
         });
     }
 
-    return loansToFilter.filter(loan => {
-        if (loan.groupId) {
-            return groupLoanIds.has(loan.groupId);
-        }
-        const customer = customerMap.get(loan.customerId);
-        return customer?.phone.includes(lowercasedQuery) || customer?.name.toLowerCase().includes(lowercasedQuery) || loan.id.toLowerCase().includes(lowercasedQuery);
-    });
+    return loansToFilter;
 
   }, [searchQuery, loans, customerMap, currentTab, statusFilter]);
 
@@ -586,3 +593,5 @@ export default function LoansPage() {
     </>
   )
 }
+
+    
