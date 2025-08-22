@@ -79,24 +79,19 @@ export default function CustomerProfilePage() {
     downloadableLoans.forEach(loan => {
         const doc = new jsPDF();
         
-        doc.setFontSize(16);
-        doc.text(`Loan Statement for ${customer.name}`, 14, 16);
-        doc.setFontSize(10);
-        doc.text(`Loan ID: ${loan.id}`, 14, 22);
-
-        autoTable(doc, {
-            startY: 30,
-            head: [['Customer Details', '']],
-            body: [
-                ['Customer ID', customer.id],
-                ['Customer Name', customer.name],
-            ],
-            theme: 'striped',
-            headStyles: { fillColor: [22, 163, 74] },
-        });
+        // Header
+        doc.setFontSize(20);
+        doc.text(`Loan Statement`, 14, 22);
+        doc.setFontSize(12);
+        doc.text(`Customer: ${customer.name}`, 14, 30);
+        doc.text(`Loan ID: ${loan.id}`, 14, 36);
+        doc.text(`Date: ${format(new Date(), 'PPP')}`, 150, 22)
         
+        let finalY = 45;
+
+        // Loan Details
         autoTable(doc, {
-            startY: (doc as any).lastAutoTable.finalY + 10,
+            startY: finalY,
             head: [['Loan Details', '']],
             body: [
                 ['Loan Type', loan.loanType],
@@ -106,43 +101,45 @@ export default function CustomerProfilePage() {
                 ['Term', `${loan.term} ${loan.collectionFrequency}s`],
                 ['Status', loan.status],
                 ['Disbursal Date', format(new Date(loan.disbursalDate), 'yyyy-MM-dd')],
+                 ['Installment Amount', `Rs. ${loan.weeklyRepayment.toLocaleString('en-IN')}`],
             ],
             theme: 'striped',
             headStyles: { fillColor: [22, 163, 74] },
         });
 
-        autoTable(doc, {
-            startY: (doc as any).lastAutoTable.finalY + 10,
-            head: [['Loan Status Summary', '']],
-            body: [
-                ['Due Date', loan.nextDueDate ? format(loan.nextDueDate, 'PPP') : 'N/A'],
-                ['Installment Amount', `Rs. ${loan.weeklyRepayment.toLocaleString('en-IN')}`],
-                ['Paid Dues', `Rs. ${loan.totalPaid.toLocaleString('en-IN')}`],
-                ['Total Outstanding', `Rs. ${loan.outstandingAmount.toLocaleString('en-IN')}`],
-            ],
-            theme: 'striped',
-            headStyles: { fillColor: [22, 163, 74] },
-        });
+        finalY = (doc as any).lastAutoTable.finalY + 10;
         
+        // Payment History
         if (loan.collections.length > 0) {
             autoTable(doc, {
-                startY: (doc as any).lastAutoTable.finalY + 10,
-                head: [['Payment History', 'Date', 'Amount', 'Method']],
+                startY: finalY,
+                head: [['Date', 'Amount', 'Method']],
                 body: loan.collections.map(c => [
-                    '',
                     format(new Date(c.date), 'PPP'), 
                     `Rs. ${c.amount.toLocaleString('en-IN')}`, 
                     c.paymentMethod
                 ]),
                 theme: 'striped',
                 headStyles: { fillColor: [22, 163, 74] },
-                didDrawCell: (data) => {
-                    if (data.section === 'head' && data.column.index === 0) {
-                        data.cell.text = 'Payment History';
-                    }
-                }
             });
+            finalY = (doc as any).lastAutoTable.finalY + 10;
+        } else {
+            doc.text('No payment history for this loan.', 14, finalY);
+            finalY += 10;
         }
+
+        // Summary at the bottom
+        autoTable(doc, {
+            startY: finalY,
+            head: [['Summary', '']],
+            body: [
+                ['Total Paid', `Rs. ${loan.totalPaid.toLocaleString('en-IN')}`],
+                ['Total Outstanding', `Rs. ${loan.outstandingAmount.toLocaleString('en-IN')}`],
+            ],
+            theme: 'striped',
+            headStyles: { fillColor: [22, 163, 74] },
+        });
+
 
         doc.save(`Loan_Statement_${loan.id}_${customer.name}.pdf`);
     });
