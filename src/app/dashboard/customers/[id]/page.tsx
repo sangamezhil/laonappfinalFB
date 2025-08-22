@@ -14,7 +14,12 @@ import { format, addDays, addWeeks, addMonths } from 'date-fns';
 import { cn, getAvatarColor } from '@/lib/utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
-import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+
+interface jsPDFWithAutoTable extends jsPDF {
+  autoTable: (options: any) => jsPDF;
+}
 
 type LoanWithDetails = Loan & {
   nextDueDate: Date | null;
@@ -72,38 +77,55 @@ export default function CustomerProfilePage() {
         alert('No active loans to download.');
         return;
     }
-    
-    const workbook = XLSX.utils.book_new();
 
     activeLoans.forEach(loan => {
-        const headerData = [
-            ['Customer Details', ''],
-            ['Customer ID', customer.id],
-            ['Customer Name', customer.name],
-            [],
-            ['Loan Details', ''],
-            ['Loan ID', loan.id],
-            ['Loan Type', loan.loanType],
-            ['Group Name', loan.groupName || 'N/A'],
-            ['Loan Amount', loan.amount],
-            ['Interest Rate (%)', loan.interestRate],
-            ['Term', `${loan.term} ${loan.collectionFrequency}s`],
-            ['Status', loan.status],
-            ['Disbursal Date', format(new Date(loan.disbursalDate), 'yyyy-MM-dd')],
-            [],
-            ['Loan Status Summary', ''],
-            ['Due Date', loan.nextDueDate ? format(loan.nextDueDate, 'PPP') : 'N/A'],
-            ['Installment Amount', loan.weeklyRepayment],
-            ['Paid Dues', loan.totalPaid],
-            ['Total Outstanding', loan.outstandingAmount],
-        ];
+        const doc = new jsPDF() as jsPDFWithAutoTable;
+        
+        doc.setFontSize(16);
+        doc.text(`Loan Statement for ${customer.name}`, 14, 16);
+        doc.setFontSize(10);
+        doc.text(`Loan ID: ${loan.id}`, 14, 22);
 
-        const sheet = XLSX.utils.aoa_to_sheet(headerData);
-        sheet['!cols'] = [{ wch: 25 }, { wch: 30 }];
-        XLSX.utils.book_append_sheet(workbook, sheet, `Loan_${loan.id}`);
+        doc.autoTable({
+            startY: 30,
+            head: [['Customer Details', '']],
+            body: [
+                ['Customer ID', customer.id],
+                ['Customer Name', customer.name],
+            ],
+            theme: 'striped',
+            headStyles: { fillColor: [22, 163, 74] },
+        });
+        
+        doc.autoTable({
+            head: [['Loan Details', '']],
+            body: [
+                ['Loan Type', loan.loanType],
+                ['Group Name', loan.groupName || 'N/A'],
+                ['Loan Amount', `Rs. ${loan.amount.toLocaleString('en-IN')}`],
+                ['Interest Rate (%)', `${loan.interestRate}%`],
+                ['Term', `${loan.term} ${loan.collectionFrequency}s`],
+                ['Status', loan.status],
+                ['Disbursal Date', format(new Date(loan.disbursalDate), 'yyyy-MM-dd')],
+            ],
+            theme: 'striped',
+            headStyles: { fillColor: [22, 163, 74] },
+        });
+
+        doc.autoTable({
+            head: [['Loan Status Summary', '']],
+            body: [
+                ['Due Date', loan.nextDueDate ? format(loan.nextDueDate, 'PPP') : 'N/A'],
+                ['Installment Amount', `Rs. ${loan.weeklyRepayment.toLocaleString('en-IN')}`],
+                ['Paid Dues', `Rs. ${loan.totalPaid.toLocaleString('en-IN')}`],
+                ['Total Outstanding', `Rs. ${loan.outstandingAmount.toLocaleString('en-IN')}`],
+            ],
+            theme: 'striped',
+            headStyles: { fillColor: [22, 163, 74] },
+        });
+
+        doc.save(`Loan_Statement_${loan.id}_${customer.name}.pdf`);
     });
-
-    XLSX.writeFile(workbook, `ActiveLoans_Statement_${customer.id}_${customer.name}.xlsx`);
   };
 
   if (customer === undefined) {
