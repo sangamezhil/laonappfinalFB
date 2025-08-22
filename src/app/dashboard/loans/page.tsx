@@ -526,7 +526,7 @@ export default function LoansPage() {
     <>
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-start justify-between gap-4">
           <div>
             <CardTitle>Loans</CardTitle>
             <CardDescription>
@@ -556,13 +556,13 @@ export default function LoansPage() {
         </div>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="all">
+        <Tabs defaultValue="all" className="w-full">
             <TabsList>
                 <TabsTrigger value="all">All Loans</TabsTrigger>
                 <TabsTrigger value="personal">Personal Loans</TabsTrigger>
                 <TabsTrigger value="group">Group Loans</TabsTrigger>
             </TabsList>
-            <TabsContent value="all">
+            <TabsContent value="all" className="pt-4">
                  <LoanCategoryTabs 
                     loans={filteredLoans}
                     customers={customers}
@@ -572,7 +572,7 @@ export default function LoansPage() {
                     handleDelete={setLoanToDelete}
                  />
             </TabsContent>
-            <TabsContent value="personal">
+            <TabsContent value="personal" className="pt-4">
                  <LoanCategoryTabs 
                     loans={personalLoans}
                     customers={customers}
@@ -582,7 +582,7 @@ export default function LoansPage() {
                     handleDelete={setLoanToDelete}
                  />
             </TabsContent>
-            <TabsContent value="group">
+            <TabsContent value="group" className="pt-4">
                 <LoanCategoryTabs 
                     loans={groupLoans}
                     customers={customers}
@@ -612,3 +612,5 @@ export default function LoansPage() {
     </>
   )
 }
+
+    
