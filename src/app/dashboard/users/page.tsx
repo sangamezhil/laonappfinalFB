@@ -107,17 +107,19 @@ const userSchema = baseUserSchema.superRefine((data, ctx) => {
             path: ['username'],
         });
     }
-    if (data.role === 'Admin' && users.some(u => u.role === 'Admin' && u.id !== data.id)) {
-        ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'Only one Admin user can be created.',
-            path: ['role'],
-        });
-    }
 });
 
 
-const editUserSchema = userSchema.omit({ password: true });
+const editUserSchema = baseUserSchema.omit({ password: true }).superRefine((data, ctx) => {
+    const users = getUsersFromStorage();
+    if (users.some(u => u.username.toLowerCase() === data.username.toLowerCase() && u.id !== data.id)) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Username already exists.',
+            path: ['username'],
+        });
+    }
+});
 
 
 const resetPasswordSchema = z.object({
