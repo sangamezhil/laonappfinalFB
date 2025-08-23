@@ -91,31 +91,31 @@ type DownloadHistoryItem = {
     date: string;
 }
 
-const userSchema = z.object({
+const baseUserSchema = z.object({
   id: z.string().optional(),
   username: z.string().min(3, 'Username must be at least 3 characters.'),
   password: z.string().min(6, 'Password must be at least 6 characters.').optional().or(z.literal('')),
   role: z.enum(['Admin', 'Collection Agent']),
-}).refine(data => {
+});
+
+const userSchema = baseUserSchema.superRefine((data, ctx) => {
     // This is a client-side check, assuming 'users' state is available in the component context
     // A more robust solution would involve checking this in the onSubmit handler.
     if (data.role === 'Admin') {
         const users = getUsersFromStorage();
         const isAdminEditing = data.id && users.find(u => u.id === data.id)?.role === 'Admin';
-        if (users.some(u => u.role === 'Admin') && !isAdminEditing) {
-            return false;
+        if (users.some(u => u.role === 'Admin' && u.id !== data.id) && !isAdminEditing) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'Only one Admin user can be created.',
+                path: ['role'],
+            });
         }
     }
-    return true;
-}, {
-    message: 'Only one Admin user can be created.',
-    path: ['role'],
 });
 
 
-const editUserSchema = userSchema.omit({ password: true }).extend({
-  role: z.enum(['Collection Agent', 'Admin']), // Allow editing to Admin
-});
+const editUserSchema = baseUserSchema.omit({ password: true });
 
 
 const resetPasswordSchema = z.object({
@@ -242,6 +242,11 @@ export default function UsersPage() {
     
     if (userToEdit.username === 'admin' && data.role !== 'Admin') {
         toast({ variant: 'destructive', title: 'Action not allowed', description: 'Default admin role cannot be changed.' });
+        return;
+    }
+    
+    if (data.role === 'Admin' && users.some(u => u.role === 'Admin' && u.id !== userToEdit.id)) {
+        toast({ variant: 'destructive', title: 'Admin Limit Reached', description: 'Another user is already an Admin.' });
         return;
     }
 
@@ -685,5 +690,3 @@ export default function UsersPage() {
     </>
   )
 }
-
-    
