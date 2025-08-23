@@ -130,9 +130,6 @@ export default function LoginPage() {
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? 'Signing In...' : 'Sign In'}
             </Button>
-            <Button variant="link" size="sm" onClick={() => router.push('/customer/login')}>
-                Are you a customer? Login here
-            </Button>
           </CardFooter>
         </form>
       </Card>
