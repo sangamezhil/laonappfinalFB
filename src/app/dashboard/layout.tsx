@@ -43,9 +43,9 @@ import { Logo } from '@/components/logo'
 import { useUserActivity, useCompanyProfile } from '@/lib/data'
 
 const allMenuItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Admin', 'Collection Agent'] },
-  { href: '/dashboard/customers', label: 'Customers', icon: Users, roles: ['Admin', 'Collection Agent'] },
-  { href: '/dashboard/loans', label: 'Loans', icon: Landmark, roles: ['Admin', 'Collection Agent'] },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Admin'] },
+  { href: '/dashboard/customers', label: 'Customers', icon: Users, roles: ['Admin'] },
+  { href: '/dashboard/loans', label: 'Loans', icon: Landmark, roles: ['Admin'] },
   { href: '/dashboard/collections', label: 'Collections', icon: ClipboardCheck, roles: ['Admin', 'Collection Agent'] },
   { href: '/dashboard/users', label: 'Users', icon: UserCog, roles: ['Admin'] },
   { href: '/dashboard/activity', label: 'Activity Log', icon: History, roles: ['Admin'] },
@@ -115,7 +115,15 @@ export default function DashboardLayout({
     if (typeof window !== 'undefined') {
       const storedUser = localStorage.getItem('loggedInUser');
       if (storedUser) {
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        
+        // Redirect if role doesn't have access to current page
+        const currentPath = window.location.pathname;
+        if(parsedUser.role === 'Collection Agent' && currentPath !== '/dashboard/collections') {
+            router.replace('/dashboard/collections');
+        }
+
       } else {
         router.push('/login');
       }
