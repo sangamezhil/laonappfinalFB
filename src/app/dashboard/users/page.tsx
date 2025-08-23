@@ -99,23 +99,25 @@ const baseUserSchema = z.object({
 });
 
 const userSchema = baseUserSchema.superRefine((data, ctx) => {
-    // This is a client-side check, assuming 'users' state is available in the component context
-    // A more robust solution would involve checking this in the onSubmit handler.
-    if (data.role === 'Admin') {
-        const users = getUsersFromStorage();
-        const isAdminEditing = data.id && users.find(u => u.id === data.id)?.role === 'Admin';
-        if (users.some(u => u.role === 'Admin' && u.id !== data.id) && !isAdminEditing) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: 'Only one Admin user can be created.',
-                path: ['role'],
-            });
-        }
+    const users = getUsersFromStorage();
+    if (users.some(u => u.username.toLowerCase() === data.username.toLowerCase() && u.id !== data.id)) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Username already exists.',
+            path: ['username'],
+        });
+    }
+    if (data.role === 'Admin' && users.some(u => u.role === 'Admin' && u.id !== data.id)) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Only one Admin user can be created.',
+            path: ['role'],
+        });
     }
 });
 
 
-const editUserSchema = baseUserSchema.omit({ password: true });
+const editUserSchema = userSchema.omit({ password: true });
 
 
 const resetPasswordSchema = z.object({
@@ -345,7 +347,7 @@ export default function UsersPage() {
             finalY += 5;
             autoTable(doc, {
                 startY: finalY,
-                head: [['ID', 'Name', 'Phone', 'ID Type', 'ID Number', 'Registered On']],
+                head: [['ID', 'Name', 'Mobile', 'ID Type', 'ID Number', 'Registered On']],
                 body: filteredCustomers.map(c => [c.id, c.name, c.phone, c.idType, c.idNumber, c.registrationDate]),
                 theme: 'striped',
                 headStyles: { fillColor: [41, 128, 185], textColor: 255, fontSize: 8 },
