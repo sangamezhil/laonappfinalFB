@@ -1,4 +1,5 @@
 
+
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -95,10 +96,25 @@ const userSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters.'),
   password: z.string().min(6, 'Password must be at least 6 characters.').optional().or(z.literal('')),
   role: z.enum(['Admin', 'Collection Agent']),
+}).refine(data => {
+    // This is a client-side check, assuming 'users' state is available in the component context
+    // A more robust solution would involve checking this in the onSubmit handler.
+    if (data.role === 'Admin') {
+        const users = getUsersFromStorage();
+        const isAdminEditing = data.id && users.find(u => u.id === data.id)?.role === 'Admin';
+        if (users.some(u => u.role === 'Admin') && !isAdminEditing) {
+            return false;
+        }
+    }
+    return true;
+}, {
+    message: 'Only one Admin user can be created.',
+    path: ['role'],
 });
 
+
 const editUserSchema = userSchema.omit({ password: true }).extend({
-  role: z.enum(['Collection Agent']), // Admins can only edit users to be collection agents
+  role: z.enum(['Collection Agent', 'Admin']), // Allow editing to Admin
 });
 
 
@@ -219,8 +235,13 @@ export default function UsersPage() {
   function handleEditUser(data: z.infer<typeof editUserSchema>) {
     if (!userToEdit) return;
 
-    if (userToEdit.role === 'Admin' && data.role !== 'Admin') {
-        toast({ variant: 'destructive', title: 'Action not allowed', description: 'Admin role cannot be changed.' });
+    if (userToEdit.username === 'admin' && data.username !== 'admin') {
+      toast({ variant: 'destructive', title: 'Action not allowed', description: 'Cannot change username of default admin.' });
+      return;
+    }
+    
+    if (userToEdit.username === 'admin' && data.role !== 'Admin') {
+        toast({ variant: 'destructive', title: 'Action not allowed', description: 'Default admin role cannot be changed.' });
         return;
     }
 
@@ -251,6 +272,11 @@ export default function UsersPage() {
 
   function handleDeleteUser() {
     if (!userToDelete) return;
+     if (userToDelete.username === 'admin') {
+      toast({ variant: 'destructive', title: 'Action not allowed', description: 'Default admin user cannot be deleted.' });
+      setUserToDelete(null);
+      return;
+    }
     const updatedUsers = users.filter(u => u.id !== userToDelete.id);
     setUsers(updatedUsers);
     setUsersInStorage(updatedUsers);
@@ -278,75 +304,110 @@ export default function UsersPage() {
   }
 
   const downloadAllData = () => {
+    const doc = new jsPDF();
     const range = dateRange?.from && dateRange.to ? { start: dateRange.from, end: dateRange.to } : null;
 
     const filteredCustomers = range ? customers.filter(c => isWithinInterval(parseISO(c.registrationDate), range)) : customers;
     const filteredLoans = range ? loans.filter(l => isWithinInterval(parseISO(l.disbursalDate), range)) : loans;
     const filteredCollections = range ? collections.filter(c => isWithinInterval(parseISO(c.date), range)) : collections;
 
-    const doc = new jsPDF();
-    let finalY = 20;
+    let headerCursorY = 20;
 
-    doc.setFontSize(18);
-    doc.text(`${companyProfile.name} - Data Export`, 14, finalY);
-    doc.setFontSize(10);
-    doc.text(`Generated on: ${format(new Date(), 'PPP p')}`, 14, finalY + 5);
-
-    finalY += 15;
-
-    if (filteredCustomers.length > 0) {
+    const addTextHeader = () => {
         doc.setFontSize(14);
-        doc.text('Customers', 14, finalY);
-        finalY += 5;
-        autoTable(doc, {
-            startY: finalY,
-            head: [['ID', 'Name', 'Phone', 'ID Type', 'ID Number', 'Registered']],
-            body: filteredCustomers.map(c => [
-                c.id, c.name, c.phone, c.idType, c.idNumber, c.registrationDate
-            ]),
-            theme: 'striped',
-            headStyles: { fillColor: [22, 163, 74] },
-        });
-        finalY = (doc as any).lastAutoTable.finalY + 10;
-    }
+        doc.setFont('helvetica', 'bold');
+        doc.text(companyProfile.name, 14, headerCursorY);
+        headerCursorY += 6;
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text(companyProfile.address, 14, headerCursorY);
+        headerCursorY += 8;
+    };
 
-    if (filteredLoans.length > 0) {
-        doc.setFontSize(14);
-        doc.text('Loans', 14, finalY);
-        finalY += 5;
-        autoTable(doc, {
-            startY: finalY,
-            head: [['ID', 'Customer', 'Amount', 'Status', 'Date']],
-            body: filteredLoans.map(l => [
-                l.id, l.customerName, l.amount.toLocaleString('en-IN'), l.status, l.disbursalDate
-            ]),
-            theme: 'striped',
-            headStyles: { fillColor: [22, 163, 74] },
-        });
-        finalY = (doc as any).lastAutoTable.finalY + 10;
-    }
+    const generatePdfContent = (startY: number) => {
+        let finalY = startY;
 
-     if (filteredCollections.length > 0) {
-        doc.setFontSize(14);
-        doc.text('Collections', 14, finalY);
-        finalY += 5;
-        autoTable(doc, {
-            startY: finalY,
-            head: [['Loan ID', 'Customer', 'Amount', 'Method', 'Date']],
-            body: filteredCollections.map(c => [
-                c.loanId, c.customer, c.amount.toLocaleString('en-IN'), c.paymentMethod, c.date
-            ]),
-            theme: 'striped',
-            headStyles: { fillColor: [22, 163, 74] },
-        });
-    }
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Consolidated Data Report', doc.internal.pageSize.getWidth() / 2, finalY, { align: 'center' });
+        finalY += 10;
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
 
+        if (filteredCustomers.length > 0) {
+            doc.setFontSize(12);
+            doc.text('Customers', 14, finalY);
+            finalY += 5;
+            autoTable(doc, {
+                startY: finalY,
+                head: [['ID', 'Name', 'Phone', 'ID Type', 'ID Number', 'Registered On']],
+                body: filteredCustomers.map(c => [c.id, c.name, c.phone, c.idType, c.idNumber, c.registrationDate]),
+                theme: 'striped',
+                headStyles: { fillColor: [41, 128, 185], textColor: 255, fontSize: 8 },
+                styles: { fontSize: 8 },
+            });
+            finalY = (doc as any).lastAutoTable.finalY + 10;
+        }
+
+        if (filteredLoans.length > 0) {
+            doc.setFontSize(12);
+            doc.text('Loans', 14, finalY);
+            finalY += 5;
+            autoTable(doc, {
+                startY: finalY,
+                head: [['ID', 'Customer', 'Type', 'Amount (Rs)', 'Status', 'Date']],
+                body: filteredLoans.map(l => [l.id, l.customerName, l.loanType, l.amount.toLocaleString('en-IN'), l.status, l.disbursalDate]),
+                theme: 'striped',
+                headStyles: { fillColor: [41, 128, 185], textColor: 255, fontSize: 8 },
+                styles: { fontSize: 8 },
+            });
+            finalY = (doc as any).lastAutoTable.finalY + 10;
+        }
+
+        if (filteredCollections.length > 0) {
+            doc.setFontSize(12);
+            doc.text('Collections', 14, finalY);
+            finalY += 5;
+            autoTable(doc, {
+                startY: finalY,
+                head: [['Loan ID', 'Customer', 'Amount (Rs)', 'Method', 'Date']],
+                body: filteredCollections.map(c => [c.loanId, c.customer, c.amount.toLocaleString('en-IN'), c.paymentMethod, c.date]),
+                theme: 'striped',
+                headStyles: { fillColor: [41, 128, 185], textColor: 255, fontSize: 8 },
+                styles: { fontSize: 8 },
+            });
+        }
+    };
     
     const fromDate = range ? format(range.start, 'yyyy-MM-dd') : 'start';
     const toDate = range ? format(range.end, 'yyyy-MM-dd') : 'end';
     const filename = `${companyProfile.name}_Data_${fromDate}_to_${toDate}.pdf`;
 
-    doc.save(filename);
+    if (companyProfile.logoUrl) {
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.src = companyProfile.logoUrl;
+        img.onload = () => {
+            doc.addImage(img, 'PNG', 14, 15, 18, 18);
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text(companyProfile.name, 38, 22);
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.text(companyProfile.address, 38, 28);
+            generatePdfContent(40);
+            doc.save(filename);
+        };
+        img.onerror = () => {
+            addTextHeader();
+            generatePdfContent(headerCursorY);
+            doc.save(filename);
+        };
+    } else {
+        addTextHeader();
+        generatePdfContent(headerCursorY);
+        doc.save(filename);
+    }
     
     toast({
         title: 'Download Started',
@@ -452,9 +513,9 @@ export default function UsersPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      {user.role !== 'Admin' && <DropdownMenuItem onSelect={() => openEditDialog(user)}>Edit User</DropdownMenuItem>}
+                      {user.username !== 'admin' && <DropdownMenuItem onSelect={() => openEditDialog(user)}>Edit User</DropdownMenuItem>}
                        <DropdownMenuItem onSelect={() => openResetPasswordDialog(user)}>Reset Password</DropdownMenuItem>
-                       {loggedInUser?.role === 'Admin' && user.username !== loggedInUser.username && (
+                       {loggedInUser?.role === 'Admin' && user.username !== loggedInUser.username && user.username !== 'admin' && (
                         <DropdownMenuItem onSelect={() => setUserToDelete(user)} className="text-destructive">Delete User</DropdownMenuItem>
                        )}
                     </DropdownMenuContent>
@@ -548,16 +609,17 @@ export default function UsersPage() {
             <FormField control={editForm.control} name="username" render={({ field }) => (
               <FormItem>
                 <FormLabel>Username</FormLabel>
-                <FormControl><Input placeholder="Enter username" {...field} /></FormControl>
+                <FormControl><Input placeholder="Enter username" {...field} disabled={userToEdit?.username === 'admin'} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
             <FormField control={editForm.control} name="role" render={({ field }) => (
               <FormItem>
                 <FormLabel>Role</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={userToEdit?.role === 'Admin'}>
+                <Select onValueChange={field.onChange} value={field.value} disabled={userToEdit?.username === 'admin'}>
                   <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
                   <SelectContent>
+                    <SelectItem value="Admin">Admin</SelectItem>
                     <SelectItem value="Collection Agent">Collection Agent</SelectItem>
                   </SelectContent>
                 </Select>
