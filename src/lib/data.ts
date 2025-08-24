@@ -1,7 +1,7 @@
 
 'use client';
-import { useState, useEffect } from 'react';
-import { addDays, addWeeks, addMonths, parseISO } from 'date-fns';
+import { useState, useEffect, useCallback } from 'react';
+import { addDays, addWeeks, addMonths, parseISO, isToday } from 'date-fns';
 
 export type Customer = {
   id: string;
@@ -109,6 +109,7 @@ const getFromStorage = <T>(key: string, initialData: T): T => {
 const setInStorage = <T>(key: string, data: T) => {
     if (typeof window === 'undefined') return;
     localStorage.setItem(key, JSON.stringify(data));
+     window.dispatchEvent(new Event('storage'));
 };
 
 export const useUsers = () => {
@@ -164,12 +165,19 @@ export const useCompanyProfile = () => {
         const data = getFromStorage('companyProfile', initialCompanyProfile);
         setProfile(data);
         setIsLoaded(true);
+
+        const handleStorage = () => {
+             const data = getFromStorage('companyProfile', initialCompanyProfile);
+             setProfile(data);
+        }
+
+        window.addEventListener('storage', handleStorage);
+        return () => window.removeEventListener('storage', handleStorage);
     }, []);
 
     const updateProfile = (newProfile: CompanyProfile) => {
         setInStorage('companyProfile', newProfile);
         setProfile(newProfile);
-        window.dispatchEvent(new Event('storage'));
     };
 
     return { profile, updateProfile, isLoaded };
@@ -240,16 +248,24 @@ export const useLoans = () => {
     const [loans, setLoans] = useState<Loan[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
 
-     useEffect(() => {
+    const refreshLoans = useCallback(() => {
         let data = getFromStorage('loans', initialLoans);
-        // Add nextDueDate to loans dynamically
         data = data.map(loan => ({
             ...loan,
             nextDueDate: calculateNextDueDate(loan)
         }));
         setLoans(data);
-        setIsLoaded(true);
     }, []);
+
+     useEffect(() => {
+        refreshLoans();
+        setIsLoaded(true);
+
+        window.addEventListener('storage', refreshLoans);
+        return () => {
+            window.removeEventListener('storage', refreshLoans);
+        }
+    }, [refreshLoans]);
 
     const addLoan = (loan: Omit<Loan, 'id'> | Omit<Loan, 'id'>[]): Loan[] => {
         const currentLoans = getFromStorage('loans', initialLoans);
@@ -276,7 +292,6 @@ export const useLoans = () => {
 
         const updatedLoans = [...currentLoans, ...loansToAdd];
         setInStorage('loans', updatedLoans);
-        setLoans(updatedLoans);
         return loansToAdd;
     };
     
@@ -286,39 +301,31 @@ export const useLoans = () => {
             loan.id === loanId ? { ...loan, status: status } : loan
         );
         setInStorage('loans', updatedLoans);
-        setLoans(updatedLoans.map(l => ({...l, nextDueDate: calculateNextDueDate(l)})));
     };
 
     const updateLoanPayment = (loanId: string, amount: number) => {
         const currentLoans = getFromStorage('loans', initialLoans);
-        let updatedLoan: Loan | undefined;
-
         const updatedLoans = currentLoans.map(loan => {
             if (loan.id === loanId) {
                 const newTotalPaid = loan.totalPaid + amount;
                 const newOutstandingAmount = loan.outstandingAmount - amount;
-                updatedLoan = {
+                return {
                     ...loan,
                     totalPaid: newTotalPaid,
                     outstandingAmount: newOutstandingAmount,
                     status: newOutstandingAmount <= 0 ? 'Closed' : loan.status,
                 };
-                // Recalculate next due date immediately
-                updatedLoan.nextDueDate = calculateNextDueDate(updatedLoan);
-                return updatedLoan;
             }
             return loan;
         });
         
         setInStorage('loans', updatedLoans);
-        setLoans(updatedLoans);
     }
     
     const deleteLoan = (loanId: string) => {
         const currentLoans = getFromStorage('loans', initialLoans);
         const updatedLoans = currentLoans.filter(loan => loan.id !== loanId);
         setInStorage('loans', updatedLoans);
-        setLoans(updatedLoans);
     };
 
     return { loans, addLoan, isLoaded, updateLoanStatus, updateLoanPayment, deleteLoan };
@@ -402,3 +409,5 @@ export function getLoansByCustomerId(customerId: string): Loan[] {
   const loans = getFromStorage('loans', initialLoans);
   return loans.filter(l => l.customerId === customerId);
 }
+
+    

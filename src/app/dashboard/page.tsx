@@ -6,7 +6,7 @@ import { TrendingUp, Users, Landmark, AlertCircle, CheckCircle, Wallet, FileText
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from 'recharts'
+import { Bar, BarChart, CartesianGrid, XAxis, ResponsiveContainer } from 'recharts'
 import type { ChartConfig } from '@/components/ui/chart'
 import { Badge } from '@/components/ui/badge'
 import { useLoans, useCustomers, useCollections, Loan, Customer, User } from '@/lib/data'
@@ -296,8 +296,9 @@ function AgentDashboard({ user }: { user: User }) {
         const todaysCollections = agentLoans.filter(l => {
             if (!l.nextDueDate) return false;
             try {
-                // Using new Date() is more lenient for parsing different date formats.
-                return isToday(new Date(l.nextDueDate));
+                // The date from localStorage is a string 'YYYY-MM-DD', which parseISO handles correctly.
+                // Adding a time component to ensure the entire day is covered.
+                return isToday(parseISO(l.nextDueDate));
             } catch (e) {
                 console.error("Invalid date format for nextDueDate", l.nextDueDate);
                 return false;
@@ -495,3 +496,5 @@ export default function DashboardPage() {
       </div>
     );
 }
+
+    
