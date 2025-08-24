@@ -1,5 +1,4 @@
 
-
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -59,8 +58,6 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { useUserActivity, useCustomers, useLoans, useCollections, useCompanyProfile } from '@/lib/data'
 import jsPDF from 'jspdf';
@@ -71,19 +68,14 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
 
-
-type UserRole = 'Admin' | 'Collection Agent';
-
 type User = {
     id: string;
     username: string;
-    role: UserRole;
     lastLogin: string;
 }
 
 type LoggedInUser = {
   username: string;
-  role: string;
 }
 
 type DownloadHistoryItem = {
@@ -95,7 +87,6 @@ const baseUserSchema = z.object({
   id: z.string().optional(),
   username: z.string().min(3, 'Username must be at least 3 characters.'),
   password: z.string().min(6, 'Password must be at least 6 characters.').optional().or(z.literal('')),
-  role: z.enum(['Admin', 'Collection Agent']),
 });
 
 const userSchema = baseUserSchema.superRefine((data, ctx) => {
@@ -109,7 +100,6 @@ const userSchema = baseUserSchema.superRefine((data, ctx) => {
     }
 });
 
-
 const editUserSchema = baseUserSchema.omit({ password: true }).superRefine((data, ctx) => {
     const users = getUsersFromStorage();
     if (users.some(u => u.username.toLowerCase() === data.username.toLowerCase() && u.id !== data.id)) {
@@ -121,7 +111,6 @@ const editUserSchema = baseUserSchema.omit({ password: true }).superRefine((data
     }
 });
 
-
 const resetPasswordSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters."),
   confirmPassword: z.string(),
@@ -130,10 +119,8 @@ const resetPasswordSchema = z.object({
   path: ["confirmPassword"],
 });
 
-
 const initialUsers: User[] = [
-  { id: 'USR001', username: 'admin', role: 'Admin', lastLogin: '2024-07-29 10:00 AM' },
-  { id: 'USR002', username: 'agent_ramesh', role: 'Collection Agent', lastLogin: '2024-07-29 09:30 AM' },
+  { id: 'USR001', username: 'admin', lastLogin: '2024-07-29 10:00 AM' },
 ];
 
 const getUsersFromStorage = (): User[] => {
@@ -157,7 +144,6 @@ const setHistoryInStorage = (history: DownloadHistoryItem[]) => {
     if (typeof window === 'undefined') return;
     localStorage.setItem('downloadHistory', JSON.stringify(history));
 }
-
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -195,7 +181,7 @@ export default function UsersPage() {
   
   const createForm = useForm<z.infer<typeof userSchema>>({
     resolver: zodResolver(userSchema),
-    defaultValues: { username: '', password: '', role: 'Collection Agent' },
+    defaultValues: { username: '', password: '' },
   });
 
   const editForm = useForm<z.infer<typeof editUserSchema>>({
@@ -207,30 +193,19 @@ export default function UsersPage() {
     defaultValues: { password: '', confirmPassword: '' },
   });
 
-
   function handleCreateUser(data: z.infer<typeof userSchema>) {
-    if (data.role === 'Admin' && users.some(u => u.role === 'Admin')) {
-        toast({
-            variant: 'destructive',
-            title: 'Admin Limit Reached',
-            description: 'Only one Admin user can be created.',
-        });
-        return;
-    }
-    
     const newUser: User = {
         id: `USR${String(Date.now()).slice(-3)}`,
         username: data.username,
-        role: data.role,
         lastLogin: 'Never'
     }
     const updatedUsers = [...users, newUser];
     setUsers(updatedUsers);
     setUsersInStorage(updatedUsers);
-    logActivity('Create User', `Created new user: ${data.username} with role ${data.role}.`);
+    logActivity('Create User', `Created new user: ${data.username}.`);
     toast({
       title: 'User Created',
-      description: `User ${data.username} with role ${data.role} has been created.`,
+      description: `User ${data.username} has been created.`,
     });
     setCreateDialogOpen(false);
     createForm.reset();
@@ -243,18 +218,8 @@ export default function UsersPage() {
       toast({ variant: 'destructive', title: 'Action not allowed', description: 'Cannot change username of default admin.' });
       return;
     }
-    
-    if (userToEdit.username === 'admin' && data.role !== 'Admin') {
-        toast({ variant: 'destructive', title: 'Action not allowed', description: 'Default admin role cannot be changed.' });
-        return;
-    }
-    
-    if (data.role === 'Admin' && users.some(u => u.role === 'Admin' && u.id !== userToEdit.id)) {
-        toast({ variant: 'destructive', title: 'Admin Limit Reached', description: 'Another user is already an Admin.' });
-        return;
-    }
 
-    const updatedUsers = users.map(u => u.id === userToEdit.id ? {...u, username: data.username, role: data.role } : u);
+    const updatedUsers = users.map(u => u.id === userToEdit.id ? {...u, username: data.username } : u);
     setUsers(updatedUsers);
     setUsersInStorage(updatedUsers);
     logActivity('Edit User', `Updated user details for ${data.username}.`);
@@ -277,7 +242,6 @@ export default function UsersPage() {
     setUserToEdit(null);
     resetPasswordForm.reset();
   }
-
 
   function handleDeleteUser() {
     if (!userToDelete) return;
@@ -302,7 +266,6 @@ export default function UsersPage() {
     editForm.reset({
         id: user.id,
         username: user.username,
-        role: user.role,
     });
     setEditDialogOpen(true);
   }
@@ -439,7 +402,7 @@ export default function UsersPage() {
           <div>
             <CardTitle>User Management</CardTitle>
             <CardDescription>
-              Create and manage users with different roles and permissions.
+              Create and manage user accounts.
             </CardDescription>
           </div>
           <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
@@ -472,19 +435,6 @@ export default function UsersPage() {
                       <FormMessage />
                     </FormItem>
                   )} />
-                  <FormField control={createForm.control} name="role" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Role</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          <SelectItem value="Admin">Admin</SelectItem>
-                          <SelectItem value="Collection Agent">Collection Agent</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
                   <DialogFooter>
                     <Button type="submit">Create User</Button>
                   </DialogFooter>
@@ -499,7 +449,6 @@ export default function UsersPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Username</TableHead>
-              <TableHead>Role</TableHead>
               <TableHead>Last Login</TableHead>
               <TableHead>
                 <span className="sr-only">Actions</span>
@@ -510,7 +459,6 @@ export default function UsersPage() {
             {users.map((user) => (
               <TableRow key={user.id}>
                 <TableCell className="font-medium">{user.username}</TableCell>
-                <TableCell><Badge variant="outline">{user.role}</Badge></TableCell>
                 <TableCell>{user.lastLogin}</TableCell>
                 <TableCell>
                   <DropdownMenu>
@@ -524,7 +472,7 @@ export default function UsersPage() {
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
                       {user.username !== 'admin' && <DropdownMenuItem onSelect={() => openEditDialog(user)}>Edit User</DropdownMenuItem>}
                        <DropdownMenuItem onSelect={() => openResetPasswordDialog(user)}>Reset Password</DropdownMenuItem>
-                       {loggedInUser?.role === 'Admin' && user.username !== loggedInUser.username && user.username !== 'admin' && (
+                       {loggedInUser?.username !== user.username && user.username !== 'admin' && (
                         <DropdownMenuItem onSelect={() => setUserToDelete(user)} className="text-destructive">Delete User</DropdownMenuItem>
                        )}
                     </DropdownMenuContent>
@@ -536,72 +484,70 @@ export default function UsersPage() {
         </Table>
       </CardContent>
       <CardFooter>
-          {loggedInUser?.role === 'Admin' && (
-            <div className="pt-4 border-t w-full space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Data Exports</h3>
-                 <div className="flex flex-col sm:flex-row gap-2 items-center">
-                    <Popover>
-                        <PopoverTrigger asChild>
-                        <Button
-                            id="date"
-                            variant={"outline"}
-                            className={cn(
-                            "w-[300px] justify-start text-left font-normal",
-                            !dateRange && "text-muted-foreground"
-                            )}
-                        >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {dateRange?.from ? (
-                            dateRange.to ? (
-                                <>
-                                {format(dateRange.from, "LLL dd, y")} -{" "}
-                                {format(dateRange.to, "LLL dd, y")}
-                                </>
-                            ) : (
-                                format(dateRange.from, "LLL dd, y")
-                            )
-                            ) : (
-                            <span>Pick a date range</span>
-                            )}
-                        </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                            initialFocus
-                            mode="range"
-                            defaultMonth={dateRange?.from}
-                            selected={dateRange}
-                            onSelect={setDateRange}
-                            numberOfMonths={2}
-                        />
-                        </PopoverContent>
-                    </Popover>
-                    <Button variant="outline" onClick={downloadAllData}>
-                        <FileDown className="w-4 h-4 mr-2" />
-                        Download Data
-                    </Button>
-                 </div>
-                 <p className="text-sm text-muted-foreground mt-2">Select a date range to export filtered data. If no range is selected, all data will be exported.</p>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Last 5 Downloads</h3>
-                {downloadHistory.length > 0 ? (
-                    <ul className="space-y-2">
-                        {downloadHistory.map((item, index) => (
-                            <li key={index} className="text-sm flex justify-between items-center p-2 rounded-md bg-muted/50">
-                                <span>{item.filename}</span>
-                                <span className="text-muted-foreground">{format(parseISO(item.date), 'dd MMM yyyy, HH:mm')}</span>
-                            </li>
-                        ))}
-                    </ul>
-                ) : (
-                    <p className="text-sm text-muted-foreground">No download history yet.</p>
-                )}
-              </div>
+          <div className="pt-4 border-t w-full space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Data Exports</h3>
+                <div className="flex flex-col sm:flex-row gap-2 items-center">
+                  <Popover>
+                      <PopoverTrigger asChild>
+                      <Button
+                          id="date"
+                          variant={"outline"}
+                          className={cn(
+                          "w-[300px] justify-start text-left font-normal",
+                          !dateRange && "text-muted-foreground"
+                          )}
+                      >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {dateRange?.from ? (
+                          dateRange.to ? (
+                              <>
+                              {format(dateRange.from, "LLL dd, y")} -{" "}
+                              {format(dateRange.to, "LLL dd, y")}
+                              </>
+                          ) : (
+                              format(dateRange.from, "LLL dd, y")
+                          )
+                          ) : (
+                          <span>Pick a date range</span>
+                          )}
+                      </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                          initialFocus
+                          mode="range"
+                          defaultMonth={dateRange?.from}
+                          selected={dateRange}
+                          onSelect={setDateRange}
+                          numberOfMonths={2}
+                      />
+                      </PopoverContent>
+                  </Popover>
+                  <Button variant="outline" onClick={downloadAllData}>
+                      <FileDown className="w-4 h-4 mr-2" />
+                      Download Data
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">Select a date range to export filtered data. If no range is selected, all data will be exported.</p>
             </div>
-          )}
+
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Last 5 Downloads</h3>
+              {downloadHistory.length > 0 ? (
+                  <ul className="space-y-2">
+                      {downloadHistory.map((item, index) => (
+                          <li key={index} className="text-sm flex justify-between items-center p-2 rounded-md bg-muted/50">
+                              <span>{item.filename}</span>
+                              <span className="text-muted-foreground">{format(parseISO(item.date), 'dd MMM yyyy, HH:mm')}</span>
+                          </li>
+                      ))}
+                  </ul>
+              ) : (
+                  <p className="text-sm text-muted-foreground">No download history yet.</p>
+              )}
+            </div>
+          </div>
       </CardFooter>
     </Card>
 
@@ -619,19 +565,6 @@ export default function UsersPage() {
               <FormItem>
                 <FormLabel>Username</FormLabel>
                 <FormControl><Input placeholder="Enter username" {...field} disabled={userToEdit?.username === 'admin'} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-            <FormField control={editForm.control} name="role" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Role</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={userToEdit?.username === 'admin'}>
-                  <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
-                  <SelectContent>
-                    <SelectItem value="Admin">Admin</SelectItem>
-                    <SelectItem value="Collection Agent">Collection Agent</SelectItem>
-                  </SelectContent>
-                </Select>
                 <FormMessage />
               </FormItem>
             )} />

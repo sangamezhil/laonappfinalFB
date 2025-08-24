@@ -27,6 +27,17 @@ type User = {
     lastLogin: string;
 }
 
+const getUsersFromStorage = (): User[] => {
+    if (typeof window === 'undefined') return [];
+    const stored = localStorage.getItem('users');
+    try {
+        if (stored) return JSON.parse(stored);
+    } catch (e) {
+        console.error("Error parsing users from localStorage", e);
+    }
+    return [];
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
@@ -51,16 +62,15 @@ export default function LoginPage() {
     setTimeout(() => {
       let userToLogin: User | null = null;
       if (typeof window !== 'undefined') {
-          const stored = localStorage.getItem('users');
-          const storedUsers: User[] = stored ? JSON.parse(stored) : [];
+          const storedUsers = getUsersFromStorage();
           
           // In this mock, we assume password is the same as username for demo purposes.
-          const foundUser = storedUsers.find(user => user.username === username && password === user.username);
+          const foundUser = storedUsers.find(user => user.username.toLowerCase() === username.toLowerCase() && password === user.username);
 
           if (foundUser) {
             userToLogin = foundUser;
-          } else if (username === 'admin' && password === 'admin' && storedUsers.find(u => u.username === 'admin') === undefined) {
-            // Fallback for initial login if 'admin' doesn't exist yet
+          } else if (username === 'admin' && password === 'admin' && storedUsers.length === 0) {
+            // Fallback for initial login if no users exist in storage yet
             userToLogin = { id: 'USR001', username: 'admin', role: 'Admin', lastLogin: new Date().toISOString() };
           }
       }
@@ -89,9 +99,6 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-background">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-             {profileLoaded ? <Logo logoUrl={profile.logoUrl} /> : <Skeleton className="w-8 h-8 rounded-full" /> }
-          </div>
           {profileLoaded ? (
             <CardTitle className="text-2xl font-headline">{profile.name}</CardTitle>
           ) : (

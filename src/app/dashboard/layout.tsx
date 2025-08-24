@@ -13,7 +13,6 @@ import {
   LogOut,
   ChevronDown,
   History,
-  Building,
 } from 'lucide-react'
 
 import {
@@ -41,14 +40,16 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Logo } from '@/components/logo'
 import { useUserActivity, useCompanyProfile } from '@/lib/data'
+import { Skeleton } from '@/components/ui/skeleton'
+
 
 const allMenuItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Admin'] },
-  { href: '/dashboard/customers', label: 'Customers', icon: Users, roles: ['Admin'] },
-  { href: '/dashboard/loans', label: 'Loans', icon: Landmark, roles: ['Admin'] },
-  { href: '/dashboard/collections', label: 'Collections', icon: ClipboardCheck, roles: ['Admin', 'Collection Agent'] },
-  { href: '/dashboard/users', label: 'Users', icon: UserCog, roles: ['Admin'] },
-  { href: '/dashboard/activity', label: 'Activity Log', icon: History, roles: ['Admin'] },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard/customers', label: 'Customers', icon: Users },
+  { href: '/dashboard/loans', label: 'Loans', icon: Landmark },
+  { href: '/dashboard/collections', label: 'Collections', icon: ClipboardCheck },
+  { href: '/dashboard/users', label: 'Users', icon: UserCog },
+  { href: '/dashboard/activity', label: 'Activity Log', icon: History },
 ]
 
 type User = {
@@ -59,29 +60,14 @@ type User = {
 function DashboardSidebar() {
     const pathname = usePathname();
     const { setOpenMobile } = useSidebar();
-    const [user, setUser] = React.useState<User | null>(null);
-
-    React.useEffect(() => {
-        if (typeof window !== 'undefined') {
-        const storedUser = localStorage.getItem('loggedInUser');
-        if (storedUser) {
-            setUser(JSON.parse(storedUser));
-        }
-        }
-    }, []);
-
-    const menuItems = React.useMemo(() => {
-        if (!user) return [];
-        return allMenuItems.filter(item => item.roles.includes(user.role));
-    }, [user]);
-
+    
     const handleLinkClick = () => {
         setOpenMobile(false);
     }
     
     return (
         <SidebarMenu>
-            {menuItems.map((item) => (
+            {allMenuItems.map((item) => (
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton
                   asChild
@@ -117,13 +103,6 @@ export default function DashboardLayout({
       if (storedUser) {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
-        
-        // Redirect if role doesn't have access to current page
-        const currentPath = window.location.pathname;
-        if(parsedUser.role === 'Collection Agent' && currentPath !== '/dashboard/collections') {
-            router.replace('/dashboard/collections');
-        }
-
       } else {
         router.push('/login');
       }
@@ -145,7 +124,20 @@ export default function DashboardLayout({
   if (!user || !profileLoaded) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div>Loading...</div>
+         <div className="p-4 space-y-4 border rounded-md">
+            <div className="flex items-center gap-4">
+              <Skeleton className="w-12 h-12 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="w-24 h-4" />
+                <Skeleton className="w-32 h-4" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="w-full h-8" />
+              <Skeleton className="w-full h-8" />
+              <Skeleton className="w-full h-8" />
+            </div>
+        </div>
       </div>
     );
   }
@@ -189,11 +181,9 @@ export default function DashboardLayout({
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {user.role === 'Admin' && (
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard/profile">Company Profile</Link>
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard/profile">Company Profile</Link>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="w-4 h-4 mr-2" />
