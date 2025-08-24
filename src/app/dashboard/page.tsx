@@ -296,8 +296,7 @@ function AgentDashboard({ user }: { user: User }) {
         const todaysCollections = agentLoans.filter(l => {
             if (!l.nextDueDate) return false;
             try {
-                // The date from localStorage might not be a valid ISO string for `parseISO`
-                // Ensure the date is handled correctly. `new Date()` is more lenient.
+                // Using new Date() is more lenient for parsing different date formats.
                 return isToday(new Date(l.nextDueDate));
             } catch (e) {
                 console.error("Invalid date format for nextDueDate", l.nextDueDate);

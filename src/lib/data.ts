@@ -220,17 +220,19 @@ const calculateNextDueDate = (loan: Loan): string | undefined => {
         ? Math.floor(loan.totalPaid / loan.weeklyRepayment) 
         : 0;
     const startDate = parseISO(loan.disbursalDate);
-    let nextDueDate: Date | null = null;
+    let nextDueDate: Date;
     
     if (loan.collectionFrequency === 'Daily') {
-        nextDueDate = addDays(startDate, installmentsPaid);
+        nextDueDate = addDays(startDate, installmentsPaid + 1);
     } else if (loan.collectionFrequency === 'Weekly') {
-        nextDueDate = addWeeks(startDate, installmentsPaid);
+        nextDueDate = addWeeks(startDate, installmentsPaid + 1);
     } else if (loan.collectionFrequency === 'Monthly') {
-        nextDueDate = addMonths(startDate, installmentsPaid);
+        nextDueDate = addMonths(startDate, installmentsPaid + 1);
+    } else {
+        return undefined; // Should not happen
     }
     
-    return nextDueDate ? nextDueDate.toISOString().split('T')[0] : undefined;
+    return nextDueDate.toISOString().split('T')[0];
 };
 
 
@@ -289,21 +291,27 @@ export const useLoans = () => {
 
     const updateLoanPayment = (loanId: string, amount: number) => {
         const currentLoans = getFromStorage('loans', initialLoans);
+        let updatedLoan: Loan | undefined;
+
         const updatedLoans = currentLoans.map(loan => {
             if (loan.id === loanId) {
                 const newTotalPaid = loan.totalPaid + amount;
                 const newOutstandingAmount = loan.outstandingAmount - amount;
-                return {
+                updatedLoan = {
                     ...loan,
                     totalPaid: newTotalPaid,
                     outstandingAmount: newOutstandingAmount,
                     status: newOutstandingAmount <= 0 ? 'Closed' : loan.status,
                 };
+                // Recalculate next due date immediately
+                updatedLoan.nextDueDate = calculateNextDueDate(updatedLoan);
+                return updatedLoan;
             }
             return loan;
         });
+        
         setInStorage('loans', updatedLoans);
-        setLoans(updatedLoans.map(l => ({...l, nextDueDate: calculateNextDueDate(l)})));
+        setLoans(updatedLoans);
     }
     
     const deleteLoan = (loanId: string) => {
