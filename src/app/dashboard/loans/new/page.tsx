@@ -217,6 +217,7 @@ export default function NewLoanPage() {
         totalPaid: 0,
         outstandingAmount: totalRepayable,
         collectionFrequency: data.collectionFrequency,
+        assignedTo: 'agent',
     });
     const newLoan = Array.isArray(newLoans) ? newLoans[0] : newLoans;
     logActivity('Create Personal Loan', `Submitted loan application ${newLoan.id} for ${customer.name}.`);
@@ -268,6 +269,7 @@ export default function NewLoanPage() {
             totalPaid: 0,
             outstandingAmount: totalRepayablePerMember,
             collectionFrequency: 'Weekly' as 'Weekly',
+            assignedTo: 'agent',
         };
     });
     

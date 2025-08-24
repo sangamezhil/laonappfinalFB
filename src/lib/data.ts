@@ -223,11 +223,11 @@ const calculateNextDueDate = (loan: Loan): string | undefined => {
     let nextDueDate: Date | null = null;
     
     if (loan.collectionFrequency === 'Daily') {
-        nextDueDate = addDays(startDate, installmentsPaid + 1);
+        nextDueDate = addDays(startDate, installmentsPaid);
     } else if (loan.collectionFrequency === 'Weekly') {
-        nextDueDate = addWeeks(startDate, installmentsPaid + 1);
+        nextDueDate = addWeeks(startDate, installmentsPaid);
     } else if (loan.collectionFrequency === 'Monthly') {
-        nextDueDate = addMonths(startDate, installmentsPaid + 1);
+        nextDueDate = addMonths(startDate, installmentsPaid);
     }
     
     return nextDueDate ? nextDueDate.toISOString().split('T')[0] : undefined;

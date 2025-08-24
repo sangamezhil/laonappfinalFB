@@ -9,16 +9,12 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from 'recharts'
 import type { ChartConfig } from '@/components/ui/chart'
 import { Badge } from '@/components/ui/badge'
-import { useLoans, useCustomers, useCollections, Loan, Customer } from '@/lib/data'
+import { useLoans, useCustomers, useCollections, Loan, Customer, User } from '@/lib/data'
 import { format, parseISO, isToday } from 'date-fns'
 import { Skeleton } from '@/components/ui/skeleton'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
-type User = {
-  username: string;
-  role: string;
-}
 
 const chartConfig = {
   disbursed: {
@@ -300,7 +296,9 @@ function AgentDashboard({ user }: { user: User }) {
         const todaysCollections = agentLoans.filter(l => {
             if (!l.nextDueDate) return false;
             try {
-                return isToday(parseISO(l.nextDueDate));
+                // The date from localStorage might not be a valid ISO string for `parseISO`
+                // Ensure the date is handled correctly. `new Date()` is more lenient.
+                return isToday(new Date(l.nextDueDate));
             } catch (e) {
                 console.error("Invalid date format for nextDueDate", l.nextDueDate);
                 return false;
