@@ -1,6 +1,7 @@
 
 'use client';
 import { useState, useEffect } from 'react';
+import { addDays, addWeeks, addMonths, parseISO } from 'date-fns';
 
 export type Customer = {
   id: string;
@@ -26,8 +27,8 @@ export type Loan = {
   customerId: string;
   customerName: string;
   groupName?: string;
-  groupId?: string; // To link group members' loans
-  groupLeaderName?: string; // To display leader in collections
+  groupId?: string;
+  groupLeaderName?: string;
   loanType: 'Personal' | 'Group';
   amount: number;
   interestRate: number;
@@ -38,7 +39,16 @@ export type Loan = {
   totalPaid: number;
   outstandingAmount: number;
   collectionFrequency: 'Daily' | 'Weekly' | 'Monthly';
-  members?: string[]; // Kept for historical data if needed, but new logic won't heavily rely on it
+  members?: string[];
+  assignedTo?: string; // Username of the collection agent
+  nextDueDate?: string;
+};
+
+export type User = {
+    id: string;
+    username: string;
+    role: 'Admin' | 'Collection Agent';
+    lastLogin: string;
 };
 
 export type UserActivity = {
@@ -56,6 +66,7 @@ export type Collection = {
     amount: number;
     date: string;
     paymentMethod: 'Cash' | 'Bank Transfer' | 'UPI';
+    collectedBy: string; // username of collector
 };
 
 export type CompanyProfile = {
@@ -75,11 +86,13 @@ const initialCompanyProfile: CompanyProfile = {
 }
 
 const initialCustomers: Customer[] = [];
-
-
 const initialLoans: Loan[] = [];
-
 const initialCollections: Collection[] = [];
+const initialUsers: User[] = [
+  { id: 'USR001', username: 'admin', role: 'Admin', lastLogin: '2024-07-29 10:00 AM' },
+  { id: 'USR002', username: 'agent', role: 'Collection Agent', lastLogin: '2024-07-29 11:00 AM' },
+];
+
 
 const getFromStorage = <T>(key: string, initialData: T): T => {
     if (typeof window === 'undefined') return initialData;
@@ -89,7 +102,7 @@ const getFromStorage = <T>(key: string, initialData: T): T => {
     } catch (e) {
         console.error(`Error parsing ${key} from localStorage`, e);
     }
-    localStorage.setItem(key, JSON.stringify(initialData));
+    setInStorage(key, initialData);
     return initialData;
 };
 
@@ -97,6 +110,51 @@ const setInStorage = <T>(key: string, data: T) => {
     if (typeof window === 'undefined') return;
     localStorage.setItem(key, JSON.stringify(data));
 };
+
+export const useUsers = () => {
+    const [users, setUsers] = useState<User[]>([]);
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    useEffect(() => {
+        const data = getFromStorage('users', initialUsers);
+        if (localStorage.getItem('users') === null) {
+            setInStorage('users', initialUsers);
+        }
+        setUsers(data);
+        setIsLoaded(true);
+    }, []);
+
+    const addUser = (user: Omit<User, 'id' | 'lastLogin'>): User => {
+        const currentUsers = getFromStorage('users', initialUsers);
+        const newIdNumber = (currentUsers.length > 0 ? Math.max(...currentUsers.map(c => parseInt(c.id.replace('USR','')))) : 0) + 1;
+        const newUser: User = {
+            ...user,
+            id: `USR${String(newIdNumber).padStart(3, '0')}`,
+            lastLogin: 'Never',
+        };
+        const updatedUsers = [...currentUsers, newUser];
+        setInStorage('users', updatedUsers);
+        setUsers(updatedUsers);
+        return newUser;
+    };
+
+    const updateUser = (userId: string, updatedData: Partial<Omit<User, 'id'>>) => {
+        const currentUsers = getFromStorage('users', initialUsers);
+        const updatedUsers = currentUsers.map(u => u.id === userId ? { ...u, ...updatedData } : u);
+        setInStorage('users', updatedUsers);
+        setUsers(updatedUsers);
+    }
+
+    const deleteUser = (userId: string) => {
+        const currentUsers = getFromStorage('users', initialUsers);
+        const updatedUsers = currentUsers.filter(u => u.id !== userId);
+        setInStorage('users', updatedUsers);
+        setUsers(updatedUsers);
+    };
+
+    return { users, isLoaded, addUser, updateUser, deleteUser };
+};
+
 
 export const useCompanyProfile = () => {
     const [profile, setProfile] = useState<CompanyProfile>(initialCompanyProfile);
@@ -153,12 +211,40 @@ export const useCustomers = () => {
     return { customers, addCustomer, deleteCustomer, isLoaded };
 };
 
+const calculateNextDueDate = (loan: Loan): string | undefined => {
+    if (loan.status !== 'Active' && loan.status !== 'Overdue') {
+        return undefined;
+    }
+
+    const installmentsPaid = loan.totalPaid > 0 && loan.weeklyRepayment > 0 
+        ? Math.floor(loan.totalPaid / loan.weeklyRepayment) 
+        : 0;
+    const startDate = parseISO(loan.disbursalDate);
+    let nextDueDate: Date | null = null;
+    
+    if (loan.collectionFrequency === 'Daily') {
+        nextDueDate = addDays(startDate, installmentsPaid + 1);
+    } else if (loan.collectionFrequency === 'Weekly') {
+        nextDueDate = addWeeks(startDate, installmentsPaid + 1);
+    } else if (loan.collectionFrequency === 'Monthly') {
+        nextDueDate = addMonths(startDate, installmentsPaid + 1);
+    }
+    
+    return nextDueDate ? nextDueDate.toISOString().split('T')[0] : undefined;
+};
+
+
 export const useLoans = () => {
     const [loans, setLoans] = useState<Loan[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
 
      useEffect(() => {
-        const data = getFromStorage('loans', initialLoans);
+        let data = getFromStorage('loans', initialLoans);
+        // Add nextDueDate to loans dynamically
+        data = data.map(loan => ({
+            ...loan,
+            nextDueDate: calculateNextDueDate(loan)
+        }));
         setLoans(data);
         setIsLoaded(true);
     }, []);
@@ -198,7 +284,7 @@ export const useLoans = () => {
             loan.id === loanId ? { ...loan, status: status } : loan
         );
         setInStorage('loans', updatedLoans);
-        setLoans(updatedLoans);
+        setLoans(updatedLoans.map(l => ({...l, nextDueDate: calculateNextDueDate(l)})));
     };
 
     const updateLoanPayment = (loanId: string, amount: number) => {
@@ -217,7 +303,7 @@ export const useLoans = () => {
             return loan;
         });
         setInStorage('loans', updatedLoans);
-        setLoans(updatedLoans);
+        setLoans(updatedLoans.map(l => ({...l, nextDueDate: calculateNextDueDate(l)})));
     }
     
     const deleteLoan = (loanId: string) => {
@@ -275,10 +361,13 @@ export const useCollections = () => {
     }, []);
 
     const addCollection = (collection: Omit<Collection, 'id'>): Collection => {
+        if(typeof window === 'undefined') return collection as Collection;
+        const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
         const currentCollections = getFromStorage('collections', initialCollections);
         const newCollection: Collection = {
             ...collection,
             id: `COLL${Date.now()}`,
+            collectedBy: loggedInUser.username || 'unknown',
         };
         const updatedCollections = [newCollection, ...currentCollections].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         setInStorage('collections', updatedCollections);
@@ -295,7 +384,6 @@ export const useCollections = () => {
 
     return { collections, isLoaded, addCollection, deleteCollection };
 }
-
 
 export function getCustomerById(id: string): Customer | undefined {
   const customers = getFromStorage('customers', initialCustomers);

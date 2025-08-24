@@ -2,16 +2,22 @@
 'use client'
 
 import * as React from 'react'
-import { TrendingUp, Users, Landmark, AlertCircle, CheckCircle, Wallet, FileText, IndianRupee } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { TrendingUp, Users, Landmark, AlertCircle, CheckCircle, Wallet, FileText, IndianRupee, UserCheck } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Text } from 'recharts'
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import type { ChartConfig } from '@/components/ui/chart'
 import { Badge } from '@/components/ui/badge'
-import { useLoans, useCustomers, useCollections } from '@/lib/data'
-import { format, parseISO } from 'date-fns'
+import { useLoans, useCustomers, useCollections, Loan, Customer } from '@/lib/data'
+import { format, parseISO, isToday } from 'date-fns'
+import { Skeleton } from '@/components/ui/skeleton'
+import Link from 'next/link'
 
+type User = {
+  username: string;
+  role: string;
+}
 
 const chartConfig = {
   disbursed: {
@@ -43,7 +49,7 @@ const CustomYAxisTick = (props: any) => {
     );
 };
 
-export default function DashboardPage() {
+function AdminDashboard() {
   const { loans, isLoaded: loansLoaded } = useLoans()
   const { customers, isLoaded: customersLoaded } = useCustomers()
   const { collections, isLoaded: collectionsLoaded } = useCollections();
@@ -53,7 +59,6 @@ export default function DashboardPage() {
 
     const monthlyData: { [key: string]: { month: string; disbursed: number; collected: number } } = {};
 
-    // Process disbursements from loans
     loans.forEach(loan => {
       if (loan.status !== 'Pending') {
           const month = format(parseISO(loan.disbursalDate), 'yyyy-MM');
@@ -64,7 +69,6 @@ export default function DashboardPage() {
       }
     });
     
-    // Process collections
     collections.forEach(collection => {
         const month = format(parseISO(collection.date), 'yyyy-MM');
         if (!monthlyData[month]) {
@@ -76,7 +80,6 @@ export default function DashboardPage() {
     return Object.values(monthlyData).sort((a,b) => a.month.localeCompare(b.month));
 
   }, [loans, collections, loansLoaded, collectionsLoaded]);
-
 
   const summary = React.useMemo(() => {
     if (!loansLoaded) return {
@@ -114,7 +117,24 @@ export default function DashboardPage() {
     }
 
   }, [loans, customers, loansLoaded])
-
+  
+   if (!loansLoaded || !customersLoaded || !collectionsLoaded) {
+    return (
+        <div className="space-y-8">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Skeleton className="h-28" />
+                <Skeleton className="h-28" />
+                <Skeleton className="h-28" />
+                <Skeleton className="h-28" />
+            </div>
+            <div className="grid gap-4 md:grid-cols-1">
+                 <Skeleton className="h-40" />
+            </div>
+             <Skeleton className="h-80" />
+             <Skeleton className="h-96" />
+        </div>
+    )
+  }
 
   return (
     <div className="space-y-8">
@@ -263,7 +283,209 @@ export default function DashboardPage() {
       </Card>
     </div>
   )
+}
 
-    
+function AgentDashboard({ user }: { user: User }) {
+    const { loans, isLoaded: loansLoaded } = useLoans();
+    const { customers, isLoaded: customersLoaded } = useCustomers();
 
+    const agentLoans = React.useMemo(() => {
+        return loans.filter(loan => loan.assignedTo === user.username);
+    }, [loans, user.username]);
+
+    const summary = React.useMemo(() => {
+        const activeLoans = agentLoans.filter(l => l.status === 'Active');
+        const overdueLoans = agentLoans.filter(l => l.status === 'Overdue');
+        const todaysCollections = agentLoans.filter(l => l.nextDueDate && isToday(parseISO(l.nextDueDate)));
+
+        return {
+            activeLoans: activeLoans.length,
+            overdueLoans: overdueLoans.length,
+            todaysCollections: todaysCollections.length,
+            todaysDueList: todaysCollections,
+            overdueList: overdueLoans,
+        };
+    }, [agentLoans]);
     
+    if (!loansLoaded || !customersLoaded) {
+      return (
+        <div className="space-y-8">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <Skeleton className="h-28" />
+                <Skeleton className="h-28" />
+                <Skeleton className="h-28" />
+            </div>
+             <Skeleton className="h-80" />
+             <Skeleton className="h-96" />
+        </div>
+      )
+    }
+
+    const getCustomer = (customerId: string): Customer | undefined => customers.find(c => c.id === customerId);
+
+    return (
+        <div className="space-y-8">
+             <Card>
+                <CardHeader>
+                    <CardTitle>Welcome, {user.username}!</CardTitle>
+                    <CardDescription>Here is your summary for today.</CardDescription>
+                </CardHeader>
+            </Card>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                        <CardTitle className="text-sm font-medium">Today's Collections</CardTitle>
+                        <Wallet className="w-4 h-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{summary.todaysCollections}</div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                        <CardTitle className="text-sm font-medium">Active Loans</CardTitle>
+                        <UserCheck className="w-4 h-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{summary.activeLoans}</div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                        <CardTitle className="text-sm font-medium">Overdue Loans</CardTitle>
+                        <AlertCircle className="w-4 h-4 text-destructive" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-destructive">{summary.overdueLoans}</div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Today's Due Collections</CardTitle>
+                    <CardDescription>Customers with payments scheduled for today.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Customer</TableHead>
+                                <TableHead>Phone</TableHead>
+                                <TableHead>Due Amount</TableHead>
+                                <TableHead>Loan ID</TableHead>
+                                <TableHead></TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {summary.todaysDueList.length > 0 ? summary.todaysDueList.map(loan => {
+                                const customer = getCustomer(loan.customerId);
+                                return (
+                                    <TableRow key={loan.id}>
+                                        <TableCell>{loan.customerName}</TableCell>
+                                        <TableCell>{customer?.phone}</TableCell>
+                                        <TableCell className='flex items-center'><IndianRupee className='w-4 h-4 mr-1'/>{loan.weeklyRepayment.toLocaleString('en-IN')}</TableCell>
+                                        <TableCell className='font-mono text-xs'>{loan.id}</TableCell>
+                                        <TableCell>
+                                            <Button asChild variant="outline" size="sm">
+                                                <Link href={`/dashboard/collections?loanId=${loan.id}`}>Collect</Link>
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                )
+                            }) : (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="text-center text-muted-foreground">No collections due today.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+
+             <Card>
+                <CardHeader>
+                    <CardTitle>Overdue Customers</CardTitle>
+                    <CardDescription>Customers who have missed their payment deadlines.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                   <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Customer</TableHead>
+                                <TableHead>Phone</TableHead>
+                                <TableHead>Outstanding</TableHead>
+                                <TableHead>Loan ID</TableHead>
+                                <TableHead></TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {summary.overdueList.length > 0 ? summary.overdueList.map(loan => {
+                                 const customer = getCustomer(loan.customerId);
+                                return (
+                                <TableRow key={loan.id}>
+                                    <TableCell>{loan.customerName}</TableCell>
+                                    <TableCell>{customer?.phone}</TableCell>
+                                    <TableCell className='flex items-center text-destructive'><IndianRupee className='w-4 h-4 mr-1'/>{loan.outstandingAmount.toLocaleString('en-IN')}</TableCell>
+                                    <TableCell className='font-mono text-xs'>{loan.id}</TableCell>
+                                    <TableCell>
+                                        <Button asChild variant="outline" size="sm">
+                                           <Link href={`/dashboard/customers/${loan.customerId}`}>View Profile</Link>
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            )}) : (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="text-center text-muted-foreground">No overdue loans.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+        </div>
+    );
+}
+
+export default function DashboardPage() {
+    const [user, setUser] = React.useState<User | null>(null);
+    const [isLoading, setIsLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const storedUser = localStorage.getItem('loggedInUser');
+            if (storedUser) {
+                setUser(JSON.parse(storedUser));
+            }
+            setIsLoading(false);
+        }
+    }, []);
+
+    if (isLoading) {
+        return (
+             <div className="space-y-8">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <Skeleton className="h-28" />
+                    <Skeleton className="h-28" />
+                    <Skeleton className="h-28" />
+                    <Skeleton className="h-28" />
+                </div>
+                <Skeleton className="h-96" />
+            </div>
+        )
+    }
+
+    if (user?.role === 'Admin') {
+        return <AdminDashboard />;
+    }
+
+    if (user?.role === 'Collection Agent') {
+        return <AgentDashboard user={user} />;
+    }
+
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p>You do not have a role assigned. Please contact an administrator.</p>
+      </div>
+    );
+}

@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { PlusCircle, MoreHorizontal, FileDown, Calendar as CalendarIcon } from 'lucide-react'
+import { PlusCircle, MoreHorizontal, FileDown, Calendar as CalendarIcon, UserCog } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -58,8 +58,15 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { useUserActivity, useCustomers, useLoans, useCollections, useCompanyProfile } from '@/lib/data'
+import { useUserActivity, useCustomers, useLoans, useCollections, useCompanyProfile, useUsers } from '@/lib/data'
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format, isWithinInterval, parseISO } from 'date-fns'
@@ -68,10 +75,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
+import { Skeleton } from '@/components/ui/skeleton'
 
 type User = {
     id: string;
     username: string;
+    role: 'Admin' | 'Collection Agent';
     lastLogin: string;
 }
 
@@ -85,33 +94,14 @@ type DownloadHistoryItem = {
     date: string;
 }
 
-const baseUserSchema = z.object({
+const userSchema = z.object({
   id: z.string().optional(),
   username: z.string().min(3, 'Username must be at least 3 characters.'),
   password: z.string().min(6, 'Password must be at least 6 characters.').optional().or(z.literal('')),
+  role: z.enum(['Admin', 'Collection Agent']),
 });
 
-const userSchema = baseUserSchema.superRefine((data, ctx) => {
-    const users = getUsersFromStorage();
-    if (users.some(u => u.username.toLowerCase() === data.username.toLowerCase() && u.id !== data.id)) {
-        ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'Username already exists.',
-            path: ['username'],
-        });
-    }
-});
-
-const editUserSchema = baseUserSchema.omit({ password: true }).superRefine((data, ctx) => {
-    const users = getUsersFromStorage();
-    if (users.some(u => u.username.toLowerCase() === data.username.toLowerCase() && u.id !== data.id)) {
-        ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'Username already exists.',
-            path: ['username'],
-        });
-    }
-});
+const editUserSchema = userSchema.omit({ password: true });
 
 const resetPasswordSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters."),
@@ -121,20 +111,6 @@ const resetPasswordSchema = z.object({
   path: ["confirmPassword"],
 });
 
-const initialUsers: User[] = [
-  { id: 'USR001', username: 'admin', lastLogin: '2024-07-29 10:00 AM' },
-];
-
-const getUsersFromStorage = (): User[] => {
-    if (typeof window === 'undefined') return [];
-    const stored = localStorage.getItem('users');
-    return stored ? JSON.parse(stored) : initialUsers;
-}
-
-const setUsersInStorage = (users: User[]) => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem('users', JSON.stringify(users));
-}
 
 const getHistoryFromStorage = (): DownloadHistoryItem[] => {
     if (typeof window === 'undefined') return [];
@@ -148,8 +124,7 @@ const setHistoryInStorage = (history: DownloadHistoryItem[]) => {
 }
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const { users, isLoaded, addUser, updateUser, deleteUser } = useUsers();
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const [isResetPasswordOpen, setResetPasswordOpen] = useState(false);
@@ -187,18 +162,12 @@ export default function UsersPage() {
         return;
     }
     
-    const data = getUsersFromStorage();
-    if (!localStorage.getItem('users')) {
-      setUsersInStorage(data);
-    }
-    setUsers(data);
     setDownloadHistory(getHistoryFromStorage());
-    setIsLoaded(true);
   }, [router, toast]);
   
   const createForm = useForm<z.infer<typeof userSchema>>({
     resolver: zodResolver(userSchema),
-    defaultValues: { username: '', password: '' },
+    defaultValues: { username: '', password: '', role: 'Collection Agent' },
   });
 
   const editForm = useForm<z.infer<typeof editUserSchema>>({
@@ -211,14 +180,11 @@ export default function UsersPage() {
   });
 
   function handleCreateUser(data: z.infer<typeof userSchema>) {
-    const newUser: User = {
-        id: `USR${String(Date.now()).slice(-3)}`,
-        username: data.username,
-        lastLogin: 'Never'
+    if (users.some(u => u.username.toLowerCase() === data.username.toLowerCase())) {
+        createForm.setError("username", { type: "manual", message: "Username already exists."});
+        return;
     }
-    const updatedUsers = [...users, newUser];
-    setUsers(updatedUsers);
-    setUsersInStorage(updatedUsers);
+    addUser({ username: data.username, role: data.role });
     logActivity('Create User', `Created new user: ${data.username}.`);
     toast({
       title: 'User Created',
@@ -236,9 +202,12 @@ export default function UsersPage() {
       return;
     }
 
-    const updatedUsers = users.map(u => u.id === userToEdit.id ? {...u, username: data.username } : u);
-    setUsers(updatedUsers);
-    setUsersInStorage(updatedUsers);
+    if (users.some(u => u.username.toLowerCase() === data.username.toLowerCase() && u.id !== userToEdit.id)) {
+        editForm.setError("username", { type: "manual", message: "Username already exists."});
+        return;
+    }
+
+    updateUser(userToEdit.id, { username: data.username, role: data.role });
     logActivity('Edit User', `Updated user details for ${data.username}.`);
     toast({
       title: 'User Updated',
@@ -250,6 +219,8 @@ export default function UsersPage() {
 
   function handleResetPassword(data: z.infer<typeof resetPasswordSchema>) {
     if (!userToEdit) return;
+    // In a real app, this would securely update the password.
+    // For this mock, we don't store passwords, so we just show a success message.
     logActivity('Reset Password', `Reset password for user ${userToEdit.username}.`);
     toast({
       title: 'Password Reset',
@@ -267,9 +238,7 @@ export default function UsersPage() {
       setUserToDelete(null);
       return;
     }
-    const updatedUsers = users.filter(u => u.id !== userToDelete.id);
-    setUsers(updatedUsers);
-    setUsersInStorage(updatedUsers);
+    deleteUser(userToDelete.id);
     logActivity('Delete User', `Deleted user: ${userToDelete.username}.`);
     toast({
         title: 'User Deleted',
@@ -283,6 +252,7 @@ export default function UsersPage() {
     editForm.reset({
         id: user.id,
         username: user.username,
+        role: user.role,
     });
     setEditDialogOpen(true);
   }
@@ -411,7 +381,18 @@ export default function UsersPage() {
   };
 
   if (!isLoaded || !loggedInUser || loggedInUser.role !== 'Admin') {
-    return null; // Render nothing while redirecting
+    return (
+        <Card>
+            <CardHeader><CardTitle>User Management</CardTitle></CardHeader>
+            <CardContent>
+                <div className="flex flex-col items-center justify-center h-64 gap-4 text-center">
+                    <UserCog className="w-16 h-16 text-muted-foreground" />
+                    <p className="text-muted-foreground">Loading user data or checking permissions...</p>
+                    <Skeleton className="w-48 h-8" />
+                </div>
+            </CardContent>
+        </Card>
+    );
   }
 
 
@@ -449,13 +430,34 @@ export default function UsersPage() {
                       <FormMessage />
                     </FormItem>
                   )} />
-                  <FormField control={createForm.control} name="password" render={({ field }) => (
+                   <FormField control={createForm.control} name="password" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Password</FormLabel>
-                      <FormControl><Input type="password" placeholder="Enter password" {...field} /></FormControl>
+                      <FormControl><Input type="password" placeholder="Defaults to username if empty" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
+                  <FormField
+                    control={createForm.control}
+                    name="role"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Role</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a role" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Admin">Admin</SelectItem>
+                            <SelectItem value="Collection Agent">Collection Agent</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <DialogFooter>
                     <Button type="submit">Create User</Button>
                   </DialogFooter>
@@ -470,6 +472,7 @@ export default function UsersPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Username</TableHead>
+              <TableHead>Role</TableHead>
               <TableHead>Last Login</TableHead>
               <TableHead>
                 <span className="sr-only">Actions</span>
@@ -480,18 +483,19 @@ export default function UsersPage() {
             {users.map((user) => (
               <TableRow key={user.id}>
                 <TableCell className="font-medium">{user.username}</TableCell>
+                <TableCell>{user.role}</TableCell>
                 <TableCell>{user.lastLogin}</TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button aria-haspopup="true" size="icon" variant="ghost">
+                      <Button aria-haspopup="true" size="icon" variant="ghost" disabled={user.username === 'admin' && loggedInUser.username !== 'admin'}>
                         <MoreHorizontal className="w-4 h-4" />
                         <span className="sr-only">Toggle menu</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      {user.username !== 'admin' && <DropdownMenuItem onSelect={() => openEditDialog(user)}>Edit User</DropdownMenuItem>}
+                       <DropdownMenuItem onSelect={() => openEditDialog(user)}>Edit User</DropdownMenuItem>
                        <DropdownMenuItem onSelect={() => openResetPasswordDialog(user)}>Reset Password</DropdownMenuItem>
                        {loggedInUser?.username !== user.username && user.username !== 'admin' && (
                         <DropdownMenuItem onSelect={() => setUserToDelete(user)} className="text-destructive">Delete User</DropdownMenuItem>
@@ -589,6 +593,27 @@ export default function UsersPage() {
                 <FormMessage />
               </FormItem>
             )} />
+             <FormField
+                control={editForm.control}
+                name="role"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Role</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={userToEdit?.username === 'admin'}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        <SelectItem value="Admin">Admin</SelectItem>
+                        <SelectItem value="Collection Agent">Collection Agent</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
               <Button type="submit">Save Changes</Button>

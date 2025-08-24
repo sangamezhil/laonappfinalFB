@@ -16,10 +16,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { Logo } from '@/components/logo'
-import { useUserActivity, useCompanyProfile } from '@/lib/data'
+import { useUserActivity, useCompanyProfile, useUsers } from '@/lib/data'
 import { Skeleton } from '@/components/ui/skeleton'
 
-// Basic User type to match what's in users/page.tsx
 type User = {
     id: string;
     username: string;
@@ -27,20 +26,10 @@ type User = {
     lastLogin: string;
 }
 
-const getUsersFromStorage = (): User[] => {
-    if (typeof window === 'undefined') return [];
-    const stored = localStorage.getItem('users');
-    try {
-        if (stored) return JSON.parse(stored);
-    } catch (e) {
-        console.error("Error parsing users from localStorage", e);
-    }
-    return [];
-}
-
 export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const { users } = useUsers()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -58,33 +47,26 @@ export default function LoginPage() {
     e.preventDefault()
     setIsLoading(true)
 
-    // Mock authentication that checks localStorage
     setTimeout(() => {
-      let userToLogin: User | null = null;
-      if (typeof window !== 'undefined') {
-          const storedUsers = getUsersFromStorage();
-          
-          // In this mock, we assume password is the same as username for demo purposes.
-          const foundUser = storedUsers.find(user => user.username.toLowerCase() === username.toLowerCase() && password === user.username);
-
-          if (foundUser) {
-            userToLogin = foundUser;
-          } else if (username === 'admin' && password === 'admin' && storedUsers.length === 0) {
-            // Fallback for initial login if no users exist in storage yet
-            userToLogin = { id: 'USR001', username: 'admin', role: 'Admin', lastLogin: new Date().toISOString() };
-          }
-      }
+      const foundUser = users.find(user => user.username.toLowerCase() === username.toLowerCase() && password === user.username);
       
-      if (userToLogin) {
-        localStorage.setItem('loggedInUser', JSON.stringify(userToLogin));
-        logActivity('User Login', `User ${userToLogin.username} logged in.`);
+      if (foundUser) {
+        localStorage.setItem('loggedInUser', JSON.stringify(foundUser));
+        logActivity('User Login', `User ${foundUser.username} logged in.`);
         toast({
           title: "Login Successful",
-          description: `Welcome back, ${userToLogin.username}!`,
+          description: `Welcome back, ${foundUser.username}!`,
         })
-        router.push('/dashboard')
-      }
-      else {
+
+        if (foundUser.role === 'Admin') {
+            router.push('/dashboard')
+        } else if (foundUser.role === 'Collection Agent') {
+            router.push('/dashboard');
+        } else {
+            router.push('/dashboard');
+        }
+
+      } else {
         toast({
           variant: "destructive",
           title: "Login Failed",
