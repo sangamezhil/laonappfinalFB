@@ -6,13 +6,14 @@ import { TrendingUp, Users, Landmark, AlertCircle, CheckCircle, Wallet, FileText
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from 'recharts'
 import type { ChartConfig } from '@/components/ui/chart'
 import { Badge } from '@/components/ui/badge'
 import { useLoans, useCustomers, useCollections, Loan, Customer } from '@/lib/data'
 import { format, parseISO, isToday } from 'date-fns'
 import { Skeleton } from '@/components/ui/skeleton'
 import Link from 'next/link'
+import { Button } from '@/components/ui/button'
 
 type User = {
   username: string;
@@ -296,7 +297,15 @@ function AgentDashboard({ user }: { user: User }) {
     const summary = React.useMemo(() => {
         const activeLoans = agentLoans.filter(l => l.status === 'Active');
         const overdueLoans = agentLoans.filter(l => l.status === 'Overdue');
-        const todaysCollections = agentLoans.filter(l => l.nextDueDate && isToday(parseISO(l.nextDueDate)));
+        const todaysCollections = agentLoans.filter(l => {
+            if (!l.nextDueDate) return false;
+            try {
+                return isToday(parseISO(l.nextDueDate));
+            } catch (e) {
+                console.error("Invalid date format for nextDueDate", l.nextDueDate);
+                return false;
+            }
+        });
 
         return {
             activeLoans: activeLoans.length,
