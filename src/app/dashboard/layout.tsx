@@ -49,7 +49,7 @@ const allMenuItems = [
   { href: '/dashboard/loans', label: 'Loans', icon: Landmark },
   { href: '/dashboard/collections', label: 'Collections', icon: ClipboardCheck },
   { href: '/dashboard/users', label: 'Users', icon: UserCog, roles: ['Admin'] },
-  { href: '/dashboard/activity', label: 'Activity Log', icon: History },
+  { href: '/dashboard/activity', label: 'Activity Log', icon: History, roles: ['Admin'] },
 ]
 
 type User = {

@@ -8,6 +8,9 @@ import { Badge } from '@/components/ui/badge'
 import { useUserActivity, UserActivity } from '@/lib/data'
 import { format } from 'date-fns'
 import { IndianRupee } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useToast } from '@/hooks/use-toast'
+import { Skeleton } from '@/components/ui/skeleton'
 
 type User = {
   username: string;
@@ -37,28 +40,53 @@ const renderActivityDetails = (activity: { action: string, details: string }) =>
 export default function ActivityLogPage() {
   const { activities, isLoaded } = useUserActivity();
   const [user, setUser] = useState<User | null>(null);
+  const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedUser = localStorage.getItem('loggedInUser');
       if (storedUser) {
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        if (parsedUser.role !== 'Admin') {
+            toast({
+                variant: 'destructive',
+                title: 'Access Denied',
+                description: 'You do not have permission to view this page.'
+            });
+            router.push('/dashboard');
+        }
+      } else {
+        router.push('/login');
       }
     }
-  }, []);
+  }, [router, toast]);
 
   const sortedActivities = React.useMemo(() => {
-    if (!user) return [];
     return [...activities]
-      .filter(activity => activity.username === user.username)
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-  }, [activities, user])
+  }, [activities])
+
+  if (!isLoaded || !user || user.role !== 'Admin') {
+      return (
+        <Card>
+            <CardHeader>
+                <Skeleton className="h-8 w-48 mb-2" />
+                <Skeleton className="h-4 w-72" />
+            </CardHeader>
+            <CardContent>
+                <Skeleton className="w-full h-64" />
+            </CardContent>
+        </Card>
+      )
+  }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Your Activity Log</CardTitle>
-        <CardDescription>A record of all significant actions taken by you.</CardDescription>
+        <CardTitle>Activity Log</CardTitle>
+        <CardDescription>A record of all significant actions taken by users.</CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
@@ -71,7 +99,7 @@ export default function ActivityLogPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoaded && user ? (
+            {isLoaded ? (
               sortedActivities.length > 0 ? (
                 sortedActivities.map((activity) => (
                   <TableRow key={activity.id}>
@@ -86,7 +114,7 @@ export default function ActivityLogPage() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center">
-                    No activity recorded for your account yet.
+                    No activity recorded yet.
                   </TableCell>
                 </TableRow>
               )
