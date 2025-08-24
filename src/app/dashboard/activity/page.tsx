@@ -5,9 +5,14 @@ import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { useUserActivity } from '@/lib/data'
+import { useUserActivity, UserActivity } from '@/lib/data'
 import { format } from 'date-fns'
 import { IndianRupee } from 'lucide-react'
+
+type User = {
+  username: string;
+  role: string;
+}
 
 const renderActivityDetails = (activity: { action: string, details: string }) => {
   if (activity.action === 'Record Collection') {
@@ -30,17 +35,30 @@ const renderActivityDetails = (activity: { action: string, details: string }) =>
 }
 
 export default function ActivityLogPage() {
-  const { activities, isLoaded } = useUserActivity()
+  const { activities, isLoaded } = useUserActivity();
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedUser = localStorage.getItem('loggedInUser');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+    }
+  }, []);
 
   const sortedActivities = React.useMemo(() => {
-    return [...activities].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-  }, [activities])
+    if (!user) return [];
+    return [...activities]
+      .filter(activity => activity.username === user.username)
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+  }, [activities, user])
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>User Activity Log</CardTitle>
-        <CardDescription>A record of all significant actions taken by users.</CardDescription>
+        <CardTitle>Your Activity Log</CardTitle>
+        <CardDescription>A record of all significant actions taken by you.</CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
@@ -53,21 +71,29 @@ export default function ActivityLogPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoaded && sortedActivities.length > 0 ? (
-              sortedActivities.map((activity) => (
-                <TableRow key={activity.id}>
-                  <TableCell>{format(new Date(activity.timestamp), 'dd MMM yyyy, HH:mm:ss')}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{activity.username}</Badge>
+            {isLoaded && user ? (
+              sortedActivities.length > 0 ? (
+                sortedActivities.map((activity) => (
+                  <TableRow key={activity.id}>
+                    <TableCell>{format(new Date(activity.timestamp), 'dd MMM yyyy, HH:mm:ss')}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{activity.username}</Badge>
+                    </TableCell>
+                    <TableCell className="font-medium">{activity.action}</TableCell>
+                    <TableCell>{renderActivityDetails(activity)}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center">
+                    No activity recorded for your account yet.
                   </TableCell>
-                  <TableCell className="font-medium">{activity.action}</TableCell>
-                  <TableCell>{renderActivityDetails(activity)}</TableCell>
                 </TableRow>
-              ))
+              )
             ) : (
               <TableRow>
                 <TableCell colSpan={4} className="text-center">
-                  {isLoaded ? 'No activity recorded yet.' : 'Loading activity...'}
+                  Loading activity...
                 </TableCell>
               </TableRow>
             )}
