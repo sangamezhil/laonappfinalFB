@@ -67,6 +67,7 @@ import { DateRange } from "react-day-picker"
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
+import { useRouter } from 'next/navigation'
 
 type User = {
     id: string;
@@ -76,6 +77,7 @@ type User = {
 
 type LoggedInUser = {
   username: string;
+  role: string;
 }
 
 type DownloadHistoryItem = {
@@ -161,23 +163,38 @@ export default function UsersPage() {
   const { loans } = useLoans();
   const { collections } = useCollections();
   const { profile: companyProfile } = useCompanyProfile();
+  const router = useRouter();
 
 
   const { toast } = useToast();
 
   useEffect(() => {
+    const storedUser = localStorage.getItem('loggedInUser');
+    if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        setLoggedInUser(parsedUser);
+        if (parsedUser.role !== 'Admin') {
+            toast({
+                variant: 'destructive',
+                title: 'Access Denied',
+                description: 'You do not have permission to view this page.'
+            });
+            router.push('/dashboard');
+            return;
+        }
+    } else {
+        router.push('/login');
+        return;
+    }
+    
     const data = getUsersFromStorage();
     if (!localStorage.getItem('users')) {
       setUsersInStorage(data);
     }
     setUsers(data);
-    const storedUser = localStorage.getItem('loggedInUser');
-    if (storedUser) {
-        setLoggedInUser(JSON.parse(storedUser));
-    }
     setDownloadHistory(getHistoryFromStorage());
     setIsLoaded(true);
-  }, []);
+  }, [router, toast]);
   
   const createForm = useForm<z.infer<typeof userSchema>>({
     resolver: zodResolver(userSchema),
@@ -392,6 +409,10 @@ export default function UsersPage() {
     setHistoryInStorage(updatedHistory);
     setDateRange(undefined);
   };
+
+  if (!isLoaded || !loggedInUser || loggedInUser.role !== 'Admin') {
+    return null; // Render nothing while redirecting
+  }
 
 
   return (

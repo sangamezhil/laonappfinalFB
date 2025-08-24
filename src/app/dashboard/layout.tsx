@@ -48,7 +48,7 @@ const allMenuItems = [
   { href: '/dashboard/customers', label: 'Customers', icon: Users },
   { href: '/dashboard/loans', label: 'Loans', icon: Landmark },
   { href: '/dashboard/collections', label: 'Collections', icon: ClipboardCheck },
-  { href: '/dashboard/users', label: 'Users', icon: UserCog },
+  { href: '/dashboard/users', label: 'Users', icon: UserCog, roles: ['Admin'] },
   { href: '/dashboard/activity', label: 'Activity Log', icon: History },
 ]
 
@@ -60,14 +60,32 @@ type User = {
 function DashboardSidebar() {
     const pathname = usePathname();
     const { setOpenMobile } = useSidebar();
+    const [user, setUser] = React.useState<User | null>(null);
+
+    React.useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const storedUser = localStorage.getItem('loggedInUser');
+            if (storedUser) {
+                setUser(JSON.parse(storedUser));
+            }
+        }
+    }, []);
     
     const handleLinkClick = () => {
         setOpenMobile(false);
     }
     
+    const visibleMenuItems = React.useMemo(() => {
+        if (!user) return [];
+        return allMenuItems.filter(item => {
+            if (!item.roles) return true; // Accessible to all roles if not specified
+            return item.roles.includes(user.role);
+        });
+    }, [user]);
+
     return (
         <SidebarMenu>
-            {allMenuItems.map((item) => (
+            {visibleMenuItems.map((item) => (
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton
                   asChild
