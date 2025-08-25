@@ -121,18 +121,23 @@ const calculateNextDueDate = (loan: Loan): string | undefined => {
         ? Math.floor(loan.totalPaid / loan.weeklyRepayment) 
         : 0;
 
-    // For new loans (installmentsPaid === 0), add 2 weeks to push to next week.
-    // For existing loans, add 1 week to get the next installment date.
-    const periodsToAdd = installmentsPaid === 0 ? 2 : installmentsPaid + 1;
     const startDate = parseISO(loan.disbursalDate);
     let nextDueDate: Date;
     
     if (loan.collectionFrequency === 'Daily') {
-        nextDueDate = addDays(startDate, periodsToAdd);
+        const daysToAdd = installmentsPaid === 0 ? 2 : installmentsPaid + 1;
+        nextDueDate = addDays(startDate, daysToAdd);
     } else if (loan.collectionFrequency === 'Weekly') {
-        nextDueDate = addWeeks(startDate, periodsToAdd);
+        // For the very first payment, add 8 days to push it to the next week.
+        // For subsequent payments, add weeks normally.
+        if (installmentsPaid === 0) {
+            nextDueDate = addDays(startDate, 8);
+        } else {
+            nextDueDate = addWeeks(startDate, installmentsPaid + 1);
+        }
     } else if (loan.collectionFrequency === 'Monthly') {
-        nextDueDate = addMonths(startDate, periodsToAdd);
+        const monthsToAdd = installmentsPaid === 0 ? 2 : installmentsPaid + 1;
+        nextDueDate = addMonths(startDate, monthsToAdd);
     } else {
         return undefined;
     }
