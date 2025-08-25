@@ -76,6 +76,8 @@ import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+
 
 type User = {
     id: string;
@@ -144,6 +146,11 @@ export default function UsersPage() {
 
   const { toast } = useToast();
 
+  const adminCount = users.filter(u => u.role === 'Admin').length;
+  const agentCount = users.filter(u => u.role === 'Collection Agent').length;
+  const isUserCreationDisabled = adminCount >= 1 && agentCount >= 2;
+
+
   useEffect(() => {
     const storedUser = localStorage.getItem('loggedInUser');
     if (storedUser) {
@@ -181,10 +188,19 @@ export default function UsersPage() {
   });
 
   function handleCreateUser(data: z.infer<typeof userSchema>) {
+    if (data.role === 'Admin' && adminCount >= 1) {
+        createForm.setError("role", { type: "manual", message: "Admin role is full."});
+        return;
+    }
+    if (data.role === 'Collection Agent' && agentCount >= 2) {
+        createForm.setError("role", { type: "manual", message: "Collection Agent roles are full."});
+        return;
+    }
     if (users.some(u => u.username.toLowerCase() === data.username.toLowerCase())) {
         createForm.setError("username", { type: "manual", message: "Username already exists."});
         return;
     }
+
     addUser({ username: data.username, password: data.password || data.username, role: data.role });
     logActivity('Create User', `Created new user: ${data.username}.`);
     toast({
@@ -406,16 +422,30 @@ export default function UsersPage() {
           <div>
             <CardTitle>User Management</CardTitle>
             <CardDescription>
-              Create and manage user accounts.
+              Create and manage user accounts. (1 Admin, 2 Agents max)
             </CardDescription>
           </div>
           <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <PlusCircle className="w-4 h-4 mr-2" />
-                Create User
-              </Button>
-            </DialogTrigger>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div tabIndex={isUserCreationDisabled ? 0 : undefined}>
+                    <DialogTrigger asChild>
+                      <Button disabled={isUserCreationDisabled}>
+                        <PlusCircle className="w-4 h-4 mr-2" />
+                        Create User
+                      </Button>
+                    </DialogTrigger>
+                  </div>
+                </TooltipTrigger>
+                {isUserCreationDisabled && (
+                  <TooltipContent>
+                    <p>User limit reached (1 Admin, 2 Agents).</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
+
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
                 <DialogTitle>Create New User</DialogTitle>
@@ -452,8 +482,8 @@ export default function UsersPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="Admin">Admin</SelectItem>
-                            <SelectItem value="Collection Agent">Collection Agent</SelectItem>
+                            <SelectItem value="Admin" disabled={adminCount >= 1}>Admin (Limit: 1)</SelectItem>
+                            <SelectItem value="Collection Agent" disabled={agentCount >= 2}>Collection Agent (Limit: 2)</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
