@@ -201,10 +201,10 @@ const LoanTable = ({
                           item.status === 'Closed' ? 'default' :
                           item.status === 'Pre-closed' ? 'outline' :
                           'outline'
-                        } className={
+                        } className={cn(
                             item.status === 'Closed' ? 'bg-green-600 text-white' : 
                             item.status === 'Pre-closed' ? 'bg-blue-600 text-white' : ''
-                        }>
+                        )}>
                           {item.status}
                         </Badge>
                       </TableCell>
@@ -250,10 +250,10 @@ const LoanTable = ({
                                 loan.status === 'Closed' ? 'default' :
                                 loan.status === 'Pre-closed' ? 'outline' :
                                 'outline'
-                            } className={
+                            } className={cn(
                                 loan.status === 'Closed' ? 'bg-green-600 text-white' : 
                                 loan.status === 'Pre-closed' ? 'bg-blue-600 text-white' : ''
-                            }>
+                            )}>
                                 {loan.status}
                             </Badge>
                             </TableCell>
@@ -315,10 +315,10 @@ const LoanTable = ({
                             item.loan.status === 'Closed' ? 'default' :
                             item.loan.status === 'Pre-closed' ? 'outline' :
                             'outline'
-                        } className={
+                        } className={cn(
                             item.loan.status === 'Closed' ? 'bg-green-600 text-white' : 
                             item.loan.status === 'Pre-closed' ? 'bg-blue-600 text-white' : ''
-                        }>
+                        )}>
                             {item.loan.status}
                         </Badge>
                         </TableCell>
@@ -451,11 +451,12 @@ export default function LoansPage() {
     }
 
     let success = false;
-    if (loanToApprove.loanType === 'Group') {
+    let allSucceeded = true;
+    if (loanToApprove.loanType === 'Group' && loanToApprove.groupId) {
         const groupLoans = loans.filter(l => l.groupId === loanToApprove.groupId);
         groupLoans.forEach((l, index) => {
            const newLedgerId = `${ledgerId.trim()}-${index + 1}`;
-           const approvalSuccess = approveLoanWithLedgerId(l.id, newLedgerId);
+           const approvalSuccess = approveLoanWithLedgerId(l.id, newLedgerId, loanToApprove.groupId);
             if (approvalSuccess) {
                 logActivity('Approve Loan', `Approved loan ${l.id} with new ID ${newLedgerId}.`);
                 success = true;
@@ -465,7 +466,7 @@ export default function LoansPage() {
                     title: "Approval Failed",
                     description: `A loan with the Ledger ID '${newLedgerId}' may already exist.`,
                 });
-                success = false;
+                allSucceeded = false;
             }
         });
 
@@ -483,7 +484,7 @@ export default function LoansPage() {
     }
 
 
-    if (success) {
+    if (success && allSucceeded) {
         toast({
             title: 'Loan(s) Approved',
             description: `The application has been activated.`,
@@ -722,3 +723,5 @@ export default function LoansPage() {
     </>
   )
 }
+
+    
