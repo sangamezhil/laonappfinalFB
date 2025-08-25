@@ -3,7 +3,7 @@
 
 import React from 'react';
 import Link from 'next/link'
-import { PlusCircle, MoreHorizontal, ChevronDown, ChevronRight, IndianRupee, CheckCircle, Search, X } from 'lucide-react'
+import { PlusCircle, MoreHorizontal, ChevronDown, ChevronRight, IndianRupee, CheckCircle, Search, X, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -89,7 +89,7 @@ const LoanTable = ({
     user: User | null, 
     onApproveClick: (loan: Loan) => void,
     handlePreclose: (id: string) => void,
-    handleDelete: (loan: Loan) => void,
+    handleDelete: (loanOrLoans: Loan | Loan[]) => void,
     hasSearched: boolean,
     isSearching: boolean
 }) => {
@@ -210,12 +210,20 @@ const LoanTable = ({
                       </TableCell>
                       <TableCell className="flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{item.totalOutstanding.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</TableCell>
                       <TableCell>
-                        {user?.role === 'Admin' && item.status === 'Pending' && (
-                           <Button variant="outline" size="sm" onClick={() => onApproveClick(item.loans[0])}>
-                                <CheckCircle className="w-4 h-4 mr-2" />
-                                Approve Group
-                            </Button>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {user?.role === 'Admin' && item.status === 'Pending' && (
+                            <>
+                              <Button variant="outline" size="sm" onClick={() => onApproveClick(item.loans[0])}>
+                                  <CheckCircle className="w-4 h-4 mr-2" />
+                                  Approve
+                              </Button>
+                              <Button variant="destructive" size="sm" onClick={() => handleDelete(item.loans)}>
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Cancel
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
 
@@ -260,11 +268,6 @@ const LoanTable = ({
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                {loan.status === 'Pending' && user?.role === 'Admin' && (
-                                    <DropdownMenuItem onSelect={() => onApproveClick(loan)}>
-                                      Approve Loan
-                                    </DropdownMenuItem>
-                                )}
                                 {(loan.status === 'Active' || loan.status === 'Overdue') && user?.role === 'Admin' && (
                                     <DropdownMenuItem onSelect={() => handlePreclose(loan.id)}>
                                     Preclose Loan
@@ -282,7 +285,7 @@ const LoanTable = ({
                                     <>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem onSelect={() => handleDelete(loan)} className="text-destructive">
-                                        Delete Loan
+                                        {loan.status === 'Pending' ? 'Cancel Application' : 'Delete Loan'}
                                     </DropdownMenuItem>
                                     </>
                                 )}
@@ -352,7 +355,7 @@ const LoanTable = ({
                                 <>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onSelect={() => handleDelete(item.loan)} className="text-destructive">
-                                    Delete Loan
+                                    {item.loan.status === 'Pending' ? 'Cancel Application' : 'Delete Loan'}
                                 </DropdownMenuItem>
                                 </>
                             )}
@@ -373,7 +376,7 @@ export default function LoansPage() {
   const { toast } = useToast();
   const [user, setUser] = React.useState<User | null>(null);
   const { logActivity } = useUserActivity();
-  const [loanToDelete, setLoanToDelete] = React.useState<Loan | null>(null);
+  const [loanToDelete, setLoanToDelete] = React.useState<Loan | Loan[] | null>(null);
   const [loanToApprove, setLoanToApprove] = React.useState<Loan | null>(null);
   const [ledgerId, setLedgerId] = React.useState('');
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -404,7 +407,7 @@ export default function LoansPage() {
         loansToFilter.forEach(loan => {
             if(loan.groupId) {
                 const customer = customerMap.get(loan.customerId);
-                if(customer?.phone.includes(lowercasedQuery) || loan.groupName?.toLowerCase().includes(lowercasedQuery) || loan.groupId.toLowerCase().includes(lowercasedQuery)) {
+                if(customer?.phone.includes(lowercasedQuery) || loan.groupName?.toLowerCase().includes(lowercasedQuery) || loan.groupId.toLowerCase().includes(lowercasedQuery) || loan.id.toLowerCase().includes(lowercasedQuery)) {
                     groupLoanIds.add(loan.groupId);
                 }
             }
@@ -447,19 +450,43 @@ export default function LoansPage() {
         return;
     }
 
-    const success = approveLoanWithLedgerId(loanToApprove.id, ledgerId.trim());
+    let success = false;
+    if (loanToApprove.loanType === 'Group') {
+        const groupLoans = loans.filter(l => l.groupId === loanToApprove.groupId);
+        groupLoans.forEach((l, index) => {
+           const newLedgerId = `${ledgerId.trim()}-${index + 1}`;
+           const approvalSuccess = approveLoanWithLedgerId(l.id, newLedgerId);
+            if (approvalSuccess) {
+                logActivity('Approve Loan', `Approved loan ${l.id} with new ID ${newLedgerId}.`);
+                success = true;
+            } else {
+                toast({
+                    variant: "destructive",
+                    title: "Approval Failed",
+                    description: `A loan with the Ledger ID '${newLedgerId}' may already exist.`,
+                });
+                success = false;
+            }
+        });
+
+    } else {
+        success = approveLoanWithLedgerId(loanToApprove.id, ledgerId.trim());
+        if(success) {
+            logActivity('Approve Loan', `Approved loan ${loanToApprove.id} with new ID ${ledgerId.trim()}.`);
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Approval Failed",
+                description: `A loan with the Ledger ID '${ledgerId.trim()}' already exists.`,
+            });
+        }
+    }
+
 
     if (success) {
-        logActivity('Approve Loan', `Approved loan ${loanToApprove.id} with new ID ${ledgerId.trim()}.`);
         toast({
-            title: 'Loan Approved',
-            description: `Loan has been activated with new ID: ${ledgerId.trim()}`,
-        });
-    } else {
-        toast({
-            variant: "destructive",
-            title: "Approval Failed",
-            description: `A loan with the Ledger ID '${ledgerId.trim()}' already exists.`,
+            title: 'Loan(s) Approved',
+            description: `The application has been activated.`,
         });
     }
     
@@ -479,19 +506,29 @@ export default function LoansPage() {
 
   const confirmDelete = () => {
     if (!loanToDelete || user?.role !== 'Admin') return;
-    if (loanToDelete.status === 'Active' || loanToDelete.status === 'Overdue') {
-        toast({
-            variant: "destructive",
-            title: "Deletion Not Allowed",
-            description: `Active or Overdue loans cannot be deleted.`,
-        });
-        return;
-    }
-    deleteLoan(loanToDelete.id);
-    logActivity('Delete Loan', `Deleted loan ${loanToDelete.id}.`);
+
+    const loansToDelete = Array.isArray(loanToDelete) ? loanToDelete : [loanToDelete];
+
+    loansToDelete.forEach(loan => {
+        if (loan.status === 'Active' || loan.status === 'Overdue') {
+            toast({
+                variant: "destructive",
+                title: "Deletion Not Allowed",
+                description: `Active or Overdue loans cannot be deleted.`,
+            });
+            return;
+        }
+        deleteLoan(loan.id);
+        logActivity('Delete Loan', `Deleted loan ${loan.id}.`);
+    });
+
+    const isGroup = Array.isArray(loanToDelete);
+    const title = isGroup ? "Group Application Cancelled" : loanToDelete.status === 'Pending' ? 'Loan Application Cancelled' : 'Loan Deleted';
+    const description = isGroup ? `The loan application for group ${loanToDelete[0].groupName} has been cancelled.` : `Loan ${loansToDelete[0].id} for ${loansToDelete[0].customerName} has been deleted.`;
+    
     toast({
-    title: 'Loan Deleted',
-    description: `Loan ${loanToDelete.id} for ${loanToDelete.customerName} has been deleted.`,
+        title,
+        description,
     });
     setLoanToDelete(null);
   };
@@ -545,6 +582,33 @@ export default function LoansPage() {
     )
   }
 
+  const getDeleteDialogInfo = () => {
+    if (!loanToDelete) return { title: 'Are you sure?', description: 'This action cannot be undone.'};
+    
+    const isGroup = Array.isArray(loanToDelete);
+    if (isGroup) {
+      return {
+        title: `Cancel Group Application for ${loanToDelete[0].groupName}?`,
+        description: 'This will cancel the pending loan applications for all members of this group. This action cannot be undone.'
+      }
+    }
+    
+    const loan = loanToDelete;
+    if (loan.status === 'Pending') {
+      return {
+        title: 'Cancel Loan Application?',
+        description: `This will permanently cancel the loan application ${loan.id} for ${loan.customerName}. This action cannot be undone.`
+      }
+    }
+
+    return {
+      title: 'Are you sure?',
+      description: `This action will permanently delete the loan record ${loan.id} for ${loan.customerName}. This action cannot be undone.`
+    }
+  }
+  const dialogInfo = getDeleteDialogInfo();
+
+
   return (
     <>
     <Card>
@@ -567,7 +631,7 @@ export default function LoansPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder={currentTab === 'personal' ? "Search by name, phone, or loan ID..." : "Search by group, phone, or group ID..."}
+                placeholder={currentTab === 'personal' ? "Search by name, phone, or loan ID..." : "Search by group, phone, or ID..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 pr-8 w-full"
@@ -612,14 +676,16 @@ export default function LoansPage() {
      <AlertDialog open={!!loanToDelete} onOpenChange={(open) => !open && setLoanToDelete(null)}>
         <AlertDialogContent>
             <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>{dialogInfo.title}</AlertDialogTitle>
             <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete the loan record <span className="font-bold">{loanToDelete?.id}</span> for <span className="font-bold">{loanToDelete?.customerName}</span>.
+                {dialogInfo.description}
             </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">
+                {Array.isArray(loanToDelete) || loanToDelete?.status === 'Pending' ? 'Yes, Cancel' : 'Yes, Delete'}
+            </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
@@ -627,15 +693,16 @@ export default function LoansPage() {
     <Dialog open={!!loanToApprove} onOpenChange={() => { setLoanToApprove(null); setLedgerId(''); }}>
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>Approve Loan</DialogTitle>
+                <DialogTitle>Approve {loanToApprove?.loanType} Loan Application</DialogTitle>
                 <DialogDescription>
-                    Enter the official ledger loan number to approve this loan. This will become the new Loan ID.
+                    Enter the official ledger loan number base to approve this application. 
+                    {loanToApprove?.loanType === 'Group' && ' Each member will get a sequential ID (e.g., LEDGER-1, LEDGER-2).'}
                 </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="ledger-id" className="text-right">
-                        Ledger Loan Number
+                        Ledger Number
                     </Label>
                     <Input
                         id="ledger-id"
