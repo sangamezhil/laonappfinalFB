@@ -8,6 +8,7 @@ import { useCompanyProfile, CompanyProfile } from '@/lib/data';
 
 // This function can be defined outside the component as it doesn't depend on its state.
 const updateTitleAndFavicon = (profile: CompanyProfile) => {
+  if (typeof window === 'undefined') return;
   document.title = profile.name || 'LoanTrack Lite';
   let link: HTMLLinkElement | null = document.querySelector("link[rel~='icon']");
   if (!link) {
@@ -25,43 +26,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   // We use the hook to get the initial profile and loaded state
-  const { profile: initialProfile, isLoaded } = useCompanyProfile();
+  const { profile, isLoaded } = useCompanyProfile();
   
-  // We use a local state to handle dynamic updates from the storage event
-  const [profile, setProfile] = useState(initialProfile);
-
   useEffect(() => {
-    // When the component loads, update the profile state
-    // with the one from the hook once it's loaded.
-     if (isLoaded) {
-      setProfile(initialProfile);
+    if (isLoaded) {
+      updateTitleAndFavicon(profile);
     }
-  }, [initialProfile, isLoaded]);
-
-  useEffect(() => {
-    // This effect runs whenever the profile state changes,
-    // ensuring the title and favicon are updated.
-    updateTitleAndFavicon(profile);
-  }, [profile]);
-  
-  useEffect(() => {
-    // This effect sets up the event listener to catch profile updates
-    // from other tabs or components.
-    const handleStorageChange = () => {
-        const stored = localStorage.getItem('companyProfile');
-        if (stored) {
-            const newProfile = JSON.parse(stored);
-            setProfile(newProfile);
-        }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-
-    // Cleanup the event listener on component unmount
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
+  }, [profile, isLoaded]);
 
   return (
     <html lang="en">
@@ -79,4 +50,3 @@ export default function RootLayout({
     </html>
   );
 }
-

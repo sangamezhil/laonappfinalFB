@@ -109,7 +109,7 @@ const getFromStorage = <T>(key: string, initialData: T): T => {
 const setInStorage = <T>(key: string, data: T) => {
     if (typeof window === 'undefined') return;
     localStorage.setItem(key, JSON.stringify(data));
-     window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new Event('local-storage-updated'));
 };
 
 export const useUsers = () => {
@@ -161,23 +161,26 @@ export const useCompanyProfile = () => {
     const [profile, setProfile] = useState<CompanyProfile>(initialCompanyProfile);
     const [isLoaded, setIsLoaded] = useState(false);
 
-    useEffect(() => {
+    const refreshProfile = useCallback(() => {
         const data = getFromStorage('companyProfile', initialCompanyProfile);
         setProfile(data);
+    }, []);
+
+
+    useEffect(() => {
+        refreshProfile();
         setIsLoaded(true);
 
         const handleStorage = () => {
-             const data = getFromStorage('companyProfile', initialCompanyProfile);
-             setProfile(data);
+             refreshProfile();
         }
 
-        window.addEventListener('storage', handleStorage);
-        return () => window.removeEventListener('storage', handleStorage);
-    }, []);
+        window.addEventListener('local-storage-updated', handleStorage);
+        return () => window.removeEventListener('local-storage-updated', handleStorage);
+    }, [refreshProfile]);
 
     const updateProfile = (newProfile: CompanyProfile) => {
         setInStorage('companyProfile', newProfile);
-        setProfile(newProfile);
     };
 
     return { profile, updateProfile, isLoaded };
@@ -188,11 +191,19 @@ export const useCustomers = () => {
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
 
-    useEffect(() => {
+    const refreshCustomers = useCallback(() => {
         const data = getFromStorage('customers', initialCustomers);
         setCustomers(data);
-        setIsLoaded(true);
     }, []);
+
+    useEffect(() => {
+        refreshCustomers();
+        setIsLoaded(true);
+        window.addEventListener('local-storage-updated', refreshCustomers);
+        return () => {
+            window.removeEventListener('local-storage-updated', refreshCustomers);
+        }
+    }, [refreshCustomers]);
 
     const addCustomer = (customer: Omit<Customer, 'id' | 'registrationDate' | 'profilePicture'>): Customer => {
         const currentCustomers = getFromStorage('customers', initialCustomers);
@@ -205,7 +216,6 @@ export const useCustomers = () => {
         };
         const updatedCustomers = [...currentCustomers, newCustomer];
         setInStorage('customers', updatedCustomers);
-        setCustomers(updatedCustomers);
         return newCustomer;
     };
 
@@ -213,7 +223,6 @@ export const useCustomers = () => {
         const currentCustomers = getFromStorage('customers', initialCustomers);
         const updatedCustomers = currentCustomers.filter(c => c.id !== customerId);
         setInStorage('customers', updatedCustomers);
-        setCustomers(updatedCustomers);
     };
 
     return { customers, addCustomer, deleteCustomer, isLoaded };
@@ -261,9 +270,9 @@ export const useLoans = () => {
         refreshLoans();
         setIsLoaded(true);
 
-        window.addEventListener('storage', refreshLoans);
+        window.addEventListener('local-storage-updated', refreshLoans);
         return () => {
-            window.removeEventListener('storage', refreshLoans);
+            window.removeEventListener('local-storage-updated', refreshLoans);
         }
     }, [refreshLoans]);
 
@@ -335,11 +344,19 @@ export const useUserActivity = () => {
     const [activities, setActivities] = useState<UserActivity[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
 
-    useEffect(() => {
+    const refreshActivities = useCallback(() => {
         const data = getFromStorage<UserActivity[]>('userActivities', []);
         setActivities(data);
-        setIsLoaded(true);
     }, []);
+
+    useEffect(() => {
+        refreshActivities();
+        setIsLoaded(true);
+        window.addEventListener('local-storage-updated', refreshActivities);
+        return () => {
+            window.removeEventListener('local-storage-updated', refreshActivities);
+        };
+    }, [refreshActivities]);
 
     const logActivity = (action: string, details: string) => {
         if (typeof window === 'undefined') return;
@@ -358,7 +375,6 @@ export const useUserActivity = () => {
         const currentActivities = getFromStorage<UserActivity[]>('userActivities', []);
         const updatedActivities = [newActivity, ...currentActivities];
         setInStorage('userActivities', updatedActivities);
-        setActivities(updatedActivities);
     };
 
     return { activities, isLoaded, logActivity };
@@ -368,12 +384,20 @@ export const useCollections = () => {
     const [collections, setCollections] = useState<Collection[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
 
-    useEffect(() => {
+    const refreshCollections = useCallback(() => {
         const data = getFromStorage('collections', initialCollections);
         const sortedCollections = data.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         setCollections(sortedCollections);
-        setIsLoaded(true);
     }, []);
+
+    useEffect(() => {
+        refreshCollections();
+        setIsLoaded(true);
+        window.addEventListener('local-storage-updated', refreshCollections);
+        return () => {
+            window.removeEventListener('local-storage-updated', refreshCollections);
+        }
+    }, [refreshCollections]);
 
     const addCollection = (collection: Omit<Collection, 'id'>): Collection => {
         if(typeof window === 'undefined') return collection as Collection;
@@ -386,7 +410,6 @@ export const useCollections = () => {
         };
         const updatedCollections = [newCollection, ...currentCollections].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         setInStorage('collections', updatedCollections);
-        setCollections(updatedCollections);
         return newCollection;
     };
 
@@ -394,7 +417,6 @@ export const useCollections = () => {
         const currentCollections = getFromStorage('collections', initialCollections);
         const updatedCollections = currentCollections.filter(c => c.id !== collectionId);
         setInStorage('collections', updatedCollections);
-        setCollections(updatedCollections);
     };
 
     return { collections, isLoaded, addCollection, deleteCollection };
@@ -409,5 +431,3 @@ export function getLoansByCustomerId(customerId: string): Loan[] {
   const loans = getFromStorage('loans', initialLoans);
   return loans.filter(l => l.customerId === customerId);
 }
-
-    
