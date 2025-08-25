@@ -57,7 +57,11 @@ export default function LoginPage() {
           title: "Login Successful",
           description: `Welcome back, ${foundUser.username}!`,
         })
-        router.push('/dashboard');
+        if (foundUser.role === 'Collection Agent') {
+          router.push('/dashboard/collections');
+        } else {
+          router.push('/dashboard');
+        }
       } else {
         toast({
           variant: "destructive",
