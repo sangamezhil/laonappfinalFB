@@ -139,19 +139,11 @@ export default function NewLoanPage() {
       if (storedUser) {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
-         if (parsedUser.role !== 'Admin') {
-            toast({
-                variant: 'destructive',
-                title: 'Access Denied',
-                description: 'You do not have permission to view this page.'
-            });
-            router.push('/dashboard');
-        }
       } else {
         router.push('/login');
       }
     }
-  }, [router, toast]);
+  }, [router]);
 
 
   const personalForm = useForm<z.infer<typeof personalLoanSchema>>({ 
@@ -307,7 +299,7 @@ export default function NewLoanPage() {
     router.push('/dashboard/loans');
   };
 
-  if (!user || user.role !== 'Admin') {
+  if (!user) {
     return (
       <Card>
         <CardHeader>
@@ -320,6 +312,20 @@ export default function NewLoanPage() {
         </CardContent>
     </Card>
     )
+  }
+
+  if (user.role !== 'Admin') {
+     return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Access Denied</CardTitle>
+                <CardDescription>You do not have permission to create new loans.</CardDescription>
+            </CardHeader>
+             <CardContent>
+                <Button onClick={() => router.back()}>Go Back</Button>
+            </CardContent>
+        </Card>
+     )
   }
 
   return (
@@ -444,7 +450,13 @@ export default function NewLoanPage() {
                       <FormItem>
                         <FormLabel>Group Leader</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl><SelectTrigger><SelectValue placeholder="Select a group leader" /></SelectTrigger></FormControl>
+                           <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a group leader">
+                                {field.value ? eligibleCustomers.find(c => c.id === field.value)?.name : "Select a group leader"}
+                                </SelectValue>
+                            </SelectTrigger>
+                            </FormControl>
                            <SelectContent>{getAvailableMembers(-1).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                         </Select>
                         <FormMessage />
@@ -458,7 +470,13 @@ export default function NewLoanPage() {
                            <FormField key={item.id} control={groupForm.control} name={`members.${index}.customerId`} render={({ field }) => (
                             <FormItem>
                                <Select onValueChange={field.onChange} value={field.value}>
-                                  <FormControl><SelectTrigger><SelectValue placeholder={`Select Member ${index + 1}`} /></SelectTrigger></FormControl>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder={`Select Member ${index + 1}`}>
+                                        {field.value ? getAvailableMembers(index).find(c => c.id === field.value)?.name : `Select Member ${index + 1}`}
+                                      </SelectValue>
+                                    </SelectTrigger>
+                                  </FormControl>
                                   <SelectContent>
                                     {getAvailableMembers(index).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                   </SelectContent>
@@ -480,3 +498,5 @@ export default function NewLoanPage() {
     </Card>
   )
 }
+
+    
