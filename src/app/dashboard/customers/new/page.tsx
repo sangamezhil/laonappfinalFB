@@ -1,6 +1,7 @@
 
 'use client'
 
+import React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -101,11 +102,38 @@ const kycFormSchema = z.object({
 
 type KycFormValues = z.infer<typeof kycFormSchema>
 
+type User = {
+  username: string;
+  role: string;
+}
+
 export default function NewCustomerPage() {
   const router = useRouter()
   const { toast } = useToast()
   const { addCustomer } = useCustomers();
   const { logActivity } = useUserActivity();
+  const [user, setUser] = React.useState<User | null>(null);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedUser = localStorage.getItem('loggedInUser');
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        if (parsedUser.role !== 'Admin') {
+            toast({
+                variant: 'destructive',
+                title: 'Access Denied',
+                description: 'You do not have permission to view this page.'
+            });
+            router.push('/dashboard');
+        }
+      } else {
+        router.push('/login');
+      }
+    }
+  }, [router, toast]);
+
 
   const form = useForm<KycFormValues>({
     resolver: zodResolver(kycFormSchema),
@@ -147,6 +175,10 @@ export default function NewCustomerPage() {
       description: `${data.fullName} has been successfully registered.`,
     })
     router.push('/dashboard/customers')
+  }
+
+  if (!user || user.role !== 'Admin') {
+    return <div className='p-4'>Checking permissions...</div>
   }
 
   return (

@@ -38,6 +38,11 @@ const groupLoanSchema = z.object({
   members: z.array(z.object({ customerId: z.string().nonempty("Please select a member") })).min(1, 'Please add members'),
 });
 
+type User = {
+  username: string;
+  role: string;
+}
+
 const DisbursalCalculator = ({ control, loanType }: { control: any; loanType: 'personal' | 'group' }) => {
   const [loanAmount, interestRate, docCharges, insuranceCharges, groupSize, repaymentTerm] = useWatch({
     control,
@@ -125,6 +130,28 @@ export default function NewLoanPage() {
   const { customers } = useCustomers();
   const { loans, addLoan } = useLoans();
   const { logActivity } = useUserActivity();
+  const [user, setUser] = React.useState<User | null>(null);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedUser = localStorage.getItem('loggedInUser');
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        if (parsedUser.role !== 'Admin') {
+            toast({
+                variant: 'destructive',
+                title: 'Access Denied',
+                description: 'You do not have permission to view this page.'
+            });
+            router.push('/dashboard');
+        }
+      } else {
+        router.push('/login');
+      }
+    }
+  }, [router, toast]);
+
 
   const personalForm = useForm<z.infer<typeof personalLoanSchema>>({ 
     resolver: zodResolver(personalLoanSchema),
@@ -278,6 +305,10 @@ export default function NewLoanPage() {
     toast({ title: "Group Loan Submitted", description: `Individual loans for ${data.groupName} are now pending approval.` });
     router.push('/dashboard/loans');
   };
+
+  if (!user || user.role !== 'Admin') {
+    return <div className='p-4'>Checking permissions...</div>
+  }
 
   return (
     <Card>

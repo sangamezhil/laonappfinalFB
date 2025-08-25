@@ -75,6 +75,7 @@ const LoanTable = ({
     handlePreclose, 
     handleDelete,
     hasSearched,
+    isSearching,
 }: { 
     loans: Loan[], 
     customers: Customer[],
@@ -83,6 +84,7 @@ const LoanTable = ({
     handlePreclose: (id: string) => void,
     handleDelete: (loan: Loan) => void,
     hasSearched: boolean,
+    isSearching: boolean
 }) => {
     const router = useRouter();
     const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>({});
@@ -136,6 +138,10 @@ const LoanTable = ({
 
         return [...Object.values(groups), ...personalLoans];
     }, [loans]);
+
+    if (isSearching) {
+        return <div className="text-center text-muted-foreground p-8">Searching...</div>
+    }
 
     if (groupedLoans.length === 0) {
         if (hasSearched) {
@@ -351,6 +357,7 @@ export default function LoansPage() {
   const { logActivity } = useUserActivity();
   const [loanToDelete, setLoanToDelete] = React.useState<Loan | null>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
+  const [isSearching, setIsSearching] = React.useState(false);
   const [currentTab, setCurrentTab] = React.useState('personal');
 
 
@@ -359,36 +366,35 @@ export default function LoansPage() {
   }, [customers]);
 
   const filteredLoans = React.useMemo(() => {
+    setIsSearching(true);
     if (!searchQuery) {
+        setIsSearching(false);
         return [];
     }
 
     let loansToFilter = loans.filter(loan => loan.loanType.toLowerCase() === currentTab);
     
-    if (searchQuery) {
-        const lowercasedQuery = searchQuery.toLowerCase();
-        
+    const lowercasedQuery = searchQuery.toLowerCase();
+    
+    if (currentTab === 'group') {
         const groupLoanIds = new Set<string>();
-        if (currentTab === 'group') {
-            loansToFilter.forEach(loan => {
-                if(loan.groupId) {
-                    const customer = customerMap.get(loan.customerId);
-                    if(customer?.phone.includes(lowercasedQuery) || loan.groupName?.toLowerCase().includes(lowercasedQuery) || loan.groupId.toLowerCase().includes(lowercasedQuery)) {
-                        groupLoanIds.add(loan.groupId);
-                    }
+        loansToFilter.forEach(loan => {
+            if(loan.groupId) {
+                const customer = customerMap.get(loan.customerId);
+                if(customer?.phone.includes(lowercasedQuery) || loan.groupName?.toLowerCase().includes(lowercasedQuery) || loan.groupId.toLowerCase().includes(lowercasedQuery)) {
+                    groupLoanIds.add(loan.groupId);
                 }
-            });
-        }
-
-        loansToFilter = loansToFilter.filter(loan => {
-            if (loan.groupId) {
-                return groupLoanIds.has(loan.groupId);
             }
+        });
+        loansToFilter = loans.filter(loan => loan.groupId && groupLoanIds.has(loan.groupId));
+    } else { // personal
+        loansToFilter = loansToFilter.filter(loan => {
             const customer = customerMap.get(loan.customerId);
             return customer?.phone.includes(lowercasedQuery) || customer?.name.toLowerCase().includes(lowercasedQuery) || loan.id.toLowerCase().includes(lowercasedQuery);
         });
     }
-
+    
+    setIsSearching(false);
     return loansToFilter;
 
   }, [searchQuery, loans, customerMap, currentTab]);
@@ -523,7 +529,7 @@ export default function LoansPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Search..."
+                placeholder={currentTab === 'personal' ? "Search by name, phone, or loan ID..." : "Search by group, phone, or group ID..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 pr-8 w-full"
@@ -559,6 +565,7 @@ export default function LoansPage() {
             handlePreclose={handlePreclose}
             handleDelete={setLoanToDelete}
             hasSearched={searchQuery.length > 0}
+            isSearching={isSearching}
         />
       </CardContent>
     </Card>

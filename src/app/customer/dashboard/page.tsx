@@ -43,11 +43,11 @@ export default function CustomerDashboardPage() {
             
             if (loan.status === 'Active' || loan.status === 'Overdue') {
                 if (loan.collectionFrequency === 'Daily') {
-                nextDueDate = addDays(startDate, installmentsPaid + 1);
+                nextDueDate = addDays(startDate, installmentsPaid);
                 } else if (loan.collectionFrequency === 'Weekly') {
-                nextDueDate = addWeeks(startDate, installmentsPaid + 1);
+                nextDueDate = addWeeks(startDate, installmentsPaid);
                 } else if (loan.collectionFrequency === 'Monthly') {
-                nextDueDate = addMonths(startDate, installmentsPaid + 1);
+                nextDueDate = addMonths(startDate, installmentsPaid);
                 }
             }
 
@@ -61,7 +61,7 @@ export default function CustomerDashboardPage() {
             setCustomer(null);
         }
     } else {
-        router.push('/customer/login');
+        router.push('/login');
     }
   }, [collections, router]);
 
@@ -110,7 +110,7 @@ export default function CustomerDashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 md:p-6">
       <Card>
         <CardHeader>
           <div className="flex items-center gap-4">
@@ -222,7 +222,8 @@ export default function CustomerDashboardPage() {
           ) : (
              <div className="text-center text-muted-foreground py-8">
                 <FileText className="mx-auto w-12 h-12 mb-4" />
-                <p>No loan history found.</p>
+                <p>You have no loan history with us.</p>
+                <p className='text-xs mt-2'>If you believe this is an error, please contact support.</p>
              </div>
           )}
         </CardContent>
