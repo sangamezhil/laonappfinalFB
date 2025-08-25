@@ -571,12 +571,14 @@ export default function LoansPage() {
               )}
             </div>
             
-            <Link href="/dashboard/loans/new" passHref>
-              <Button className="flex-shrink-0">
-                <PlusCircle className="w-4 h-4 mr-2" />
-                New Loan
-              </Button>
-            </Link>
+            {user?.role === 'Admin' && (
+              <Link href="/dashboard/loans/new" passHref>
+                <Button className="flex-shrink-0">
+                  <PlusCircle className="w-4 h-4 mr-2" />
+                  New Loan
+                </Button>
+              </Link>
+            )}
             
           </div>
         </div>
