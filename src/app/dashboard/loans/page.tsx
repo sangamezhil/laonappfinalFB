@@ -38,6 +38,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge'
 import { useLoans, useUserActivity, Loan, useCustomers, Customer } from '@/lib/data'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -69,7 +78,7 @@ const LoanTable = ({
     loans, 
     customers,
     user, 
-    handleApprove, 
+    onApproveClick, 
     handlePreclose, 
     handleDelete,
     hasSearched,
@@ -78,7 +87,7 @@ const LoanTable = ({
     loans: Loan[], 
     customers: Customer[],
     user: User | null, 
-    handleApprove: (id: string, groupId?: string) => void, 
+    onApproveClick: (loan: Loan) => void,
     handlePreclose: (id: string) => void,
     handleDelete: (loan: Loan) => void,
     hasSearched: boolean,
@@ -197,7 +206,7 @@ const LoanTable = ({
                       <TableCell className="flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{item.totalOutstanding.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</TableCell>
                       <TableCell>
                         {user?.role === 'Admin' && item.status === 'Pending' && (
-                            <Button variant="outline" size="sm" onClick={() => handleApprove(item.groupId, item.groupId)}>
+                           <Button variant="outline" size="sm" onClick={() => onApproveClick(item.loans[0])}>
                                 <CheckCircle className="w-4 h-4 mr-2" />
                                 Approve Group
                             </Button>
@@ -243,8 +252,8 @@ const LoanTable = ({
                                 <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                 {loan.status === 'Pending' && user?.role === 'Admin' && (
-                                    <DropdownMenuItem onSelect={() => handleApprove(loan.id)}>
-                                    Approve Loan
+                                    <DropdownMenuItem onSelect={() => onApproveClick(loan)}>
+                                      Approve Loan
                                     </DropdownMenuItem>
                                 )}
                                 {(loan.status === 'Active' || loan.status === 'Overdue') && user?.role === 'Admin' && (
@@ -309,8 +318,8 @@ const LoanTable = ({
                             <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             {item.loan.status === 'Pending' && user?.role === 'Admin' && (
-                                <DropdownMenuItem onSelect={() => handleApprove(item.loan.id)}>
-                                Approve Loan
+                                <DropdownMenuItem onSelect={() => onApproveClick(item.loan)}>
+                                  Approve Loan
                                 </DropdownMenuItem>
                             )}
                             {(item.loan.status === 'Active' || item.loan.status === 'Overdue') && user?.role === 'Admin' && (
@@ -346,12 +355,14 @@ const LoanTable = ({
 }
 
 export default function LoansPage() {
-  const { loans, isLoaded, updateLoanStatus, deleteLoan } = useLoans();
+  const { loans, isLoaded, updateLoanStatus, approveLoanWithLedgerId, deleteLoan } = useLoans();
   const { customers, isLoaded: customersLoaded } = useCustomers();
   const { toast } = useToast();
   const [user, setUser] = React.useState<User | null>(null);
   const { logActivity } = useUserActivity();
   const [loanToDelete, setLoanToDelete] = React.useState<Loan | null>(null);
+  const [loanToApprove, setLoanToApprove] = React.useState<Loan | null>(null);
+  const [ledgerId, setLedgerId] = React.useState('');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isSearching, setIsSearching] = React.useState(false);
   const [currentTab, setCurrentTab] = React.useState('personal');
@@ -408,26 +419,39 @@ export default function LoansPage() {
     }
   }, []);
 
-  const handleApprove = (id: string, groupId?: string) => {
+  const onApproveClick = (loan: Loan) => {
     if (user?.role !== 'Admin') return;
-    if (groupId) {
-        const groupLoans = loans.filter(l => l.groupId === groupId && l.status === 'Pending');
-        groupLoans.forEach(loan => {
-            updateLoanStatus(loan.id, 'Active');
-        });
-        logActivity('Approve Group Loan', `Approved all loans for group ${groupId}.`);
+    setLoanToApprove(loan);
+  }
+
+  const handleApprove = () => {
+    if (!loanToApprove || !ledgerId.trim()) {
         toast({
-            title: 'Group Loans Approved',
-            description: `All pending loans for the group have been activated.`,
+            variant: "destructive",
+            title: "Validation Error",
+            description: "Ledger Loan Number cannot be empty.",
         });
-    } else {
-        updateLoanStatus(id, 'Active');
-        logActivity('Approve Loan', `Approved loan ${id}.`);
+        return;
+    }
+
+    const success = approveLoanWithLedgerId(loanToApprove.id, ledgerId.trim());
+
+    if (success) {
+        logActivity('Approve Loan', `Approved loan ${loanToApprove.id} with new ID ${ledgerId.trim()}.`);
         toast({
             title: 'Loan Approved',
-            description: `Loan ${id} has been activated.`,
+            description: `Loan has been activated with new ID: ${ledgerId.trim()}`,
+        });
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Approval Failed",
+            description: `A loan with the Ledger ID '${ledgerId.trim()}' already exists.`,
         });
     }
+    
+    setLoanToApprove(null);
+    setLedgerId('');
   };
 
   const handlePreclose = (loanId: string) => {
@@ -564,7 +588,7 @@ export default function LoansPage() {
             loans={filteredLoans}
             customers={customers}
             user={user}
-            handleApprove={handleApprove}
+            onApproveClick={onApproveClick}
             handlePreclose={handlePreclose}
             handleDelete={setLoanToDelete}
             hasSearched={searchQuery.length > 0}
@@ -586,6 +610,35 @@ export default function LoansPage() {
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
+    
+    <Dialog open={!!loanToApprove} onOpenChange={() => { setLoanToApprove(null); setLedgerId(''); }}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Approve Loan</DialogTitle>
+                <DialogDescription>
+                    Enter the official ledger loan number to approve this loan. This will become the new Loan ID.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="ledger-id" className="text-right">
+                        Ledger Loan Number
+                    </Label>
+                    <Input
+                        id="ledger-id"
+                        value={ledgerId}
+                        onChange={(e) => setLedgerId(e.target.value)}
+                        className="col-span-3"
+                        autoFocus
+                    />
+                </div>
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => { setLoanToApprove(null); setLedgerId(''); }}>Cancel</Button>
+                <Button onClick={handleApprove}>Approve</Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
     </>
   )
 }

@@ -116,10 +116,12 @@ const calculateNextDueDate = (loan: Loan): string | undefined => {
     if (loan.status !== 'Active' && loan.status !== 'Overdue') {
         return undefined;
     }
-
+    
+    // Use Math.round to avoid floating point inaccuracies
     const installmentsPaid = loan.totalPaid > 0 && loan.weeklyRepayment > 0 
-        ? Math.floor(loan.totalPaid / loan.weeklyRepayment) 
+        ? Math.round(loan.totalPaid / loan.weeklyRepayment) 
         : 0;
+
     const startDate = parseISO(loan.disbursalDate);
     let nextDueDate: Date;
     
@@ -162,8 +164,9 @@ export const useUsers = () => {
     useEffect(() => {
         refreshData();
         setIsLoaded(true);
-        window.addEventListener('local-storage-updated', refreshData);
-        return () => window.removeEventListener('local-storage-updated', refreshData);
+        const handleStorageChange = () => refreshData();
+        window.addEventListener('local-storage-updated', handleStorageChange);
+        return () => window.removeEventListener('local-storage-updated', handleStorageChange);
     }, [refreshData]);
 
     const addUser = (user: Omit<User, 'id' | 'lastLogin'>): User => {
@@ -207,8 +210,9 @@ export const useCompanyProfile = () => {
     useEffect(() => {
         refreshProfile();
         setIsLoaded(true);
-        window.addEventListener('local-storage-updated', refreshProfile);
-        return () => window.removeEventListener('local-storage-updated', refreshProfile);
+        const handleStorageChange = () => refreshProfile();
+        window.addEventListener('local-storage-updated', handleStorageChange);
+        return () => window.removeEventListener('local-storage-updated', handleStorageChange);
     }, [refreshProfile]);
 
     const updateProfile = (newProfile: CompanyProfile) => {
@@ -231,9 +235,10 @@ export const useCustomers = () => {
     useEffect(() => {
         refreshCustomers();
         setIsLoaded(true);
-        window.addEventListener('local-storage-updated', refreshCustomers);
+        const handleStorageChange = () => refreshCustomers();
+        window.addEventListener('local-storage-updated', handleStorageChange);
         return () => {
-            window.removeEventListener('local-storage-updated', refreshCustomers);
+            window.removeEventListener('local-storage-updated', handleStorageChange);
         }
     }, [refreshCustomers]);
 
@@ -288,15 +293,16 @@ export const useLoans = () => {
      useEffect(() => {
         refreshLoans();
         setIsLoaded(true);
-        window.addEventListener('local-storage-updated', refreshLoans);
+        const handleStorageChange = () => refreshLoans();
+        window.addEventListener('local-storage-updated', handleStorageChange);
         return () => {
-            window.removeEventListener('local-storage-updated', refreshLoans);
+            window.removeEventListener('local-storage-updated', handleStorageChange);
         }
     }, [refreshLoans]);
 
     const addLoan = (loan: Omit<Loan, 'id'> | Omit<Loan, 'id'>[]): Loan[] => {
         const currentLoans = getFromStorage('loans', initialLoans);
-        const generateLoanId = () => Math.floor(100000000000 + Math.random() * 900000000000).toString();
+        const generateLoanId = () => `TEMP_${Math.floor(1000 + Math.random() * 9000)}`;
         
         const loansToAdd: Loan[] = (Array.isArray(loan) ? loan : [loan]).map(l => ({
             ...l,
@@ -316,13 +322,42 @@ export const useLoans = () => {
         setInStorage('loans', updatedLoans);
     };
 
+    const approveLoanWithLedgerId = (tempId: string, ledgerId: string): boolean => {
+        const currentLoans = getFromStorage('loans', initialLoans);
+        
+        // Check if the ledgerId already exists
+        if (currentLoans.some(loan => loan.id === ledgerId)) {
+            return false; // Ledger ID already exists
+        }
+
+        let loanFound = false;
+        const updatedLoans = currentLoans.map(loan => {
+            if (loan.id === tempId) {
+                loanFound = true;
+                return { 
+                    ...loan, 
+                    id: ledgerId,
+                    status: 'Active',
+                    disbursalDate: new Date().toISOString().split('T')[0] // Set disbursal date on approval
+                };
+            }
+            return loan;
+        });
+
+        if (loanFound) {
+            setInStorage('loans', updatedLoans);
+        }
+        
+        return loanFound;
+    };
+
     const updateLoanPayment = (loanId: string, amount: number) => {
         const currentLoans = getFromStorage('loans', initialLoans);
         const updatedLoans = currentLoans.map(loan => {
             if (loan.id === loanId) {
                 const newTotalPaid = loan.totalPaid + amount;
                 const newOutstandingAmount = loan.outstandingAmount - amount;
-                const newStatus = newOutstandingAmount <= 0 ? 'Closed' : loan.status;
+                const newStatus = newOutstandingAmount <= 0 ? 'Closed' : 'Active'; // Revert to Active on payment
 
                 let tempLoan = {
                     ...loan,
@@ -331,7 +366,6 @@ export const useLoans = () => {
                     status: newStatus,
                 };
                 
-                // Recalculate next due date immediately after payment
                 const nextDueDate = calculateNextDueDate(tempLoan);
 
                 return {
@@ -351,7 +385,7 @@ export const useLoans = () => {
         setInStorage('loans', updatedLoans);
     };
 
-    return { loans, addLoan, isLoaded, updateLoanStatus, updateLoanPayment, deleteLoan };
+    return { loans, addLoan, isLoaded, updateLoanStatus, approveLoanWithLedgerId, updateLoanPayment, deleteLoan };
 }
 
 export const useUserActivity = () => {
@@ -366,9 +400,10 @@ export const useUserActivity = () => {
     useEffect(() => {
         refreshActivities();
         setIsLoaded(true);
-        window.addEventListener('local-storage-updated', refreshActivities);
+        const handleStorageChange = () => refreshActivities();
+        window.addEventListener('local-storage-updated', handleStorageChange);
         return () => {
-            window.removeEventListener('local-storage-updated', refreshActivities);
+            window.removeEventListener('local-storage-updated', handleStorageChange);
         };
     }, [refreshActivities]);
 
@@ -407,9 +442,10 @@ export const useCollections = () => {
     useEffect(() => {
         refreshCollections();
         setIsLoaded(true);
-        window.addEventListener('local-storage-updated', refreshCollections);
+        const handleStorageChange = () => refreshCollections();
+        window.addEventListener('local-storage-updated', handleStorageChange);
         return () => {
-            window.removeEventListener('local-storage-updated', refreshCollections);
+            window.removeEventListener('local-storage-updated', handleStorageChange);
         }
     }, [refreshCollections]);
 
