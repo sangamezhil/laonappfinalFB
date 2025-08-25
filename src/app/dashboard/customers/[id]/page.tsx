@@ -143,11 +143,11 @@ export default function CustomerProfilePage() {
             [
                 { content: 'Customer:', styles: { fontStyle: 'bold' } },
                 customer.name,
-                { content: 'Loan Agreement Number:', styles: { fontStyle: 'bold' } },
-                loan.id,
+                { content: 'Phone Number:', styles: { fontStyle: 'bold' } },
+                customer.phone,
             ],
             [
-                { content: 'Loan Application Number:', styles: { fontStyle: 'bold' } },
+                { content: 'Loan Agreement Number:', styles: { fontStyle: 'bold' } },
                 loan.id,
                 { content: 'Loan Type:', styles: { fontStyle: 'bold' } },
                 `${loan.loanType} Loan`,
@@ -165,8 +165,8 @@ export default function CustomerProfilePage() {
                  loan.collectionFrequency,
             ],
             [
-                { content: 'Currency:', styles: { fontStyle: 'bold' } },
-                'Indian Rupee',
+                { content: 'Loan Status:', styles: { fontStyle: 'bold' } },
+                loan.status,
                 { content: '', styles: { fontStyle: 'bold' } },
                 '',
             ],
@@ -325,7 +325,9 @@ export default function CustomerProfilePage() {
         </CardHeader>
         <CardContent>
           {loansWithDetails.length > 0 ? (
-            <Accordion type="single" collapsible className="w-full">
+            <Accordion type="single" collapsible className="w-full"
+              {...loansWithDetails.length > 0 && {defaultValue: loansWithDetails[0].id}}
+            >
               {loansWithDetails.map((loan) => (
                 <AccordionItem value={loan.id} key={loan.id}>
                   <AccordionTrigger>
@@ -428,3 +430,5 @@ export default function CustomerProfilePage() {
     </div>
   )
 }
+
+    
