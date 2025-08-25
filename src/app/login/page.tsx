@@ -57,15 +57,7 @@ export default function LoginPage() {
           title: "Login Successful",
           description: `Welcome back, ${foundUser.username}!`,
         })
-
-        if (foundUser.role === 'Admin') {
-            router.push('/dashboard')
-        } else if (foundUser.role === 'Collection Agent') {
-            router.push('/dashboard');
-        } else {
-            router.push('/dashboard');
-        }
-
+        router.push('/dashboard');
       } else {
         toast({
           variant: "destructive",
@@ -89,7 +81,7 @@ export default function LoginPage() {
             ) : (
                 <Skeleton className="w-48 h-8 mx-auto" />
             )}
-            <CardDescription>Sign in to your account</CardDescription>
+            <CardDescription>Sign in to your staff account</CardDescription>
         </CardHeader>
         <form onSubmit={handleStaffLogin}>
             <CardContent className="space-y-4 pt-6">
