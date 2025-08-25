@@ -332,6 +332,7 @@ export const useLoans = () => {
             if (loan.id === loanId) {
                 const updatedLoan = { ...loan, status: status };
                 if (status === 'Closed') {
+                    updatedLoan.totalPaid += updatedLoan.outstandingAmount;
                     updatedLoan.outstandingAmount = 0;
                 }
                 return updatedLoan;
