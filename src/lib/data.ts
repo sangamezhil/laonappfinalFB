@@ -119,7 +119,7 @@ const calculateNextDueDate = (loan: Loan): string | undefined => {
     
     // Use Math.round to avoid floating point inaccuracies
     const installmentsPaid = loan.totalPaid > 0 && loan.weeklyRepayment > 0 
-        ? Math.round(loan.totalPaid / loan.weeklyRepayment) 
+        ? Math.floor(loan.totalPaid / loan.weeklyRepayment) 
         : 0;
 
     const startDate = parseISO(loan.disbursalDate);
@@ -325,20 +325,23 @@ export const useLoans = () => {
     const approveLoanWithLedgerId = (tempId: string, ledgerId: string): boolean => {
         const currentLoans = getFromStorage('loans', initialLoans);
         
-        // Check if the ledgerId already exists
         if (currentLoans.some(loan => loan.id === ledgerId)) {
-            return false; // Ledger ID already exists
+            return false; 
         }
 
         let loanFound = false;
         const updatedLoans = currentLoans.map(loan => {
             if (loan.id === tempId) {
                 loanFound = true;
-                return { 
+                const activeLoan = { 
                     ...loan, 
                     id: ledgerId,
-                    status: 'Active',
-                    disbursalDate: new Date().toISOString().split('T')[0] // Set disbursal date on approval
+                    status: 'Active' as 'Active',
+                    disbursalDate: new Date().toISOString().split('T')[0]
+                };
+                return {
+                    ...activeLoan,
+                    nextDueDate: calculateNextDueDate(activeLoan)
                 };
             }
             return loan;
@@ -357,7 +360,7 @@ export const useLoans = () => {
             if (loan.id === loanId) {
                 const newTotalPaid = loan.totalPaid + amount;
                 const newOutstandingAmount = loan.outstandingAmount - amount;
-                const newStatus = newOutstandingAmount <= 0 ? 'Closed' : 'Active'; // Revert to Active on payment
+                const newStatus = newOutstandingAmount <= 0 ? 'Closed' : 'Active';
 
                 let tempLoan = {
                     ...loan,
