@@ -44,7 +44,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 
 const allMenuItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Admin'] },
   { href: '/dashboard/customers', label: 'Customers', icon: Users },
   { href: '/dashboard/loans', label: 'Loans', icon: Landmark },
   { href: '/dashboard/collections', label: 'Collections', icon: ClipboardCheck },
