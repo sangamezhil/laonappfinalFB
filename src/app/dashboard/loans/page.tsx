@@ -268,19 +268,9 @@ const LoanTable = ({
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                {(loan.status === 'Active' || loan.status === 'Overdue') && user?.role === 'Admin' && (
-                                    <DropdownMenuItem onSelect={() => handlePreclose(loan.id)}>
-                                    Preclose Loan
-                                    </DropdownMenuItem>
-                                )}
                                 <DropdownMenuItem onSelect={() => router.push(`/dashboard/customers/${loan.customerId}`)}>
                                     View Customer
                                 </DropdownMenuItem>
-                                {(loan.status === 'Active' || loan.status === 'Overdue') &&
-                                    <DropdownMenuItem onSelect={() => router.push(`/dashboard/collections?loanId=${loan.id}`)}>
-                                    Record Payment
-                                    </DropdownMenuItem>
-                                }
                                  {user?.role === 'Admin' && loan.status !== 'Active' && loan.status !== 'Overdue' && (
                                     <>
                                     <DropdownMenuSeparator />
@@ -454,9 +444,11 @@ export default function LoansPage() {
     let allSucceeded = true;
     if (loanToApprove.loanType === 'Group' && loanToApprove.groupId) {
         const groupLoans = loans.filter(l => l.groupId === loanToApprove.groupId);
+        const groupLedgerId = ledgerId.trim();
+
         groupLoans.forEach((l, index) => {
-           const newLedgerId = `${ledgerId.trim()}-${index + 1}`;
-           const approvalSuccess = approveLoanWithLedgerId(l.id, newLedgerId, loanToApprove.groupId);
+           const newLedgerId = `${groupLedgerId}-${index + 1}`;
+           const approvalSuccess = approveLoanWithLedgerId(l.id, newLedgerId, groupLedgerId);
             if (approvalSuccess) {
                 logActivity('Approve Loan', `Approved loan ${l.id} with new ID ${newLedgerId}.`);
                 success = true;
