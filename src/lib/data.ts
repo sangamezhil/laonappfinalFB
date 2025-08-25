@@ -356,7 +356,7 @@ export const useLoans = () => {
                 const activeLoan = { 
                     ...loan, 
                     id: ledgerId,
-                    groupId: groupId || loan.groupId, // ensure group ID is consistent if it is a group approval
+                    groupId: groupId || loan.groupId, 
                     status: 'Active' as 'Active',
                     disbursalDate: new Date().toISOString().split('T')[0]
                 };
@@ -369,12 +369,11 @@ export const useLoans = () => {
         });
         
         if (groupId) {
-          // If it's a group loan approval, after one member is updated, we need to update the groupId for all members of that group.
           const tempGroupId = currentLoans.find(l => l.id === tempId)?.groupId;
           if(tempGroupId) {
             updatedLoans.forEach(l => {
               if (l.groupId === tempGroupId) {
-                l.groupId = ledgerId.substring(0, ledgerId.lastIndexOf('-'));
+                l.groupId = groupId;
               }
             })
           }
@@ -564,5 +563,3 @@ export function getLoansByCustomerId(customerId: string): Loan[] {
   const loans = getFromStorage('loans', initialLoans);
   return loans.filter(l => l.customerId === customerId);
 }
-
-    

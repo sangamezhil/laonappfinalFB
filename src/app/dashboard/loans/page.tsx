@@ -215,9 +215,9 @@ const LoanTable = ({
                             <>
                               <Button variant="outline" size="sm" onClick={() => onApproveClick(item.loans[0])}>
                                   <CheckCircle className="w-4 h-4 mr-2" />
-                                  Approve
+                                  Approve Group
                               </Button>
-                              <Button variant="destructive" size="sm" onClick={() => handleDelete(item.loans)}>
+                               <Button variant="destructive" size="sm" onClick={() => handleDelete(item.loans)}>
                                   <Trash2 className="w-4 h-4 mr-2" />
                                   Cancel
                               </Button>
@@ -715,5 +715,3 @@ export default function LoansPage() {
     </>
   )
 }
-
-    
