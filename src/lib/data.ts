@@ -328,9 +328,16 @@ export const useLoans = () => {
     
     const updateLoanStatus = (loanId: string, status: Loan['status']) => {
         const currentLoans = getFromStorage('loans', initialLoans);
-        const updatedLoans = currentLoans.map(loan => 
-            loan.id === loanId ? { ...loan, status: status } : loan
-        );
+        const updatedLoans = currentLoans.map(loan => {
+            if (loan.id === loanId) {
+                const updatedLoan = { ...loan, status: status };
+                if (status === 'Closed') {
+                    updatedLoan.outstandingAmount = 0;
+                }
+                return updatedLoan;
+            }
+            return loan;
+        });
         setInStorage('loans', updatedLoans);
     };
 
