@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast'
 import { useLoans, Loan, useUserActivity, useCollections, Collection, useCustomers } from '@/lib/data'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { CalendarIcon, IndianRupee, Landmark, Users, Phone, Search, Trash2, MoreHorizontal, X } from 'lucide-react'
+import { CalendarIcon, IndianRupee, Landmark, Users, Phone, Search, Trash2, MoreHorizontal, X, Group } from 'lucide-react'
 import { Calendar } from '@/components/ui/calendar'
 import { cn, getAvatarColor } from '@/lib/utils'
 import { format, addDays, addWeeks, addMonths } from 'date-fns'
@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/alert-dialog"
 
 const collectionSchema = z.object({
-  loanId: z.string().nonempty({ message: 'Please select a loan.' }),
+  loanOrGroupId: z.string().nonempty({ message: 'Please select a loan or group.' }),
   amount: z.coerce.number().positive({ message: 'Amount must be a positive number.' }),
   collectionDate: z.date({
     required_error: "A collection date is required.",
@@ -47,6 +47,17 @@ type User = {
   role: string;
 }
 
+type SelectedLoanInfo = {
+    isGroup: boolean;
+    id: string;
+    name: string;
+    loans: Loan[];
+    totalDue: number;
+    totalOutstanding: number;
+    currentDueDate: Date | null;
+    nextDueDate: Date | null;
+}
+
 function CollectionsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -55,9 +66,8 @@ function CollectionsPageContent() {
   const { customers } = useCustomers();
   const { logActivity } = useUserActivity();
   const { collections, addCollection, deleteCollection } = useCollections();
-  const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
+  const [selectedInfo, setSelectedInfo] = useState<SelectedLoanInfo | null>(null);
   const [phoneSearch, setPhoneSearch] = useState('');
-  const [dueDates, setDueDates] = useState<{ current: Date | null, next: Date | null }>({ current: null, next: null });
   const [collectionToDelete, setCollectionToDelete] = useState<Collection | null>(null);
   const [collectionToConfirm, setCollectionToConfirm] = useState<CollectionFormValues | null>(null);
   const [user, setUser] = React.useState<User | null>(null);
@@ -77,10 +87,30 @@ function CollectionsPageContent() {
     return loans.filter(l => l.status === 'Active' || l.status === 'Overdue')
   }, [loans]);
 
+  const uniqueGroupLoans = React.useMemo(() => {
+    const groups: { [key: string]: { id: string; name: string; leader: string, phone: string } } = {};
+    activeAndOverdueLoans.forEach(loan => {
+      if (loan.loanType === 'Group' && loan.groupId && !groups[loan.groupId]) {
+        const leaderCustomer = customers.find(c => c.name === loan.groupLeaderName)
+        groups[loan.groupId] = {
+          id: loan.groupId,
+          name: loan.groupName || 'Unnamed Group',
+          leader: loan.groupLeaderName || 'Unknown Leader',
+          phone: leaderCustomer?.phone || ''
+        };
+      }
+    });
+    return Object.values(groups);
+  }, [activeAndOverdueLoans, customers]);
+
+  const personalLoans = React.useMemo(() => {
+    return activeAndOverdueLoans.filter(l => l.loanType === 'Personal');
+  }, [activeAndOverdueLoans]);
+
   const form = useForm<CollectionFormValues>({
     resolver: zodResolver(collectionSchema),
     defaultValues: {
-      loanId: '',
+      loanOrGroupId: '',
       amount: '' as any,
       paymentMethod: 'Cash',
       collectionDate: new Date(),
@@ -89,51 +119,81 @@ function CollectionsPageContent() {
   
   const { formState, setValue, control } = form;
 
-  const selectedLoanIdInForm = form.watch('loanId');
+  const selectedLoanOrGroupIdInForm = form.watch('loanOrGroupId');
 
-  const updateLoanDetails = useCallback((loanId: string | null) => {
-    const loan = loanId ? loans.find(l => l.id === loanId) : null;
-    setSelectedLoan(loan || null);
-
-    if (loan) {
-      setValue('amount', loan.weeklyRepayment, { shouldValidate: true });
-      const installmentsPaid = loan.totalPaid > 0 && loan.weeklyRepayment > 0 ? Math.floor(loan.totalPaid / loan.weeklyRepayment) : 0;
-      const startDate = new Date(loan.disbursalDate);
-      let currentDueDate: Date | null = null;
-      let nextDueDate: Date | null = null;
-      
-      if (loan.collectionFrequency === 'Daily') {
-        currentDueDate = addDays(startDate, installmentsPaid + 1);
-        nextDueDate = addDays(startDate, installmentsPaid + 2);
-      } else if (loan.collectionFrequency === 'Weekly') {
-        currentDueDate = addWeeks(startDate, installmentsPaid + 1);
-        nextDueDate = addWeeks(startDate, installmentsPaid + 2);
-      } else if (loan.collectionFrequency === 'Monthly') {
-        currentDueDate = addMonths(startDate, installmentsPaid + 1);
-        nextDueDate = addMonths(startDate, installmentsPaid + 2);
-      }
-      setDueDates({ current: currentDueDate, next: nextDueDate });
-    } else {
-      setDueDates({ current: null, next: null });
+  const updateSelectionDetails = useCallback((id: string | null) => {
+    if (!id) {
+        setSelectedInfo(null);
+        return;
     }
+    
+    const isGroup = id.startsWith('GRP');
+    let info: SelectedLoanInfo | null = null;
+    
+    if (isGroup) {
+      const groupLoans = loans.filter(l => l.groupId === id);
+      if (groupLoans.length > 0) {
+        const firstLoan = groupLoans[0];
+        const totalDue = groupLoans.reduce((acc, l) => acc + l.weeklyRepayment, 0);
+        const totalOutstanding = groupLoans.reduce((acc, l) => acc + l.outstandingAmount, 0);
+        
+        const installmentsPaid = firstLoan.totalPaid > 0 && firstLoan.weeklyRepayment > 0 ? Math.floor(firstLoan.totalPaid / firstLoan.weeklyRepayment) : 0;
+        const startDate = new Date(firstLoan.disbursalDate);
+        let currentDueDate: Date | null = addWeeks(startDate, installmentsPaid + 1);
+        let nextDueDate: Date | null = addWeeks(startDate, installmentsPaid + 2);
+        
+        info = {
+            isGroup: true,
+            id: id,
+            name: firstLoan.groupName || 'Group',
+            loans: groupLoans,
+            totalDue,
+            totalOutstanding,
+            currentDueDate,
+            nextDueDate
+        };
+        setValue('amount', totalDue, { shouldValidate: true });
+      }
+    } else { // Personal Loan
+      const loan = loans.find(l => l.id === id);
+      if (loan) {
+        const installmentsPaid = loan.totalPaid > 0 && loan.weeklyRepayment > 0 ? Math.floor(loan.totalPaid / loan.weeklyRepayment) : 0;
+        const startDate = new Date(loan.disbursalDate);
+        let currentDueDate: Date | null = addWeeks(startDate, installmentsPaid + 1);
+        let nextDueDate: Date | null = addWeeks(startDate, installmentsPaid + 2);
+        
+        info = {
+            isGroup: false,
+            id: loan.id,
+            name: loan.customerName,
+            loans: [loan],
+            totalDue: loan.weeklyRepayment,
+            totalOutstanding: loan.outstandingAmount,
+            currentDueDate,
+            nextDueDate
+        };
+        setValue('amount', loan.weeklyRepayment, { shouldValidate: true });
+      }
+    }
+
+    setSelectedInfo(info);
   }, [loans, setValue]);
 
   useEffect(() => {
-    const loanIdToProcess = loanIdFromQuery || selectedLoanIdInForm;
+    const idToProcess = loanIdFromQuery || selectedLoanOrGroupIdInForm;
 
-    if (loanIdToProcess && loanIdToProcess !== (selectedLoan?.id ?? '')) {
-      updateLoanDetails(loanIdToProcess);
+    if (idToProcess && idToProcess !== (selectedInfo?.id ?? '')) {
+      updateSelectionDetails(idToProcess);
       
       if (loanIdFromQuery) {
-        setValue('loanId', loanIdFromQuery, { shouldValidate: true, shouldDirty: true });
-        
+        setValue('loanOrGroupId', loanIdFromQuery, { shouldValidate: true, shouldDirty: true });
         const currentPath = window.location.pathname;
         window.history.replaceState({ ...window.history.state, as: currentPath, url: currentPath }, '', currentPath);
       }
-    } else if (!loanIdToProcess && selectedLoan) {
+    } else if (!idToProcess && selectedInfo) {
         handleClear();
     }
-  }, [loanIdFromQuery, selectedLoanIdInForm, updateLoanDetails, setValue, selectedLoan]);
+  }, [loanIdFromQuery, selectedLoanOrGroupIdInForm, updateSelectionDetails, setValue, selectedInfo]);
 
 
   const handlePhoneSearch = () => {
@@ -148,7 +208,8 @@ function CollectionsPageContent() {
     }
     const activeLoan = loans.find(l => l.customerId === customer.id && (l.status === 'Active' || l.status === 'Overdue'));
     if (activeLoan) {
-      setValue('loanId', activeLoan.id, { shouldValidate: true });
+      const idToSelect = activeLoan.groupId || activeLoan.id;
+      setValue('loanOrGroupId', idToSelect, { shouldValidate: true });
     } else {
       toast({ title: 'No Active Loan', description: `${customer.name} does not have an active loan.` });
     }
@@ -156,41 +217,39 @@ function CollectionsPageContent() {
 
   const handleClear = () => {
     form.reset({
-      loanId: '',
+      loanOrGroupId: '',
       amount: '' as any,
       paymentMethod: 'Cash',
       collectionDate: new Date(),
     });
-    setValue('loanId', '');
-    setSelectedLoan(null);
+    setValue('loanOrGroupId', '');
+    setSelectedInfo(null);
     setPhoneSearch('');
-    setDueDates({ current: null, next: null });
   }
 
   function onAttemptSubmit(data: CollectionFormValues) {
-    if (!data.loanId) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Please select a loan before recording a collection.' });
+    if (!data.loanOrGroupId || !selectedInfo) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please select a loan or group before recording a collection.' });
       return;
     }
     setCollectionToConfirm(data);
   }
 
   function handleConfirmCollection() {
-    if (!collectionToConfirm) return;
+    if (!collectionToConfirm || !selectedInfo) return;
     const data = collectionToConfirm;
 
-    const loan = loans.find(l => l.id === data.loanId);
-    if (!loan) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Selected loan not found.' });
-        return;
+    if (selectedInfo.isGroup) {
+        updateLoanPayment(null, data.amount, selectedInfo.id);
+        logActivity('Record Group Collection', `Recorded payment of ₹${data.amount} for group ${selectedInfo.name} (${selectedInfo.id}).`);
+    } else {
+        updateLoanPayment(selectedInfo.id, data.amount);
+        logActivity('Record Collection', `Recorded payment of ₹${data.amount} for loan ${selectedInfo.id} (${selectedInfo.name}).`);
     }
-    
-    updateLoanPayment(data.loanId, data.amount);
-    logActivity('Record Collection', `Recorded payment of ₹${data.amount} for loan ${data.loanId} (${loan.customerName}).`);
 
     addCollection({
-      loanId: data.loanId,
-      customer: loan.loanType === 'Group' ? `${loan.groupName} (${loan.customerName})` : loan.customerName,
+      loanId: selectedInfo.isGroup ? selectedInfo.id : selectedInfo.loans[0].id,
+      customer: selectedInfo.name,
       amount: data.amount,
       date: format(data.collectionDate, 'yyyy-MM-dd'),
       paymentMethod: data.paymentMethod
@@ -198,7 +257,7 @@ function CollectionsPageContent() {
 
     toast({
       title: 'Collection Recorded',
-      description: <>Payment of <IndianRupee className="inline-block w-4 h-4" /> {data.amount.toLocaleString('en-IN')} for loan {data.loanId} has been recorded.</>,
+      description: <>Payment of <IndianRupee className="inline-block w-4 h-4" /> {data.amount.toLocaleString('en-IN')} for {selectedInfo.name} has been recorded.</>,
     });
 
     setCollectionToConfirm(null);
@@ -219,10 +278,6 @@ function CollectionsPageContent() {
   const getLoanDisplayName = (loan: Loan) => {
     const customer = customers.find(c => c.id === loan.customerId);
     const phone = customer ? `(${customer.phone})` : '';
-
-    if (loan.loanType === 'Group') {
-      return `${loan.customerName} ${phone} (${loan.groupName}) - ${loan.id}`
-    }
     return `${loan.customerName} ${phone} - ${loan.id}`
   }
 
@@ -235,10 +290,10 @@ function CollectionsPageContent() {
             <Card>
               <CardHeader>
                 <CardTitle>Collection Entry</CardTitle>
-                <CardDescription>Record a new payment from a customer.</CardDescription>
+                <CardDescription>Record a new payment from a customer or group.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {activeAndOverdueLoans.length === 0 && (
+                {(personalLoans.length === 0 && uniqueGroupLoans.length === 0) && (
                   <div className="p-4 text-center rounded-md bg-secondary text-muted-foreground">
                     There are no active or overdue loans to collect payments for.
                   </div>
@@ -252,7 +307,7 @@ function CollectionsPageContent() {
                             value={phoneSearch} 
                             onChange={(e) => setPhoneSearch(e.target.value)}
                             className="pl-9 pr-8"
-                            disabled={activeAndOverdueLoans.length === 0}
+                            disabled={personalLoans.length === 0 && uniqueGroupLoans.length === 0}
                         />
                          {phoneSearch && (
                             <Button 
@@ -265,19 +320,23 @@ function CollectionsPageContent() {
                             </Button>
                         )}
                     </div>
-                    <Button type="button" onClick={handlePhoneSearch} disabled={activeAndOverdueLoans.length === 0 || !phoneSearch}><Search className="w-4 h-4" /></Button>
+                    <Button type="button" onClick={handlePhoneSearch} disabled={(personalLoans.length === 0 && uniqueGroupLoans.length === 0) || !phoneSearch}><Search className="w-4 h-4" /></Button>
                 </div>
 
-
-                <FormField control={form.control} name="loanId" render={({ field }) => (
+                <FormField control={form.control} name="loanOrGroupId" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Loan / Customer</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={activeAndOverdueLoans.length === 0}>
+                    <FormLabel>Loan / Group</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={personalLoans.length === 0 && uniqueGroupLoans.length === 0}>
                       <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Select a loan" /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Select a loan or group" /></SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {activeAndOverdueLoans.map(loan => (
+                        {uniqueGroupLoans.length > 0 && <FormLabel className='px-2 py-1.5 text-xs font-semibold'>Groups</FormLabel>}
+                        {uniqueGroupLoans.map(group => (
+                          <SelectItem key={group.id} value={group.id}>{group.name} - {group.leader} ({group.phone})</SelectItem>
+                        ))}
+                        {personalLoans.length > 0 && <FormLabel className='px-2 py-1.5 text-xs font-semibold'>Personal Loans</FormLabel>}
+                        {personalLoans.map(loan => (
                           <SelectItem key={loan.id} value={loan.id}>{getLoanDisplayName(loan)}</SelectItem>
                         ))}
                       </SelectContent>
@@ -286,10 +345,13 @@ function CollectionsPageContent() {
                   </FormItem>
                 )} />
 
-                {selectedLoan && (
+                {selectedInfo && (
                   <Card className="bg-secondary/50">
                     <CardHeader className="pb-4">
-                      <CardTitle className="text-base">Loan Details</CardTitle>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        {selectedInfo.isGroup ? <Group className="w-5 h-5" /> : <Users className="w-5 h-5" />}
+                        {selectedInfo.name} Details
+                      </CardTitle>
                     </CardHeader>
                     <CardContent className="text-sm space-y-2">
                        <div className="flex justify-between">
@@ -297,26 +359,32 @@ function CollectionsPageContent() {
                           <IndianRupee className="w-4 h-4" />
                           Due Amount
                         </span>
-                        <span className="font-semibold flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{selectedLoan.weeklyRepayment.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                        <span className="font-semibold flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{selectedInfo.totalDue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                       </div>
                        <div className="flex justify-between">
                         <span className="text-muted-foreground flex items-center gap-1">
                           <CalendarIcon className="w-4 h-4" />
                           Current Due Date
                         </span>
-                        <span className="font-semibold">{dueDates.current ? format(dueDates.current, 'PPP') : 'N/A'}</span>
+                        <span className="font-semibold">{selectedInfo.currentDueDate ? format(selectedInfo.currentDueDate, 'PPP') : 'N/A'}</span>
                       </div>
                        <div className="flex justify-between">
                         <span className="text-muted-foreground flex items-center gap-1">
                           <CalendarIcon className="w-4 h-4" />
                           Next Due Date
                         </span>
-                        <span className="font-semibold">{dueDates.next ? format(dueDates.next, 'PPP') : 'N/A'}</span>
+                        <span className="font-semibold">{selectedInfo.nextDueDate ? format(selectedInfo.nextDueDate, 'PPP') : 'N/A'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground flex items-center gap-1"><Landmark className="w-4 h-4" /> Outstanding</span>
-                        <span className="font-semibold flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{selectedLoan.outstandingAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                        <span className="font-semibold flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{selectedInfo.totalOutstanding.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                       </div>
+                       {selectedInfo.isGroup && (
+                         <div className="flex justify-between">
+                           <span className="text-muted-foreground flex items-center gap-1"><Users className="w-4 h-4" /> Members</span>
+                           <span className="font-semibold">{selectedInfo.loans.length}</span>
+                         </div>
+                       )}
                     </CardContent>
                   </Card>
                 )}
@@ -389,7 +457,7 @@ function CollectionsPageContent() {
               </CardContent>
               <CardFooter className="flex justify-end gap-2">
                 <Button variant="outline" type="button" onClick={handleClear}>Clear</Button>
-                <Button type="submit" disabled={!selectedLoanIdInForm || formState.isSubmitting}>Record Collection</Button>
+                <Button type="submit" disabled={!selectedLoanOrGroupIdInForm || formState.isSubmitting}>Record Collection</Button>
               </CardFooter>
             </Card>
           </form>
@@ -417,7 +485,7 @@ function CollectionsPageContent() {
                     </div>
                   </TableHead>
                   <TableHead>Method</TableHead>
-                  <TableHead>Loan ID</TableHead>
+                  <TableHead>Loan/Group ID</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead><span className="sr-only">Actions</span></TableHead>
                 </TableRow>
@@ -473,12 +541,12 @@ function CollectionsPageContent() {
               Please review the details before confirming the collection.
               <div className="py-4 space-y-2 text-foreground">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Customer:</span>
-                  <span className="font-semibold">{selectedLoan?.customerName}</span>
+                  <span className="text-muted-foreground">Customer/Group:</span>
+                  <span className="font-semibold">{selectedInfo?.name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Loan ID:</span>
-                  <span className="font-semibold font-mono text-xs">{selectedLoan?.id}</span>
+                  <span className="text-muted-foreground">ID:</span>
+                  <span className="font-semibold font-mono text-xs">{selectedInfo?.id}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Amount:</span>
@@ -486,7 +554,7 @@ function CollectionsPageContent() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Due Date:</span>
-                  <span className="font-semibold">{dueDates.current ? format(dueDates.current, 'PPP') : 'N/A'}</span>
+                  <span className="font-semibold">{selectedInfo?.currentDueDate ? format(selectedInfo.currentDueDate, 'PPP') : 'N/A'}</span>
                 </div>
               </div>
               This action cannot be undone.
@@ -505,7 +573,7 @@ function CollectionsPageContent() {
             <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete the collection record for <span className="font-bold">{collectionToDelete?.customer}</span> of <IndianRupee className="inline-block w-4 h-4 mx-1" /> <span className="font-bold">{collectionToDelete?.amount.toLocaleString('en-IN')}</span>.
+                This action cannot be undone. This will permanently delete the collection record for <span className="font-bold">{collectionToDelete?.customer}</span> of <IndianRupee className="inline-block w-4 h-4 mx-1" /> <span className="font-bold">{collectionToDelete?.amount.toLocaleString('en-IN')}</span>. This will also revert the collected amount from the loan balance.
             </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

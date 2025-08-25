@@ -63,8 +63,8 @@ export type UserActivity = {
 
 export type Collection = {
     id: string;
-    loanId: string;
-    customer: string;
+    loanId: string; // For personal loan, this is loanId. For group loan, this is groupId.
+    customer: string; // Customer name or Group name
     amount: number;
     date: string;
     paymentMethod: 'Cash' | 'Bank Transfer' | 'UPI';
@@ -374,32 +374,40 @@ export const useLoans = () => {
         return loanFound;
     };
 
-    const updateLoanPayment = (loanId: string, amount: number) => {
+    const updateLoanPayment = (loanId: string | null, amount: number, groupId?: string) => {
         const currentLoans = getFromStorage('loans', initialLoans);
-        const updatedLoans = currentLoans.map(loan => {
-            if (loan.id === loanId) {
-                const newTotalPaid = loan.totalPaid + amount;
-                const newOutstandingAmount = loan.outstandingAmount - amount;
-                const newStatus = newOutstandingAmount <= 0 ? 'Closed' : 'Active';
 
-                let tempLoan = {
-                    ...loan,
-                    totalPaid: newTotalPaid,
-                    outstandingAmount: newOutstandingAmount,
-                    status: newStatus,
-                };
-                
-                const nextDueDate = calculateNextDueDate(tempLoan);
+        if (groupId) {
+            const groupLoans = currentLoans.filter(l => l.groupId === groupId && (l.status === 'Active' || l.status === 'Overdue'));
+            if (groupLoans.length === 0) return;
+            
+            const amountPerMember = amount / groupLoans.length;
 
-                return {
-                    ...tempLoan,
-                    nextDueDate: nextDueDate
-                };
-            }
-            return loan;
-        });
-        
-        setInStorage('loans', updatedLoans);
+            const updatedLoans = currentLoans.map(loan => {
+                if (loan.groupId === groupId) {
+                    const newTotalPaid = loan.totalPaid + amountPerMember;
+                    const newOutstandingAmount = loan.outstandingAmount - amountPerMember;
+                    const newStatus = newOutstandingAmount <= 0 ? 'Closed' : 'Active';
+                    const tempLoan = { ...loan, totalPaid: newTotalPaid, outstandingAmount: newOutstandingAmount, status: newStatus };
+                    return { ...tempLoan, nextDueDate: calculateNextDueDate(tempLoan) };
+                }
+                return loan;
+            });
+            setInStorage('loans', updatedLoans);
+        } else if (loanId) {
+            const updatedLoans = currentLoans.map(loan => {
+                if (loan.id === loanId) {
+                    const newTotalPaid = loan.totalPaid + amount;
+                    const newOutstandingAmount = loan.outstandingAmount - amount;
+                    const newStatus = newOutstandingAmount <= 0 ? 'Closed' : 'Active';
+                    let tempLoan = { ...loan, totalPaid: newTotalPaid, outstandingAmount: newOutstandingAmount, status: newStatus };
+                    const nextDueDate = calculateNextDueDate(tempLoan);
+                    return { ...tempLoan, nextDueDate: nextDueDate };
+                }
+                return loan;
+            });
+            setInStorage('loans', updatedLoans);
+        }
     }
     
     const deleteLoan = (loanId: string) => {
@@ -490,27 +498,45 @@ export const useCollections = () => {
         const currentCollections = getFromStorage('collections', initialCollections);
         const collectionToDelete = currentCollections.find(c => c.id === collectionId);
         if (!collectionToDelete) return;
-        
-        // Revert loan payment
+
+        const isGroup = collectionToDelete.loanId.startsWith('GRP');
+        const amountToRevert = collectionToDelete.amount;
+
         const currentLoans = getFromStorage('loans', initialLoans);
+        
         const updatedLoans = currentLoans.map(loan => {
-            if (loan.id === collectionToDelete.loanId) {
-                 const newTotalPaid = loan.totalPaid - collectionToDelete.amount;
-                 const newOutstandingAmount = loan.outstandingAmount + collectionToDelete.amount;
+            let shouldUpdate = false;
+            let amountPerMember = 0;
+
+            if (isGroup && loan.groupId === collectionToDelete.loanId) {
+                const groupLoans = currentLoans.filter(l => l.groupId === collectionToDelete.loanId);
+                amountPerMember = groupLoans.length > 0 ? amountToRevert / groupLoans.length : 0;
+                shouldUpdate = true;
+            } else if (!isGroup && loan.id === collectionToDelete.loanId) {
+                shouldUpdate = true;
+            }
+
+            if (shouldUpdate) {
+                 const revertAmount = isGroup ? amountPerMember : amountToRevert;
+                 const newTotalPaid = loan.totalPaid - revertAmount;
+                 const newOutstandingAmount = loan.outstandingAmount + revertAmount;
+                 const wasClosed = loan.outstandingAmount <= 0;
                  return {
                      ...loan,
                      totalPaid: newTotalPaid,
                      outstandingAmount: newOutstandingAmount,
-                     status: loan.status === 'Closed' ? 'Active' : loan.status,
+                     status: wasClosed ? 'Active' : loan.status,
                  };
             }
             return loan;
         });
+
         setInStorage('loans', updatedLoans);
 
         const updatedCollections = currentCollections.filter(c => c.id !== collectionId);
         setInStorage('collections', updatedCollections);
     };
+
 
     return { collections, isLoaded, addCollection, deleteCollection };
 }
