@@ -34,7 +34,7 @@ export type Loan = {
   amount: number;
   interestRate: number;
   term: number; 
-  status: 'Pending' | 'Active' | 'Overdue' | 'Closed' | 'Missed';
+  status: 'Pending' | 'Active' | 'Overdue' | 'Closed' | 'Missed' | 'Pre-closed';
   disbursalDate: string;
   weeklyRepayment: number; 
   totalPaid: number;
@@ -331,7 +331,7 @@ export const useLoans = () => {
         const updatedLoans = currentLoans.map(loan => {
             if (loan.id === loanId) {
                 const updatedLoan = { ...loan, status: status };
-                if (status === 'Closed') {
+                if (status === 'Closed' || status === 'Pre-closed') {
                     updatedLoan.totalPaid += updatedLoan.outstandingAmount;
                     updatedLoan.outstandingAmount = 0;
                 }

@@ -139,6 +139,7 @@ const LoanTable = ({
                 if (group.loans.some(l => l.status === 'Overdue')) group.status = 'Overdue';
                 else if (group.loans.some(l => l.status === 'Active')) group.status = 'Active';
                 else if (group.loans.every(l => l.status === 'Closed')) group.status = 'Closed';
+                else if (group.loans.every(l => l.status === 'Pre-closed')) group.status = 'Pre-closed';
                 else group.status = 'Pending';
             }
         });
@@ -198,8 +199,12 @@ const LoanTable = ({
                           item.status === 'Active' ? 'secondary' :
                           item.status === 'Overdue' ? 'destructive' :
                           item.status === 'Closed' ? 'default' :
+                          item.status === 'Pre-closed' ? 'outline' :
                           'outline'
-                        } className={item.status === 'Closed' ? 'bg-green-600 text-white' : ''}>
+                        } className={
+                            item.status === 'Closed' ? 'bg-green-600 text-white' : 
+                            item.status === 'Pre-closed' ? 'bg-blue-600 text-white' : ''
+                        }>
                           {item.status}
                         </Badge>
                       </TableCell>
@@ -235,8 +240,12 @@ const LoanTable = ({
                                 loan.status === 'Active' ? 'secondary' :
                                 loan.status === 'Overdue' ? 'destructive' :
                                 loan.status === 'Closed' ? 'default' :
+                                loan.status === 'Pre-closed' ? 'outline' :
                                 'outline'
-                            } className={loan.status === 'Closed' ? 'bg-green-600 text-white' : ''}>
+                            } className={
+                                loan.status === 'Closed' ? 'bg-green-600 text-white' : 
+                                loan.status === 'Pre-closed' ? 'bg-blue-600 text-white' : ''
+                            }>
                                 {loan.status}
                             </Badge>
                             </TableCell>
@@ -301,8 +310,12 @@ const LoanTable = ({
                             item.loan.status === 'Active' ? 'secondary' :
                             item.loan.status === 'Overdue' ? 'destructive' :
                             item.loan.status === 'Closed' ? 'default' :
+                            item.loan.status === 'Pre-closed' ? 'outline' :
                             'outline'
-                        } className={item.loan.status === 'Closed' ? 'bg-green-600 text-white' : ''}>
+                        } className={
+                            item.loan.status === 'Closed' ? 'bg-green-600 text-white' : 
+                            item.loan.status === 'Pre-closed' ? 'bg-blue-600 text-white' : ''
+                        }>
                             {item.loan.status}
                         </Badge>
                         </TableCell>
@@ -456,11 +469,11 @@ export default function LoansPage() {
 
   const handlePreclose = (loanId: string) => {
     if (user?.role !== 'Admin') return;
-    updateLoanStatus(loanId, 'Closed');
+    updateLoanStatus(loanId, 'Pre-closed');
     logActivity('Preclose Loan', `Pre-closed loan ${loanId}.`);
     toast({
       title: 'Loan Pre-closed',
-      description: `Loan ${loanId} has been marked as closed.`,
+      description: `Loan ${loanId} has been marked as pre-closed.`,
     });
   };
 

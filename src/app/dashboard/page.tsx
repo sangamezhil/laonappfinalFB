@@ -92,7 +92,7 @@ function AdminDashboard() {
     
     const activeLoans = loans.filter(l => l.status === 'Active');
     const overdueLoans = loans.filter(l => l.status === 'Overdue');
-    const closedLoans = loans.filter(l => l.status === 'Closed');
+    const closedLoans = loans.filter(l => l.status === 'Closed' || l.status === 'Pre-closed');
     
     const totalDisbursed = loans.reduce((acc, loan) => acc + loan.amount, 0);
     const totalOutstanding = loans.reduce((acc, loan) => acc + loan.outstandingAmount, 0);
@@ -264,9 +264,13 @@ function AdminDashboard() {
                       loan.status === 'Active' ? 'secondary' :
                       loan.status === 'Overdue' ? 'destructive' :
                       loan.status === 'Closed' ? 'default' :
+                      loan.status === 'Pre-closed' ? 'outline' :
                       'outline'
                     }
-                    className={loan.status === 'Closed' ? 'bg-green-600 text-white' : ''}
+                    className={
+                        loan.status === 'Closed' ? 'bg-green-600 text-white' : 
+                        loan.status === 'Pre-closed' ? 'bg-blue-600 text-white' : ''
+                    }
                     >
                       {loan.status}
                     </Badge>

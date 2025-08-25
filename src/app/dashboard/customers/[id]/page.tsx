@@ -46,7 +46,7 @@ export default function CustomerProfilePage() {
             if (loan.collectionFrequency === 'Daily') {
               nextDueDate = addDays(startDate, installmentsPaid + 1);
             } else if (loan.collectionFrequency === 'Weekly') {
-              nextDueDate = addWeeks(startDate, installmentsPaid + 1);
+              nextDueDate = addDays(startDate, installmentsPaid + 8);
             } else if (loan.collectionFrequency === 'Monthly') {
               nextDueDate = addMonths(startDate, installmentsPaid + 1);
             }
@@ -68,7 +68,7 @@ export default function CustomerProfilePage() {
     if (!customer) return;
 
     const downloadableLoans = loansWithDetails.filter(loan => 
-      loan.status === 'Active' || loan.status === 'Overdue' || loan.status === 'Closed'
+      loan.status === 'Active' || loan.status === 'Overdue' || loan.status === 'Closed' || loan.status === 'Pre-closed'
     );
 
     if (downloadableLoans.length === 0) {
@@ -342,8 +342,12 @@ export default function CustomerProfilePage() {
                             loan.status === 'Active' ? 'secondary' :
                             loan.status === 'Overdue' ? 'destructive' :
                             loan.status === 'Closed' ? 'default' :
+                            loan.status === 'Pre-closed' ? 'outline' :
                             'outline'
-                         } className={loan.status === 'Closed' ? 'bg-green-600 text-white' : ''}>
+                         } className={
+                            loan.status === 'Closed' ? 'bg-green-600 text-white' : 
+                            loan.status === 'Pre-closed' ? 'bg-blue-600 text-white' : ''
+                         }>
                           {loan.status}
                         </Badge>
                       </div>
@@ -430,5 +434,3 @@ export default function CustomerProfilePage() {
     </div>
   )
 }
-
-    
