@@ -1,7 +1,7 @@
 
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { addDays, addWeeks, addMonths, parseISO, isToday } from 'date-fns';
+import { addDays, addWeeks, addMonths, parseISO, isToday, isBefore, startOfToday } from 'date-fns';
 
 export type Customer = {
   id: string;
@@ -112,18 +112,59 @@ const setInStorage = <T>(key: string, data: T) => {
     window.dispatchEvent(new Event('local-storage-updated'));
 };
 
+const calculateNextDueDate = (loan: Loan): string | undefined => {
+    if (loan.status !== 'Active' && loan.status !== 'Overdue') {
+        return undefined;
+    }
+
+    const installmentsPaid = loan.totalPaid > 0 && loan.weeklyRepayment > 0 
+        ? Math.floor(loan.totalPaid / loan.weeklyRepayment) 
+        : 0;
+    const startDate = parseISO(loan.disbursalDate);
+    let nextDueDate: Date;
+    
+    if (loan.collectionFrequency === 'Daily') {
+        nextDueDate = addDays(startDate, installmentsPaid);
+    } else if (loan.collectionFrequency === 'Weekly') {
+        nextDueDate = addWeeks(startDate, installmentsPaid);
+    } else if (loan.collectionFrequency === 'Monthly') {
+        nextDueDate = addMonths(startDate, installmentsPaid);
+    } else {
+        return undefined;
+    }
+    
+    return nextDueDate.toISOString().split('T')[0];
+};
+
+const updateLoanStatusOnLoad = (loan: Loan): Loan => {
+    if (loan.status === 'Active' && loan.nextDueDate) {
+        const nextDueDate = parseISO(loan.nextDueDate);
+        if (isBefore(nextDueDate, startOfToday())) {
+            return { ...loan, status: 'Overdue' };
+        }
+    }
+    return loan;
+};
+
+
 export const useUsers = () => {
     const [users, setUsers] = useState<User[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
 
-    useEffect(() => {
+    const refreshData = useCallback(() => {
         const data = getFromStorage('users', initialUsers);
         if (localStorage.getItem('users') === null) {
             setInStorage('users', initialUsers);
         }
         setUsers(data);
-        setIsLoaded(true);
     }, []);
+
+    useEffect(() => {
+        refreshData();
+        setIsLoaded(true);
+        window.addEventListener('local-storage-updated', refreshData);
+        return () => window.removeEventListener('local-storage-updated', refreshData);
+    }, [refreshData]);
 
     const addUser = (user: Omit<User, 'id' | 'lastLogin'>): User => {
         const currentUsers = getFromStorage('users', initialUsers);
@@ -135,7 +176,6 @@ export const useUsers = () => {
         };
         const updatedUsers = [...currentUsers, newUser];
         setInStorage('users', updatedUsers);
-        setUsers(updatedUsers);
         return newUser;
     };
 
@@ -143,14 +183,12 @@ export const useUsers = () => {
         const currentUsers = getFromStorage('users', initialUsers);
         const updatedUsers = currentUsers.map(u => u.id === userId ? { ...u, ...updatedData } : u);
         setInStorage('users', updatedUsers);
-        setUsers(updatedUsers);
     }
 
     const deleteUser = (userId: string) => {
         const currentUsers = getFromStorage('users', initialUsers);
         const updatedUsers = currentUsers.filter(u => u.id !== userId);
         setInStorage('users', updatedUsers);
-        setUsers(updatedUsers);
     };
 
     return { users, isLoaded, addUser, updateUser, deleteUser };
@@ -166,17 +204,11 @@ export const useCompanyProfile = () => {
         setProfile(data);
     }, []);
 
-
     useEffect(() => {
         refreshProfile();
         setIsLoaded(true);
-
-        const handleStorage = () => {
-             refreshProfile();
-        }
-
-        window.addEventListener('local-storage-updated', handleStorage);
-        return () => window.removeEventListener('local-storage-updated', handleStorage);
+        window.addEventListener('local-storage-updated', refreshProfile);
+        return () => window.removeEventListener('local-storage-updated', refreshProfile);
     }, [refreshProfile]);
 
     const updateProfile = (newProfile: CompanyProfile) => {
@@ -228,48 +260,34 @@ export const useCustomers = () => {
     return { customers, addCustomer, deleteCustomer, isLoaded };
 };
 
-const calculateNextDueDate = (loan: Loan): string | undefined => {
-    if (loan.status !== 'Active' && loan.status !== 'Overdue') {
-        return undefined;
-    }
-
-    const installmentsPaid = loan.totalPaid > 0 && loan.weeklyRepayment > 0 
-        ? Math.floor(loan.totalPaid / loan.weeklyRepayment) 
-        : 0;
-    const startDate = parseISO(loan.disbursalDate);
-    let nextDueDate: Date;
-    
-    if (loan.collectionFrequency === 'Daily') {
-        nextDueDate = addDays(startDate, installmentsPaid + 1);
-    } else if (loan.collectionFrequency === 'Weekly') {
-        nextDueDate = addWeeks(startDate, installmentsPaid + 1);
-    } else if (loan.collectionFrequency === 'Monthly') {
-        nextDueDate = addMonths(startDate, installmentsPaid + 1);
-    } else {
-        return undefined; // Should not happen
-    }
-    
-    return nextDueDate.toISOString().split('T')[0];
-};
-
-
 export const useLoans = () => {
     const [loans, setLoans] = useState<Loan[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
 
     const refreshLoans = useCallback(() => {
         let data = getFromStorage('loans', initialLoans);
-        data = data.map(loan => ({
-            ...loan,
-            nextDueDate: calculateNextDueDate(loan)
-        }));
+        let loansNeedUpdate = false;
+        data = data.map(loan => {
+            const loanWithCalculatedDueDate = {
+                ...loan,
+                nextDueDate: calculateNextDueDate(loan)
+            };
+            const updatedLoan = updateLoanStatusOnLoad(loanWithCalculatedDueDate);
+            if (updatedLoan.status !== loan.status) {
+                loansNeedUpdate = true;
+            }
+            return updatedLoan;
+        });
+
         setLoans(data);
+        if (loansNeedUpdate) {
+            setInStorage('loans', data);
+        }
     }, []);
 
      useEffect(() => {
         refreshLoans();
         setIsLoaded(true);
-
         window.addEventListener('local-storage-updated', refreshLoans);
         return () => {
             window.removeEventListener('local-storage-updated', refreshLoans);
@@ -278,26 +296,12 @@ export const useLoans = () => {
 
     const addLoan = (loan: Omit<Loan, 'id'> | Omit<Loan, 'id'>[]): Loan[] => {
         const currentLoans = getFromStorage('loans', initialLoans);
+        const generateLoanId = () => Math.floor(100000000000 + Math.random() * 900000000000).toString();
         
-        const generateLoanId = () => {
-            return Math.floor(100000000000 + Math.random() * 900000000000).toString();
-        }
-
-        const loansToAdd: Loan[] = [];
-        
-        if (Array.isArray(loan)) {
-            loan.forEach(l => {
-                loansToAdd.push({
-                    ...l,
-                    id: generateLoanId(),
-                });
-            });
-        } else {
-            loansToAdd.push({
-                ...loan,
-                id: generateLoanId(),
-            });
-        }
+        const loansToAdd: Loan[] = (Array.isArray(loan) ? loan : [loan]).map(l => ({
+            ...l,
+            id: generateLoanId(),
+        }));
 
         const updatedLoans = [...currentLoans, ...loansToAdd];
         setInStorage('loans', updatedLoans);
@@ -318,11 +322,21 @@ export const useLoans = () => {
             if (loan.id === loanId) {
                 const newTotalPaid = loan.totalPaid + amount;
                 const newOutstandingAmount = loan.outstandingAmount - amount;
-                return {
+                const newStatus = newOutstandingAmount <= 0 ? 'Closed' : loan.status;
+
+                let tempLoan = {
                     ...loan,
                     totalPaid: newTotalPaid,
                     outstandingAmount: newOutstandingAmount,
-                    status: newOutstandingAmount <= 0 ? 'Closed' : loan.status,
+                    status: newStatus,
+                };
+                
+                // Recalculate next due date immediately after payment
+                const nextDueDate = calculateNextDueDate(tempLoan);
+
+                return {
+                    ...tempLoan,
+                    nextDueDate: nextDueDate
                 };
             }
             return loan;
@@ -399,7 +413,7 @@ export const useCollections = () => {
         }
     }, [refreshCollections]);
 
-    const addCollection = (collection: Omit<Collection, 'id'>): Collection => {
+    const addCollection = (collection: Omit<Collection, 'id' | 'collectedBy'>): Collection => {
         if(typeof window === 'undefined') return collection as Collection;
         const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
         const currentCollections = getFromStorage('collections', initialCollections);
@@ -408,13 +422,33 @@ export const useCollections = () => {
             id: `COLL${Date.now()}`,
             collectedBy: loggedInUser.username || 'unknown',
         };
-        const updatedCollections = [newCollection, ...currentCollections].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        const updatedCollections = [newCollection, ...currentCollections];
         setInStorage('collections', updatedCollections);
         return newCollection;
     };
 
     const deleteCollection = (collectionId: string) => {
         const currentCollections = getFromStorage('collections', initialCollections);
+        const collectionToDelete = currentCollections.find(c => c.id === collectionId);
+        if (!collectionToDelete) return;
+        
+        // Revert loan payment
+        const currentLoans = getFromStorage('loans', initialLoans);
+        const updatedLoans = currentLoans.map(loan => {
+            if (loan.id === collectionToDelete.loanId) {
+                 const newTotalPaid = loan.totalPaid - collectionToDelete.amount;
+                 const newOutstandingAmount = loan.outstandingAmount + collectionToDelete.amount;
+                 return {
+                     ...loan,
+                     totalPaid: newTotalPaid,
+                     outstandingAmount: newOutstandingAmount,
+                     status: loan.status === 'Closed' ? 'Active' : loan.status,
+                 };
+            }
+            return loan;
+        });
+        setInStorage('loans', updatedLoans);
+
         const updatedCollections = currentCollections.filter(c => c.id !== collectionId);
         setInStorage('collections', updatedCollections);
     };
