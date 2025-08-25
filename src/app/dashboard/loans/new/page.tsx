@@ -256,10 +256,17 @@ export default function NewLoanPage() {
       toast({ variant: "destructive", title: "Duplicate Members", description: "Each customer can only be in the group once." });
       return;
     }
+  
+    const activeLoanCustomerIds = new Set(loans.filter(l => l.status === 'Active' || l.status === 'Overdue').map(l => l.customerId));
+    const membersWithActiveLoans = allMemberIds.filter(id => activeLoanCustomerIds.has(id));
 
-    const existingLoan = loans.find(l => l.customerId && allMemberIds.includes(l.customerId) && l.status !== 'Closed');
-    if(existingLoan) {
-        toast({ variant: 'destructive', title: "Member Has Active Loan", description: `One or more members in this group already have an active loan.` });
+    if(membersWithActiveLoans.length > 0) {
+        const memberNames = membersWithActiveLoans.map(id => customers.find(c => c.id === id)?.name || id).join(', ');
+        toast({ 
+            variant: 'destructive', 
+            title: "Members Have Active Loans", 
+            description: `The following members already have active or overdue loans: ${memberNames}.`
+        });
         return;
     }
 
@@ -473,7 +480,7 @@ export default function NewLoanPage() {
                                   <FormControl>
                                     <SelectTrigger>
                                       <SelectValue placeholder={`Select Member ${index + 1}`}>
-                                        {field.value ? getAvailableMembers(index).find(c => c.id === field.value)?.name : `Select Member ${index + 1}`}
+                                        {field.value ? customers.find(c => c.id === field.value)?.name : `Select Member ${index + 1}`}
                                       </SelectValue>
                                     </SelectTrigger>
                                   </FormControl>
