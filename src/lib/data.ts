@@ -48,6 +48,7 @@ export type Loan = {
 export type User = {
     id: string;
     username: string;
+    password?: string;
     role: 'Admin' | 'Collection Agent';
     lastLogin: string;
 };
@@ -90,8 +91,8 @@ const initialCustomers: Customer[] = [];
 const initialLoans: Loan[] = [];
 const initialCollections: Collection[] = [];
 const initialUsers: User[] = [
-  { id: 'USR001', username: 'admin', role: 'Admin', lastLogin: '2024-07-29 10:00 AM' },
-  { id: 'USR002', username: 'agent', role: 'Collection Agent', lastLogin: '2024-07-29 11:00 AM' },
+  { id: 'USR001', username: 'admin', password: 'password', role: 'Admin', lastLogin: '2024-07-29 10:00 AM' },
+  { id: 'USR002', username: 'agent', password: 'password', role: 'Collection Agent', lastLogin: '2024-07-29 11:00 AM' },
 ];
 
 
@@ -181,6 +182,7 @@ export const useUsers = () => {
         const newUser: User = {
             ...user,
             id: `USR${String(newIdNumber).padStart(3, '0')}`,
+            password: user.password || user.username,
             lastLogin: 'Never',
         };
         const updatedUsers = [...currentUsers, newUser];

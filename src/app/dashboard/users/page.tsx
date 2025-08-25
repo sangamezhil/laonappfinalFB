@@ -80,6 +80,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 type User = {
     id: string;
     username: string;
+    password?: string;
     role: 'Admin' | 'Collection Agent';
     lastLogin: string;
 }
@@ -184,7 +185,7 @@ export default function UsersPage() {
         createForm.setError("username", { type: "manual", message: "Username already exists."});
         return;
     }
-    addUser({ username: data.username, role: data.role });
+    addUser({ username: data.username, password: data.password || data.username, role: data.role });
     logActivity('Create User', `Created new user: ${data.username}.`);
     toast({
       title: 'User Created',
@@ -219,8 +220,9 @@ export default function UsersPage() {
 
   function handleResetPassword(data: z.infer<typeof resetPasswordSchema>) {
     if (!userToEdit) return;
-    // In a real app, this would securely update the password.
-    // For this mock, we don't store passwords, so we just show a success message.
+    
+    updateUser(userToEdit.id, { password: data.password });
+
     logActivity('Reset Password', `Reset password for user ${userToEdit.username}.`);
     toast({
       title: 'Password Reset',
@@ -673,5 +675,3 @@ export default function UsersPage() {
     </>
   )
 }
-
-    
