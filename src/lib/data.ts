@@ -20,6 +20,7 @@ export type Customer = {
   monthlyIncome: number;
   profilePicture: string;
   registrationDate: string;
+  addedBy?: string;
 };
 
 export type Loan = {
@@ -125,19 +126,17 @@ const calculateNextDueDate = (loan: Loan): string | undefined => {
     let nextDueDate: Date;
     
     if (loan.collectionFrequency === 'Daily') {
-        const daysToAdd = installmentsPaid === 0 ? 2 : installmentsPaid + 1;
-        nextDueDate = addDays(startDate, daysToAdd);
+        const periodsToAdd = installmentsPaid + 1;
+        nextDueDate = addDays(startDate, periodsToAdd);
     } else if (loan.collectionFrequency === 'Weekly') {
-        // For the very first payment, add 8 days to push it to the next week.
-        // For subsequent payments, add weeks normally.
         if (installmentsPaid === 0) {
             nextDueDate = addDays(startDate, 8);
         } else {
             nextDueDate = addWeeks(startDate, installmentsPaid + 1);
         }
     } else if (loan.collectionFrequency === 'Monthly') {
-        const monthsToAdd = installmentsPaid === 0 ? 2 : installmentsPaid + 1;
-        nextDueDate = addMonths(startDate, monthsToAdd);
+        const periodsToAdd = installmentsPaid + 1;
+        nextDueDate = addMonths(startDate, periodsToAdd);
     } else {
         return undefined;
     }
@@ -249,7 +248,10 @@ export const useCustomers = () => {
         }
     }, [refreshCustomers]);
 
-    const addCustomer = (customer: Omit<Customer, 'id' | 'registrationDate' | 'profilePicture'>): Customer => {
+    const addCustomer = (customer: Omit<Customer, 'id' | 'registrationDate' | 'profilePicture' | 'addedBy'>): Customer => {
+        if (typeof window === 'undefined') return customer as Customer;
+        const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+        
         const currentCustomers = getFromStorage('customers', initialCustomers);
         const newIdNumber = (currentCustomers.length > 0 ? Math.max(...currentCustomers.map(c => parseInt(c.id.replace('CUST','')))) : 0) + 1;
         const newCustomer: Customer = {
@@ -257,6 +259,7 @@ export const useCustomers = () => {
             id: `CUST${String(newIdNumber).padStart(3, '0')}`,
             registrationDate: new Date().toISOString().split('T')[0],
             profilePicture: 'https://placehold.co/100x100',
+            addedBy: loggedInUser.username || 'unknown'
         };
         const updatedCustomers = [...currentCustomers, newCustomer];
         setInStorage('customers', updatedCustomers);

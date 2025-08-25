@@ -42,6 +42,7 @@ import { useCustomers, useLoans, Customer } from '@/lib/data'
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { getAvatarColor } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 type User = {
   username: string;
@@ -116,6 +117,7 @@ export default function CustomersPage() {
               <TableHead>ID Type</TableHead>
               <TableHead>ID Number</TableHead>
               <TableHead>Registered On</TableHead>
+              <TableHead>Added By</TableHead>
               <TableHead>
                 <span className="sr-only">Actions</span>
               </TableHead>
@@ -138,6 +140,7 @@ export default function CustomersPage() {
                   <TableCell><Skeleton className="w-20 h-5" /></TableCell>
                   <TableCell><Skeleton className="w-28 h-5" /></TableCell>
                   <TableCell><Skeleton className="w-24 h-5" /></TableCell>
+                  <TableCell><Skeleton className="w-20 h-5" /></TableCell>
                   <TableCell><Skeleton className="w-8 h-8 rounded-md" /></TableCell>
                 </TableRow>
               ))
@@ -163,6 +166,9 @@ export default function CustomersPage() {
                   <TableCell>{customer.idType}</TableCell>
                   <TableCell>{customer.idNumber}</TableCell>
                   <TableCell>{customer.registrationDate}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{customer.addedBy || 'N/A'}</Badge>
+                  </TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
