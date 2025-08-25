@@ -409,6 +409,7 @@ export default function LoansPage() {
   }, []);
 
   const handleApprove = (id: string, groupId?: string) => {
+    if (user?.role !== 'Admin') return;
     if (groupId) {
         const groupLoans = loans.filter(l => l.groupId === groupId && l.status === 'Pending');
         groupLoans.forEach(loan => {
@@ -430,6 +431,7 @@ export default function LoansPage() {
   };
 
   const handlePreclose = (loanId: string) => {
+    if (user?.role !== 'Admin') return;
     updateLoanStatus(loanId, 'Closed');
     logActivity('Preclose Loan', `Pre-closed loan ${loanId}.`);
     toast({
@@ -439,7 +441,7 @@ export default function LoansPage() {
   };
 
   const confirmDelete = () => {
-    if (!loanToDelete) return;
+    if (!loanToDelete || user?.role !== 'Admin') return;
     if (loanToDelete.status === 'Active' || loanToDelete.status === 'Overdue') {
         toast({
             variant: "destructive",
@@ -545,12 +547,14 @@ export default function LoansPage() {
               )}
             </div>
             
+            {user?.role === 'Admin' && (
               <Link href="/dashboard/loans/new" passHref>
                 <Button className="flex-shrink-0">
                   <PlusCircle className="w-4 h-4 mr-2" />
                   New Loan
                 </Button>
               </Link>
+            )}
             
           </div>
         </div>

@@ -137,12 +137,21 @@ export default function NewLoanPage() {
     if (typeof window !== 'undefined') {
       const storedUser = localStorage.getItem('loggedInUser');
       if (storedUser) {
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        if (parsedUser.role !== 'Admin') {
+            toast({
+                variant: 'destructive',
+                title: 'Access Denied',
+                description: 'You do not have permission to view this page.'
+            });
+            router.push('/dashboard');
+        }
       } else {
         router.push('/login');
       }
     }
-  }, [router]);
+  }, [router, toast]);
 
 
   const personalForm = useForm<z.infer<typeof personalLoanSchema>>({ 
@@ -298,7 +307,7 @@ export default function NewLoanPage() {
     router.push('/dashboard/loans');
   };
 
-  if (!user) {
+  if (!user || user.role !== 'Admin') {
     return (
       <Card>
         <CardHeader>
@@ -306,7 +315,7 @@ export default function NewLoanPage() {
             <Skeleton className="h-4 w-72" />
         </CardHeader>
         <CardContent>
-            <p>Loading...</p>
+            <p>Checking permissions...</p>
             <Skeleton className="w-full h-64" />
         </CardContent>
     </Card>
