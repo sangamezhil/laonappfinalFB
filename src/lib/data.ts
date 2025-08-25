@@ -117,14 +117,13 @@ const calculateNextDueDate = (loan: Loan): string | undefined => {
         return undefined;
     }
     
-    // For a brand new loan, the first due date is one period after disbursal.
-    // For existing loans, it's based on installments paid.
-    // We add 1 to the installments paid to get the next due period.
     const installmentsPaid = loan.totalPaid > 0 && loan.weeklyRepayment > 0 
         ? Math.floor(loan.totalPaid / loan.weeklyRepayment) 
         : 0;
 
-    const periodsToAdd = installmentsPaid + 1;
+    // For new loans (installmentsPaid === 0), add 2 weeks to push to next week.
+    // For existing loans, add 1 week to get the next installment date.
+    const periodsToAdd = installmentsPaid === 0 ? 2 : installmentsPaid + 1;
     const startDate = parseISO(loan.disbursalDate);
     let nextDueDate: Date;
     
