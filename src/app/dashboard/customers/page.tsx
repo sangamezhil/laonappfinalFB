@@ -98,14 +98,12 @@ export default function CustomersPage() {
             <CardDescription>Manage your customers and view their loan histories.</CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            {user?.role === 'Admin' && (
-              <Link href="/dashboard/customers/new" passHref>
-                  <Button>
-                  <PlusCircle className="w-4 h-4 mr-2" />
-                  Add Customer
-                  </Button>
-              </Link>
-            )}
+            <Link href="/dashboard/customers/new" passHref>
+                <Button>
+                <PlusCircle className="w-4 h-4 mr-2" />
+                Add Customer
+                </Button>
+            </Link>
           </div>
         </div>
       </CardHeader>
