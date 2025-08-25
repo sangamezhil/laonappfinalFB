@@ -68,11 +68,11 @@ export default function CustomerProfilePage() {
     if (!customer) return;
 
     const downloadableLoans = loansWithDetails.filter(loan => 
-      loan.status === 'Active' || loan.status === 'Overdue' || loan.status === 'Closed' || loan.status === 'Pre-closed'
+      loan.status === 'Active' || loan.status === 'Overdue'
     );
 
     if (downloadableLoans.length === 0) {
-        alert('No loans available to download.');
+        alert('No active or overdue loans available to download.');
         return;
     }
 
@@ -434,3 +434,5 @@ export default function CustomerProfilePage() {
     </div>
   )
 }
+
+    
