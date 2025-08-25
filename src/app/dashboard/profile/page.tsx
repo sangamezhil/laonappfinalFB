@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Upload, Trash2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 const profileSchema = z.object({
   name: z.string().min(3, { message: "Company name must be at least 3 characters." }),
@@ -25,17 +26,44 @@ const profileSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileSchema>
 
+type User = {
+  username: string;
+  role: string;
+}
+
 export default function CompanyProfilePage() {
   const { profile, updateProfile, isLoaded } = useCompanyProfile()
   const { logActivity } = useUserActivity()
   const { toast } = useToast()
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: profile,
   })
 
+  useEffect(() => {
+     if (typeof window !== 'undefined') {
+      const storedUser = localStorage.getItem('loggedInUser');
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        if (parsedUser.role !== 'Admin') {
+            toast({
+                variant: 'destructive',
+                title: 'Access Denied',
+                description: 'You do not have permission to view this page.'
+            });
+            router.push('/dashboard');
+        }
+      } else {
+        router.push('/login');
+      }
+    }
+  }, [router, toast]);
+  
   useEffect(() => {
     if (isLoaded) {
       form.reset(profile)
@@ -88,7 +116,7 @@ export default function CompanyProfilePage() {
     }, 1000)
   }
 
-  if (!isLoaded) {
+  if (!isLoaded || !user || user.role !== 'Admin') {
     return (
         <Card>
             <CardHeader>

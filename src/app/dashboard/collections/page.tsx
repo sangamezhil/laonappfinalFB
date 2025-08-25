@@ -97,8 +97,7 @@ function CollectionsPageContent() {
 
     if (loan) {
       setValue('amount', loan.weeklyRepayment, { shouldValidate: true });
-
-      const installmentsPaid = loan.totalPaid > 0 ? Math.floor(loan.totalPaid / loan.weeklyRepayment) : 0;
+      const installmentsPaid = loan.totalPaid > 0 && loan.weeklyRepayment > 0 ? Math.floor(loan.totalPaid / loan.weeklyRepayment) : 0;
       const startDate = new Date(loan.disbursalDate);
       let currentDueDate: Date | null = null;
       let nextDueDate: Date | null = null;
@@ -110,7 +109,8 @@ function CollectionsPageContent() {
         currentDueDate = addWeeks(startDate, installmentsPaid + 1);
         nextDueDate = addWeeks(startDate, installmentsPaid + 2);
       } else if (loan.collectionFrequency === 'Monthly') {
-        currentDueDate = addMonths(startDate, installmentsPaid + 2);
+        currentDueDate = addMonths(startDate, installmentsPaid + 1);
+        nextDueDate = addMonths(startDate, installmentsPaid + 2);
       }
       setDueDates({ current: currentDueDate, next: nextDueDate });
     } else {
@@ -168,6 +168,10 @@ function CollectionsPageContent() {
   }
 
   function onAttemptSubmit(data: CollectionFormValues) {
+    if (!data.loanId) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please select a loan before recording a collection.' });
+      return;
+    }
     setCollectionToConfirm(data);
   }
 
@@ -522,7 +526,3 @@ export default function CollectionsPage() {
     </Suspense>
   )
 }
-
-    
-
-    

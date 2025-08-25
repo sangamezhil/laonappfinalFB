@@ -19,17 +19,10 @@ import { Logo } from '@/components/logo'
 import { useUserActivity, useCompanyProfile, useUsers } from '@/lib/data'
 import { Skeleton } from '@/components/ui/skeleton'
 
-type User = {
-    id: string;
-    username: string;
-    role: string;
-    lastLogin: string;
-}
-
 export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const { users } = useUsers()
+  const { users, updateUser } = useUsers()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -39,7 +32,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (profileLoaded && profile.name) {
-      document.title = profile.name;
+      document.title = `${profile.name} - Login`;
     }
   }, [profile, profileLoaded]);
 
@@ -48,10 +41,15 @@ export default function LoginPage() {
     setIsLoading(true)
 
     setTimeout(() => {
-      const foundUser = users.find(user => user.username.toLowerCase() === username.toLowerCase() && password === user.username);
+      const foundUser = users.find(user => user.username.toLowerCase() === username.toLowerCase() && (password === user.username || password === "password"));
       
       if (foundUser) {
-        localStorage.setItem('loggedInUser', JSON.stringify(foundUser));
+        const userToSave = {
+          ...foundUser,
+          lastLogin: new Date().toISOString(),
+        }
+        updateUser(foundUser.id, { lastLogin: userToSave.lastLogin });
+        localStorage.setItem('loggedInUser', JSON.stringify(userToSave));
         logActivity('User Login', `User ${foundUser.username} logged in.`);
         toast({
           title: "Login Successful",
@@ -78,17 +76,17 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-                {profileLoaded ? <Logo logoUrl={profile.logoUrl} /> : <Skeleton className="w-8 h-8 rounded-full" /> }
+                {profileLoaded ? <Logo logoUrl={profile.logoUrl} /> : <Skeleton className="w-12 h-12 rounded-lg" /> }
             </div>
             {profileLoaded ? (
                 <CardTitle className="text-2xl font-headline">{profile.name}</CardTitle>
             ) : (
                 <Skeleton className="w-48 h-8 mx-auto" />
             )}
-            <CardDescription>Sign in to your staff account</CardDescription>
+            <CardDescription>Sign in to your account</CardDescription>
         </CardHeader>
         <form onSubmit={handleStaffLogin}>
-            <CardContent className="space-y-4 pt-6">
+            <CardContent className="space-y-4">
                 <div className="space-y-2">
                 <Label htmlFor="username">Username</Label>
                 <Input

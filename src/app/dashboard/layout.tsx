@@ -186,7 +186,7 @@ export default function DashboardLayout({
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-2">
                 <Avatar className="w-8 h-8">
-                  {profile.logoUrl ? (
+                  {user.username === 'admin' && profile.logoUrl ? (
                     <AvatarImage src={profile.logoUrl} alt={profile.name} />
                   ) : (
                      <AvatarFallback>{user.username.charAt(0).toUpperCase()}</AvatarFallback>

@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { useUserActivity, UserActivity } from '@/lib/data'
+import { useUserActivity } from '@/lib/data'
 import { format } from 'date-fns'
 import { IndianRupee } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -27,7 +27,7 @@ const renderActivityDetails = (activity: { action: string, details: string }) =>
           {before}
           <span className="inline-flex items-center">
             <IndianRupee className="w-4 h-4 mx-1" />
-            {parseFloat(amount).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+            {parseFloat(amount.replace(/,/g, '')).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
           </span>
           {after}
         </span>

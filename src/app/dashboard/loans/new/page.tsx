@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
 import { useCustomers, useLoans, useUserActivity, Customer } from '@/lib/data'
 import { IndianRupee } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const personalLoanSchema = z.object({
   customerId: z.string().nonempty({ message: 'Please select a customer.' }),
@@ -307,7 +308,18 @@ export default function NewLoanPage() {
   };
 
   if (!user || user.role !== 'Admin') {
-    return <div className='p-4'>Checking permissions...</div>
+    return (
+      <Card>
+        <CardHeader>
+            <Skeleton className="h-8 w-48 mb-2" />
+            <Skeleton className="h-4 w-72" />
+        </CardHeader>
+        <CardContent>
+            <p>Checking permissions...</p>
+            <Skeleton className="w-full h-64" />
+        </CardContent>
+    </Card>
+    )
   }
 
   return (

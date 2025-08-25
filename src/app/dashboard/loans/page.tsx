@@ -3,7 +3,7 @@
 
 import React from 'react';
 import Link from 'next/link'
-import { PlusCircle, MoreHorizontal, ChevronDown, ChevronRight, IndianRupee, CheckCircle, Search, X, Filter } from 'lucide-react'
+import { PlusCircle, MoreHorizontal, ChevronDown, ChevronRight, IndianRupee, CheckCircle, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -43,11 +43,9 @@ import { useLoans, useUserActivity, Loan, useCustomers, Customer } from '@/lib/d
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
 import { useRouter } from 'next/navigation'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
 
 type User = {
   username: string;
@@ -347,8 +345,6 @@ const LoanTable = ({
     )
 }
 
-type StatusFilter = 'All' | Loan['status'];
-
 export default function LoansPage() {
   const { loans, isLoaded, updateLoanStatus, deleteLoan } = useLoans();
   const { customers, isLoaded: customersLoaded } = useCustomers();
@@ -372,7 +368,10 @@ export default function LoansPage() {
         return [];
     }
 
-    let loansToFilter = loans.filter(loan => loan.loanType.toLowerCase() === currentTab);
+    let loansToFilter = loans.filter(loan => 
+        (currentTab === 'personal' && loan.loanType === 'Personal') ||
+        (currentTab === 'group' && loan.loanType === 'Group')
+    );
     
     const lowercasedQuery = searchQuery.toLowerCase();
     

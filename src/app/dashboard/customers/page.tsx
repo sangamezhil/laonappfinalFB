@@ -37,11 +37,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useCustomers, useLoans, Customer } from '@/lib/data'
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { cn, getAvatarColor } from '@/lib/utils';
+import { getAvatarColor } from '@/lib/utils';
 
 type User = {
   username: string;
@@ -209,5 +209,3 @@ export default function CustomersPage() {
     </>
   )
 }
-
-    

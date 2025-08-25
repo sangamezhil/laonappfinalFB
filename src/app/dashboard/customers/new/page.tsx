@@ -6,14 +6,13 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useRouter } from 'next/navigation'
-import { CalendarIcon, IndianRupee } from 'lucide-react'
+import { IndianRupee } from 'lucide-react'
 import { format, parse } from 'date-fns'
 
 import { Button } from '@/components/ui/button'
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -30,9 +29,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { useCustomers, useUserActivity } from '@/lib/data'
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
-import { Calendar } from '@/components/ui/calendar'
-import { cn } from '@/lib/utils'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const kycFormSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -178,7 +175,18 @@ export default function NewCustomerPage() {
   }
 
   if (!user || user.role !== 'Admin') {
-    return <div className='p-4'>Checking permissions...</div>
+    return (
+      <Card>
+          <CardHeader>
+              <Skeleton className="h-8 w-48 mb-2" />
+              <Skeleton className="h-4 w-72" />
+          </CardHeader>
+          <CardContent>
+              <p>Checking permissions...</p>
+              <Skeleton className="w-full h-64" />
+          </CardContent>
+      </Card>
+    )
   }
 
   return (
