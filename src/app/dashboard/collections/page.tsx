@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon, IndianRupee, Landmark, Users, Phone, Search, Trash2, MoreHorizontal, X, Group } from 'lucide-react'
 import { Calendar } from '@/components/ui/calendar'
 import { cn, getAvatarColor } from '@/lib/utils'
-import { format, addDays, addWeeks, addMonths, parseISO } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   AlertDialog,
@@ -58,6 +58,15 @@ type SelectedLoanInfo = {
     nextDueDate: Date | null;
 }
 
+type LoanOption = {
+  id: string;
+  name: string;
+  phone: string;
+  isGroup: boolean;
+  groupName?: string;
+  leaderName?: string;
+}
+
 function CollectionsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -71,6 +80,7 @@ function CollectionsPageContent() {
   const [collectionToDelete, setCollectionToDelete] = useState<Collection | null>(null);
   const [collectionToConfirm, setCollectionToConfirm] = useState<CollectionFormValues | null>(null);
   const [user, setUser] = React.useState<User | null>(null);
+  const [filteredOptions, setFilteredOptions] = useState<LoanOption[]>([]);
   
   const loanIdFromQuery = searchParams.get('loanId');
 
@@ -86,26 +96,44 @@ function CollectionsPageContent() {
   const activeAndOverdueLoans = React.useMemo(() => {
     return loans.filter(l => l.status === 'Active' || l.status === 'Overdue')
   }, [loans]);
-
-  const uniqueGroupLoans = React.useMemo(() => {
-    const groups: { [key: string]: { id: string; name: string; leader: string, phone: string } } = {};
-    activeAndOverdueLoans.forEach(loan => {
-      if (loan.loanType === 'Group' && loan.groupId && !groups[loan.groupId]) {
-        const leaderCustomer = customers.find(c => c.name === loan.groupLeaderName)
-        groups[loan.groupId] = {
-          id: loan.groupId,
-          name: loan.groupName || 'Unnamed Group',
-          leader: loan.groupLeaderName || 'Unknown Leader',
-          phone: leaderCustomer?.phone || ''
+  
+  const allLoanOptions = React.useMemo(() => {
+    const personalLoanOptions: LoanOption[] = activeAndOverdueLoans
+      .filter(l => l.loanType === 'Personal')
+      .map(loan => {
+        const customer = customers.find(c => c.id === loan.customerId);
+        return {
+          id: loan.id,
+          name: loan.customerName,
+          phone: customer?.phone || '',
+          isGroup: false,
         };
+      });
+
+    const groupLoanOptions: LoanOption[] = [];
+    const groupMap = new Map<string, LoanOption>();
+    activeAndOverdueLoans.forEach(loan => {
+      if (loan.loanType === 'Group' && loan.groupId) {
+        if (!groupMap.has(loan.groupId)) {
+          const leaderCustomer = customers.find(c => c.name === loan.groupLeaderName);
+          groupMap.set(loan.groupId, {
+            id: loan.groupId,
+            name: loan.groupName || 'Unnamed Group',
+            phone: leaderCustomer?.phone || '',
+            isGroup: true,
+            leaderName: loan.groupLeaderName,
+          });
+        }
       }
     });
-    return Object.values(groups);
-  }, [activeAndOverdueLoans, customers]);
 
-  const personalLoans = React.useMemo(() => {
-    return activeAndOverdueLoans.filter(l => l.loanType === 'Personal');
-  }, [activeAndOverdueLoans]);
+    return [...Array.from(groupMap.values()), ...personalLoanOptions];
+  }, [activeAndOverdueLoans, customers]);
+  
+  useEffect(() => {
+    setFilteredOptions(allLoanOptions);
+  }, [allLoanOptions]);
+
 
   const form = useForm<CollectionFormValues>({
     resolver: zodResolver(collectionSchema),
@@ -129,35 +157,14 @@ function CollectionsPageContent() {
     
     const isGroup = id.startsWith('GRP') || !id.startsWith('CUST') && !id.startsWith('TEMP');
     let info: SelectedLoanInfo | null = null;
-
-    const getDueDates = (loan: Loan) => {
-        const installmentsPaid = loan.totalPaid > 0 && loan.weeklyRepayment > 0 ? Math.floor(loan.totalPaid / loan.weeklyRepayment) : 0;
-        const startDate = parseISO(loan.disbursalDate);
-        let currentDueDate: Date | null = null;
-        let nextDueDate: Date | null = null;
-
-        if (loan.collectionFrequency === 'Weekly') {
-            currentDueDate = addWeeks(startDate, installmentsPaid + 1);
-            nextDueDate = addWeeks(startDate, installmentsPaid + 2);
-        } else if (loan.collectionFrequency === 'Daily') {
-            currentDueDate = addDays(startDate, installmentsPaid + 1);
-            nextDueDate = addDays(startDate, installmentsPaid + 2);
-        } else if (loan.collectionFrequency === 'Monthly') {
-            currentDueDate = addMonths(startDate, installmentsPaid + 1);
-            nextDueDate = addMonths(startDate, installmentsPaid + 2);
-        }
-        
-        return { currentDueDate, nextDueDate };
-    }
     
     if (isGroup) {
       const groupLoans = loans.filter(l => l.groupId === id);
       if (groupLoans.length > 0) {
         const firstLoan = groupLoans[0];
+        const { currentDueDate, nextDueDate } = firstLoan.nextDueDate ? { currentDueDate: parseISO(firstLoan.disbursalDate), nextDueDate: parseISO(firstLoan.nextDueDate)} : {currentDueDate: null, nextDueDate: null};
         const totalDue = groupLoans.reduce((acc, l) => acc + l.weeklyRepayment, 0);
         const totalOutstanding = groupLoans.reduce((acc, l) => acc + l.outstandingAmount, 0);
-        
-        const { currentDueDate, nextDueDate } = getDueDates(firstLoan);
         
         info = {
             isGroup: true,
@@ -174,7 +181,7 @@ function CollectionsPageContent() {
     } else { // Personal Loan
       const loan = loans.find(l => l.id === id);
       if (loan) {
-        const { currentDueDate, nextDueDate } = getDueDates(loan);
+        const { currentDueDate, nextDueDate } = loan.nextDueDate ? { currentDueDate: parseISO(loan.disbursalDate), nextDueDate: parseISO(loan.nextDueDate)} : {currentDueDate: null, nextDueDate: null};
 
         info = {
             isGroup: false,
@@ -215,17 +222,17 @@ function CollectionsPageContent() {
       toast({ variant: 'destructive', title: 'Invalid Phone Number', description: 'Please enter a valid 10-digit phone number.' });
       return;
     }
-    const customer = customers.find(c => c.phone === phoneSearch);
-    if (!customer) {
-      toast({ variant: 'destructive', title: 'Customer Not Found', description: 'No customer found with this phone number.' });
-      return;
-    }
-    const activeLoan = loans.find(l => l.customerId === customer.id && (l.status === 'Active' || l.status === 'Overdue'));
-    if (activeLoan) {
-      const idToSelect = activeLoan.groupId || activeLoan.id;
-      setValue('loanOrGroupId', idToSelect, { shouldValidate: true });
+    const results = allLoanOptions.filter(option => option.phone.includes(phoneSearch));
+    
+    if(results.length > 0) {
+      setFilteredOptions(results);
+      if (results.length === 1) {
+        setValue('loanOrGroupId', results[0].id, { shouldValidate: true });
+      }
+      toast({title: `${results.length} result(s) found`, description: "Please select from the filtered list."})
     } else {
-      toast({ title: 'No Active Loan', description: `${customer.name} does not have an active loan.` });
+      setFilteredOptions([]);
+      toast({ variant: 'destructive', title: 'No Match Found', description: 'No active loans found for this phone number.' });
     }
   };
 
@@ -239,6 +246,7 @@ function CollectionsPageContent() {
     setValue('loanOrGroupId', '');
     setSelectedInfo(null);
     setPhoneSearch('');
+    setFilteredOptions(allLoanOptions);
   }
 
   function onAttemptSubmit(data: CollectionFormValues) {
@@ -289,10 +297,11 @@ function CollectionsPageContent() {
     }
   };
 
-  const getLoanDisplayName = (loan: Loan) => {
-    const customer = customers.find(c => c.id === loan.customerId);
-    const phone = customer ? `(${customer.phone})` : '';
-    return `${loan.customerName} ${phone} - ${loan.id}`
+  const getLoanDisplayName = (option: LoanOption) => {
+    if(option.isGroup) {
+      return `${option.name} - ${option.leaderName} (${option.phone})`;
+    }
+    return `${option.name} (${option.phone}) - ${option.id}`
   }
 
   return (
@@ -307,7 +316,7 @@ function CollectionsPageContent() {
                 <CardDescription>Record a new payment from a customer or group.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {(personalLoans.length === 0 && uniqueGroupLoans.length === 0) && (
+                {(allLoanOptions.length === 0) && (
                   <div className="p-4 text-center rounded-md bg-secondary text-muted-foreground">
                     There are no active or overdue loans to collect payments for.
                   </div>
@@ -321,38 +330,42 @@ function CollectionsPageContent() {
                             value={phoneSearch} 
                             onChange={(e) => setPhoneSearch(e.target.value)}
                             className="pl-9 pr-8"
-                            disabled={personalLoans.length === 0 && uniqueGroupLoans.length === 0}
+                            disabled={allLoanOptions.length === 0}
                         />
                          {phoneSearch && (
                             <Button 
                                 variant="ghost" 
                                 size="icon" 
                                 className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
-                                onClick={() => setPhoneSearch('')}
+                                onClick={() => {
+                                  setPhoneSearch('');
+                                  setFilteredOptions(allLoanOptions);
+                                }}
                             >
                                 <X className="h-4 w-4" />
                             </Button>
                         )}
                     </div>
-                    <Button type="button" onClick={handlePhoneSearch} disabled={(personalLoans.length === 0 && uniqueGroupLoans.length === 0) || !phoneSearch}><Search className="w-4 h-4" /></Button>
+                    <Button type="button" onClick={handlePhoneSearch} disabled={(allLoanOptions.length === 0) || !phoneSearch}><Search className="w-4 h-4" /></Button>
                 </div>
 
                 <FormField control={form.control} name="loanOrGroupId" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Loan / Group</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={personalLoans.length === 0 && uniqueGroupLoans.length === 0}>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={allLoanOptions.length === 0}>
                       <FormControl>
                         <SelectTrigger><SelectValue placeholder="Select a loan or group" /></SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {uniqueGroupLoans.length > 0 && <FormLabel className='px-2 py-1.5 text-xs font-semibold'>Groups</FormLabel>}
-                        {uniqueGroupLoans.map(group => (
-                          <SelectItem key={group.id} value={group.id}>{group.name} - {group.leader} ({group.phone})</SelectItem>
+                        {filteredOptions.filter(o => o.isGroup).length > 0 && <FormLabel className='px-2 py-1.5 text-xs font-semibold'>Groups</FormLabel>}
+                        {filteredOptions.filter(o => o.isGroup).map(option => (
+                          <SelectItem key={option.id} value={option.id}>{getLoanDisplayName(option)}</SelectItem>
                         ))}
-                        {personalLoans.length > 0 && <FormLabel className='px-2 py-1.5 text-xs font-semibold'>Personal Loans</FormLabel>}
-                        {personalLoans.map(loan => (
-                          <SelectItem key={loan.id} value={loan.id}>{getLoanDisplayName(loan)}</SelectItem>
+                        {filteredOptions.filter(o => !o.isGroup).length > 0 && <FormLabel className='px-2 py-1.5 text-xs font-semibold'>Personal Loans</FormLabel>}
+                        {filteredOptions.filter(o => !o.isGroup).map(option => (
+                          <SelectItem key={option.id} value={option.id}>{getLoanDisplayName(option)}</SelectItem>
                         ))}
+                        {filteredOptions.length === 0 && phoneSearch && <div className="text-sm text-center text-muted-foreground p-2">No matching loans found.</div>}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -387,7 +400,7 @@ function CollectionsPageContent() {
                           <CalendarIcon className="w-4 h-4" />
                           Next Due Date
                         </span>
-                        <span className="font-semibold">{selectedInfo.nextDueDate ? format(selectedInfo.nextDueDate, 'PPP') : 'N/A'}</span>
+                        <span className="font-semibold">{selectedInfo.nextDueDate ? format(selectedInfo.nextDueDate, 'PPP') : 'N.A'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground flex items-center gap-1"><Landmark className="w-4 h-4" /> Outstanding</span>
