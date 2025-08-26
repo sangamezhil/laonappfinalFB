@@ -185,12 +185,12 @@ export default function NewLoanPage() {
     return customers.filter(c => !activeLoanCustomerIds.has(c.id));
   }, [customers, loans]);
   
-  const getAvailableMembers = (currentIndex: number): Customer[] => {
+  const getAvailableMembers = React.useCallback((currentIndex: number): Customer[] => {
       const selectedMemberIds = new Set(selectedMembers?.map((m, i) => i === currentIndex ? null : m.customerId).filter(Boolean));
       if (groupLeaderId) selectedMemberIds.add(groupLeaderId);
       
       return eligibleCustomers.filter(c => !selectedMemberIds.has(c.id));
-  }
+  }, [eligibleCustomers, groupLeaderId, selectedMembers]);
 
 
   React.useEffect(() => {
