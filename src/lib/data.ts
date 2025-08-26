@@ -350,33 +350,56 @@ export const useLoans = () => {
         }
 
         let loanFound = false;
-        const updatedLoans = currentLoans.map(loan => {
-            if (loan.id === tempId) {
-                loanFound = true;
-                const activeLoan = { 
-                    ...loan, 
-                    id: ledgerId,
-                    groupId: groupId || loan.groupId, 
+        let updatedLoans;
+
+        if (groupId) {
+            const tempLoan = currentLoans.find(l => l.id === tempId);
+            const tempGroupId = tempLoan?.groupId;
+            const groupName = tempLoan?.groupName?.replace(/\s/g, '') || 'GROUP';
+            
+            if (!tempGroupId) return false;
+
+            const groupLoans = currentLoans.filter(l => l.groupId === tempGroupId);
+            const newLedgerIdForGroup = ledgerId.trim();
+
+            if (groupLoans.length > 0) loanFound = true;
+
+            const finalLoans: Loan[] = [];
+            const otherLoans = currentLoans.filter(l => l.groupId !== tempGroupId);
+            
+            groupLoans.forEach((l, index) => {
+                const newMemberLoanId = `${newLedgerIdForGroup}-${groupName}-${index + 1}`;
+                const activeLoan = {
+                    ...l,
+                    id: newMemberLoanId,
+                    groupId: newLedgerIdForGroup,
                     status: 'Active' as 'Active',
                     disbursalDate: new Date().toISOString().split('T')[0]
                 };
-                return {
+                finalLoans.push({
                     ...activeLoan,
                     nextDueDate: calculateNextDueDate(activeLoan)
-                };
-            }
-            return loan;
-        });
-        
-        if (groupId) {
-          const tempGroupId = currentLoans.find(l => l.id === tempId)?.groupId;
-          if(tempGroupId) {
-            updatedLoans.forEach(l => {
-              if (l.groupId === tempGroupId) {
-                l.groupId = groupId;
-              }
-            })
-          }
+                });
+            });
+            updatedLoans = [...otherLoans, ...finalLoans];
+
+        } else {
+            updatedLoans = currentLoans.map(loan => {
+                if (loan.id === tempId) {
+                    loanFound = true;
+                    const activeLoan = { 
+                        ...loan, 
+                        id: ledgerId.trim(),
+                        status: 'Active' as 'Active',
+                        disbursalDate: new Date().toISOString().split('T')[0]
+                    };
+                    return {
+                        ...activeLoan,
+                        nextDueDate: calculateNextDueDate(activeLoan)
+                    };
+                }
+                return loan;
+            });
         }
 
 

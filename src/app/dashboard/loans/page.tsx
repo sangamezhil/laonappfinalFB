@@ -443,24 +443,20 @@ export default function LoansPage() {
     let success = false;
     let allSucceeded = true;
     if (loanToApprove.loanType === 'Group' && loanToApprove.groupId) {
-        const groupLoans = loans.filter(l => l.groupId === loanToApprove.groupId);
         const groupLedgerId = ledgerId.trim();
-
-        groupLoans.forEach((l, index) => {
-           const newLedgerId = `${groupLedgerId}-${index + 1}`;
-           const approvalSuccess = approveLoanWithLedgerId(l.id, newLedgerId, groupLedgerId);
-            if (approvalSuccess) {
-                logActivity('Approve Loan', `Approved loan ${l.id} with new ID ${newLedgerId}.`);
-                success = true;
-            } else {
-                toast({
-                    variant: "destructive",
-                    title: "Approval Failed",
-                    description: `A loan with the Ledger ID '${newLedgerId}' may already exist.`,
-                });
-                allSucceeded = false;
-            }
-        });
+        const approvalSuccess = approveLoanWithLedgerId(loanToApprove.id, groupLedgerId, groupLedgerId);
+        
+        if (approvalSuccess) {
+            logActivity('Approve Group Loan', `Approved group loan ${loanToApprove.groupId} with new ID ${groupLedgerId}.`);
+            success = true;
+        } else {
+             toast({
+                variant: "destructive",
+                title: "Approval Failed",
+                description: `A loan or group with the Ledger ID '${groupLedgerId}' may already exist.`,
+            });
+            allSucceeded = false;
+        }
 
     } else {
         success = approveLoanWithLedgerId(loanToApprove.id, ledgerId.trim());
@@ -689,7 +685,7 @@ export default function LoansPage() {
                 <DialogTitle>Approve {loanToApprove?.loanType} Loan Application</DialogTitle>
                 <DialogDescription>
                     Enter the official ledger loan number base to approve this application. 
-                    {loanToApprove?.loanType === 'Group' && ' Each member will get a sequential ID (e.g., LEDGER-1, LEDGER-2).'}
+                    {loanToApprove?.loanType === 'Group' && ' Each member will get a sequential ID (e.g., LEDGER-GROUPNAME-1).'}
                 </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
