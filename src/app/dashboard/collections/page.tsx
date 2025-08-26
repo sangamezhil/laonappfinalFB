@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast'
 import { useLoans, Loan, useUserActivity, useCollections, Collection, useCustomers } from '@/lib/data'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { CalendarIcon, IndianRupee, Landmark, Users, Phone, Search, Trash2, MoreHorizontal, X, Group } from 'lucide-react'
+import { CalendarIcon, IndianRupee, Landmark, Users, Phone, Search, Trash2, X, Group } from 'lucide-react'
 import { Calendar } from '@/components/ui/calendar'
 import { cn, getAvatarColor } from '@/lib/utils'
 import { format, parseISO } from 'date-fns'
@@ -139,7 +139,7 @@ function CollectionsPageContent() {
     resolver: zodResolver(collectionSchema),
     defaultValues: {
       loanOrGroupId: '',
-      amount: '' as any,
+      amount: undefined,
       paymentMethod: 'Cash',
       collectionDate: new Date(),
     },
@@ -155,7 +155,7 @@ function CollectionsPageContent() {
         return;
     }
     
-    const isGroup = id.startsWith('GRP') || !id.startsWith('CUST') && !id.startsWith('TEMP');
+    const isGroup = id.startsWith('GRP') || allLoanOptions.find(o => o.id === id)?.isGroup;
     let info: SelectedLoanInfo | null = null;
     
     if (isGroup) {
@@ -198,7 +198,7 @@ function CollectionsPageContent() {
     }
 
     setSelectedInfo(info);
-  }, [loans, setValue]);
+  }, [loans, setValue, allLoanOptions]);
 
   useEffect(() => {
     const idToProcess = loanIdFromQuery || selectedLoanOrGroupIdInForm;
@@ -239,7 +239,7 @@ function CollectionsPageContent() {
   const handleClear = () => {
     form.reset({
       loanOrGroupId: '',
-      amount: '' as any,
+      amount: undefined,
       paymentMethod: 'Cash',
       collectionDate: new Date(),
     });

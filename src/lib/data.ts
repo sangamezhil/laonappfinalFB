@@ -1,7 +1,7 @@
 
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { addDays, addWeeks, addMonths, parseISO, isToday, isBefore, startOfToday, isAfter } from 'date-fns';
+import { addDays, addWeeks, addMonths, parseISO, isToday, isBefore, startOfToday, isAfter, startOfDay } from 'date-fns';
 
 export type Customer = {
   id: string;
@@ -115,7 +115,7 @@ const setInStorage = <T>(key: string, data: T) => {
 };
 
 const calculateNextDueDate = (loan: Loan): string | undefined => {
-    if (loan.status !== 'Active' && loan.status !== 'Overdue') {
+    if (loan.status === 'Closed' || loan.status === 'Pre-closed' || loan.status === 'Pending') {
         return undefined;
     }
     
@@ -140,16 +140,16 @@ const calculateNextDueDate = (loan: Loan): string | undefined => {
 };
 
 const updateLoanStatusOnLoad = (loan: Loan): Loan => {
-    let newStatus = loan.status;
-    if ((loan.status === 'Active' || loan.status === 'Overdue') && loan.nextDueDate) {
-        const nextDueDate = parseISO(loan.nextDueDate);
-        if (isBefore(nextDueDate, startOfToday())) {
-            newStatus = 'Overdue';
-        } else {
-            newStatus = 'Active';
-        }
+    if (loan.status !== 'Active' && loan.status !== 'Overdue') {
+        return loan;
     }
-    return { ...loan, status: newStatus };
+
+    const nextDueDate = loan.nextDueDate ? parseISO(loan.nextDueDate) : undefined;
+    if (nextDueDate && isBefore(nextDueDate, startOfToday())) {
+        return { ...loan, status: 'Overdue' };
+    }
+    
+    return { ...loan, status: 'Active' };
 };
 
 
@@ -424,9 +424,9 @@ export const useLoans = () => {
             let newStatus = tempLoan.status;
             if (newOutstandingAmount <= 0) {
                 newStatus = 'Closed';
-            } else if (tempLoan.status === 'Overdue' && nextDueDate && isAfter(parseISO(nextDueDate), startOfToday())) {
-                newStatus = 'Active';
-            } else if (tempLoan.status !== 'Overdue') {
+            } else if (nextDueDate && isBefore(parseISO(nextDueDate), startOfToday())) {
+                newStatus = 'Overdue';
+            } else {
                 newStatus = 'Active';
             }
 
@@ -577,14 +577,14 @@ export const useCollections = () => {
                 
                 const nextDueDate = calculateNextDueDate(tempLoan);
                 let newStatus = tempLoan.status;
-
-                if (newStatus === 'Closed' && newOutstandingAmount > 0) {
+                
+                if (tempLoan.status === 'Closed' && newOutstandingAmount > 0) {
                    newStatus = 'Active';
                 }
 
-                if (nextDueDate && isBefore(parseISO(nextDueDate), startOfToday())) {
+                if (nextDueDate && isBefore(startOfDay(parseISO(nextDueDate)), startOfToday())) {
                     newStatus = 'Overdue';
-                } else if (newStatus === 'Overdue') {
+                } else if (tempLoan.status === 'Overdue') {
                     newStatus = 'Active';
                 }
 
@@ -612,3 +612,5 @@ export function getLoansByCustomerId(customerId: string): Loan[] {
   const loans = getFromStorage('loans', initialLoans);
   return loans.filter(l => l.customerId === customerId);
 }
+
+    
