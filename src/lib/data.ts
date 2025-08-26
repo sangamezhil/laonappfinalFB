@@ -1,7 +1,7 @@
 
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { addDays, addWeeks, addMonths, parseISO, isToday, isBefore, startOfToday } from 'date-fns';
+import { addDays, addWeeks, addMonths, parseISO, isToday, isBefore, startOfToday, isAfter } from 'date-fns';
 
 export type Customer = {
   id: string;
@@ -140,13 +140,16 @@ const calculateNextDueDate = (loan: Loan): string | undefined => {
 };
 
 const updateLoanStatusOnLoad = (loan: Loan): Loan => {
-    if (loan.status === 'Active' && loan.nextDueDate) {
+    let newStatus = loan.status;
+    if ((loan.status === 'Active' || loan.status === 'Overdue') && loan.nextDueDate) {
         const nextDueDate = parseISO(loan.nextDueDate);
         if (isBefore(nextDueDate, startOfToday())) {
-            return { ...loan, status: 'Overdue' };
+            newStatus = 'Overdue';
+        } else {
+            newStatus = 'Active';
         }
     }
-    return loan;
+    return { ...loan, status: newStatus };
 };
 
 
@@ -339,7 +342,9 @@ export const useLoans = () => {
     const approveLoanWithLedgerId = (tempId: string, ledgerId: string, groupId?: string): boolean => {
         const currentLoans = getFromStorage('loans', initialLoans);
         
-        if (currentLoans.some(loan => loan.id === ledgerId)) {
+        const trimmedLedgerId = ledgerId.trim();
+
+        if (currentLoans.some(loan => loan.id === trimmedLedgerId || loan.groupId === trimmedLedgerId)) {
             return false; 
         }
 
@@ -353,8 +358,7 @@ export const useLoans = () => {
             if (!tempGroupId) return false;
 
             const groupLoans = currentLoans.filter(l => l.groupId === tempGroupId);
-            const newLedgerIdForGroup = ledgerId.trim();
-
+            
             if (groupLoans.length > 0) loanFound = true;
             
             const groupName = groupLoans[0].groupName?.replace(/\s/g, '') || 'GROUP';
@@ -363,11 +367,11 @@ export const useLoans = () => {
             const otherLoans = currentLoans.filter(l => l.groupId !== tempGroupId);
             
             groupLoans.forEach((l, index) => {
-                const newMemberLoanId = `${newLedgerIdForGroup}-${groupName}-${index + 1}`;
+                const newMemberLoanId = `${trimmedLedgerId}-${groupName}-${index + 1}`;
                 const activeLoan = {
                     ...l,
                     id: newMemberLoanId,
-                    groupId: newLedgerIdForGroup,
+                    groupId: trimmedLedgerId,
                     status: 'Active' as 'Active',
                     disbursalDate: new Date().toISOString().split('T')[0]
                 };
@@ -384,7 +388,7 @@ export const useLoans = () => {
                     loanFound = true;
                     const activeLoan = { 
                         ...loan, 
-                        id: ledgerId.trim(),
+                        id: trimmedLedgerId,
                         status: 'Active' as 'Active',
                         disbursalDate: new Date().toISOString().split('T')[0]
                     };
@@ -408,6 +412,27 @@ export const useLoans = () => {
     const updateLoanPayment = (loanId: string | null, amount: number, groupId?: string) => {
         const currentLoans = getFromStorage('loans', initialLoans);
 
+        const processLoanUpdate = (loan: Loan, paymentAmount: number) => {
+            const newTotalPaid = loan.totalPaid + paymentAmount;
+            const newOutstandingAmount = loan.outstandingAmount - paymentAmount;
+            
+            let tempLoan = { ...loan, totalPaid: newTotalPaid, outstandingAmount: newOutstandingAmount };
+            
+            const nextDueDate = calculateNextDueDate(tempLoan);
+            tempLoan.nextDueDate = nextDueDate;
+
+            let newStatus = tempLoan.status;
+            if (newOutstandingAmount <= 0) {
+                newStatus = 'Closed';
+            } else if (tempLoan.status === 'Overdue' && nextDueDate && isAfter(parseISO(nextDueDate), startOfToday())) {
+                newStatus = 'Active';
+            } else if (tempLoan.status !== 'Overdue') {
+                newStatus = 'Active';
+            }
+
+            return { ...tempLoan, status: newStatus };
+        };
+
         if (groupId) {
             const groupLoans = currentLoans.filter(l => l.groupId === groupId && (l.status === 'Active' || l.status === 'Overdue'));
             if (groupLoans.length === 0) return;
@@ -416,24 +441,16 @@ export const useLoans = () => {
 
             const updatedLoans = currentLoans.map(loan => {
                 if (loan.groupId === groupId) {
-                    const newTotalPaid = loan.totalPaid + amountPerMember;
-                    const newOutstandingAmount = loan.outstandingAmount - amountPerMember;
-                    const newStatus = newOutstandingAmount <= 0 ? 'Closed' : 'Active';
-                    const tempLoan = { ...loan, totalPaid: newTotalPaid, outstandingAmount: newOutstandingAmount, status: newStatus };
-                    return { ...tempLoan, nextDueDate: calculateNextDueDate(tempLoan) };
+                    return processLoanUpdate(loan, amountPerMember);
                 }
                 return loan;
             });
             setInStorage('loans', updatedLoans);
+
         } else if (loanId) {
             const updatedLoans = currentLoans.map(loan => {
                 if (loan.id === loanId) {
-                    const newTotalPaid = loan.totalPaid + amount;
-                    const newOutstandingAmount = loan.outstandingAmount - amount;
-                    const newStatus = newOutstandingAmount <= 0 ? 'Closed' : 'Active';
-                    let tempLoan = { ...loan, totalPaid: newTotalPaid, outstandingAmount: newOutstandingAmount, status: newStatus };
-                    const nextDueDate = calculateNextDueDate(tempLoan);
-                    return { ...tempLoan, nextDueDate: nextDueDate };
+                    return processLoanUpdate(loan, amount);
                 }
                 return loan;
             });
@@ -548,16 +565,30 @@ export const useCollections = () => {
             }
 
             if (shouldUpdate) {
-                 const revertAmount = isGroup ? amountPerMember : amountToRevert;
-                 const newTotalPaid = loan.totalPaid - revertAmount;
-                 const newOutstandingAmount = loan.outstandingAmount + revertAmount;
-                 const wasClosed = loan.outstandingAmount <= 0;
-                 return {
-                     ...loan,
-                     totalPaid: newTotalPaid,
-                     outstandingAmount: newOutstandingAmount,
-                     status: wasClosed ? 'Active' : loan.status,
-                 };
+                const revertAmount = isGroup ? amountPerMember : amountToRevert;
+                const newTotalPaid = loan.totalPaid - revertAmount;
+                const newOutstandingAmount = loan.outstandingAmount + revertAmount;
+
+                let tempLoan = {
+                    ...loan,
+                    totalPaid: newTotalPaid,
+                    outstandingAmount: newOutstandingAmount,
+                };
+                
+                const nextDueDate = calculateNextDueDate(tempLoan);
+                let newStatus = tempLoan.status;
+
+                if (newStatus === 'Closed' && newOutstandingAmount > 0) {
+                   newStatus = 'Active';
+                }
+
+                if (nextDueDate && isBefore(parseISO(nextDueDate), startOfToday())) {
+                    newStatus = 'Overdue';
+                } else if (newStatus === 'Overdue') {
+                    newStatus = 'Active';
+                }
+
+                return { ...tempLoan, status: newStatus, nextDueDate };
             }
             return loan;
         });
@@ -581,4 +612,3 @@ export function getLoansByCustomerId(customerId: string): Loan[] {
   const loans = getFromStorage('loans', initialLoans);
   return loans.filter(l => l.customerId === customerId);
 }
-

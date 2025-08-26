@@ -153,9 +153,9 @@ const LoanTable = ({
 
     if (groupedLoans.length === 0) {
         if (hasSearched) {
-            return <div className="text-center text-muted-foreground p-8">No loans found matching your search.</div>
+            return <div className="text-center text-muted-foreground p-8">No loans found matching your search criteria.</div>
         }
-        return <div className="text-center text-muted-foreground p-8">Please enter a search query to see loans.</div>
+        return <div className="text-center text-muted-foreground p-8">Please enter a search query to view loan information.</div>
     }
 
     return (

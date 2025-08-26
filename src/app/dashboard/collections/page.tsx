@@ -129,6 +129,26 @@ function CollectionsPageContent() {
     
     const isGroup = id.startsWith('GRP') || !id.startsWith('CUST') && !id.startsWith('TEMP');
     let info: SelectedLoanInfo | null = null;
+
+    const getDueDates = (loan: Loan) => {
+        const installmentsPaid = loan.totalPaid > 0 && loan.weeklyRepayment > 0 ? Math.floor(loan.totalPaid / loan.weeklyRepayment) : 0;
+        const startDate = parseISO(loan.disbursalDate);
+        let currentDueDate: Date | null = null;
+        let nextDueDate: Date | null = null;
+
+        if (loan.collectionFrequency === 'Weekly') {
+            currentDueDate = addWeeks(startDate, installmentsPaid + 1);
+            nextDueDate = addWeeks(startDate, installmentsPaid + 2);
+        } else if (loan.collectionFrequency === 'Daily') {
+            currentDueDate = addDays(startDate, installmentsPaid + 1);
+            nextDueDate = addDays(startDate, installmentsPaid + 2);
+        } else if (loan.collectionFrequency === 'Monthly') {
+            currentDueDate = addMonths(startDate, installmentsPaid + 1);
+            nextDueDate = addMonths(startDate, installmentsPaid + 2);
+        }
+        
+        return { currentDueDate, nextDueDate };
+    }
     
     if (isGroup) {
       const groupLoans = loans.filter(l => l.groupId === id);
@@ -137,11 +157,7 @@ function CollectionsPageContent() {
         const totalDue = groupLoans.reduce((acc, l) => acc + l.weeklyRepayment, 0);
         const totalOutstanding = groupLoans.reduce((acc, l) => acc + l.outstandingAmount, 0);
         
-        const installmentsPaid = firstLoan.totalPaid > 0 && firstLoan.weeklyRepayment > 0 ? Math.floor(firstLoan.totalPaid / firstLoan.weeklyRepayment) : 0;
-        const startDate = parseISO(firstLoan.disbursalDate);
-        let currentDueDate: Date | null = addWeeks(startDate, installmentsPaid);
-        if (installmentsPaid === 0) currentDueDate = addWeeks(startDate, 1);
-        let nextDueDate: Date | null = addWeeks(startDate, installmentsPaid + 1);
+        const { currentDueDate, nextDueDate } = getDueDates(firstLoan);
         
         info = {
             isGroup: true,
@@ -158,11 +174,7 @@ function CollectionsPageContent() {
     } else { // Personal Loan
       const loan = loans.find(l => l.id === id);
       if (loan) {
-        const installmentsPaid = loan.totalPaid > 0 && loan.weeklyRepayment > 0 ? Math.floor(loan.totalPaid / loan.weeklyRepayment) : 0;
-        const startDate = parseISO(loan.disbursalDate);
-        let currentDueDate: Date | null = addWeeks(startDate, installmentsPaid);
-        if (installmentsPaid === 0) currentDueDate = addWeeks(startDate, 1);
-        let nextDueDate: Date | null = addWeeks(startDate, installmentsPaid + 1);
+        const { currentDueDate, nextDueDate } = getDueDates(loan);
 
         info = {
             isGroup: false,
