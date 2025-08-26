@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon, IndianRupee, Landmark, Users, Phone, Search, Trash2, MoreHorizontal, X, Group } from 'lucide-react'
 import { Calendar } from '@/components/ui/calendar'
 import { cn, getAvatarColor } from '@/lib/utils'
-import { format, addDays, addWeeks, addMonths } from 'date-fns'
+import { format, addDays, addWeeks, addMonths, parseISO } from 'date-fns'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   AlertDialog,
@@ -127,7 +127,7 @@ function CollectionsPageContent() {
         return;
     }
     
-    const isGroup = id.startsWith('GRP');
+    const isGroup = id.startsWith('GRP') || !id.startsWith('CUST') && !id.startsWith('TEMP');
     let info: SelectedLoanInfo | null = null;
     
     if (isGroup) {
@@ -138,9 +138,10 @@ function CollectionsPageContent() {
         const totalOutstanding = groupLoans.reduce((acc, l) => acc + l.outstandingAmount, 0);
         
         const installmentsPaid = firstLoan.totalPaid > 0 && firstLoan.weeklyRepayment > 0 ? Math.floor(firstLoan.totalPaid / firstLoan.weeklyRepayment) : 0;
-        const startDate = new Date(firstLoan.disbursalDate);
-        let currentDueDate: Date | null = addWeeks(startDate, installmentsPaid + 1);
-        let nextDueDate: Date | null = addWeeks(startDate, installmentsPaid + 2);
+        const startDate = parseISO(firstLoan.disbursalDate);
+        let currentDueDate: Date | null = addWeeks(startDate, installmentsPaid);
+        if (installmentsPaid === 0) currentDueDate = addWeeks(startDate, 1);
+        let nextDueDate: Date | null = addWeeks(startDate, installmentsPaid + 1);
         
         info = {
             isGroup: true,
@@ -158,10 +159,11 @@ function CollectionsPageContent() {
       const loan = loans.find(l => l.id === id);
       if (loan) {
         const installmentsPaid = loan.totalPaid > 0 && loan.weeklyRepayment > 0 ? Math.floor(loan.totalPaid / loan.weeklyRepayment) : 0;
-        const startDate = new Date(loan.disbursalDate);
-        let currentDueDate: Date | null = addWeeks(startDate, installmentsPaid + 1);
-        let nextDueDate: Date | null = addWeeks(startDate, installmentsPaid + 2);
-        
+        const startDate = parseISO(loan.disbursalDate);
+        let currentDueDate: Date | null = addWeeks(startDate, installmentsPaid);
+        if (installmentsPaid === 0) currentDueDate = addWeeks(startDate, 1);
+        let nextDueDate: Date | null = addWeeks(startDate, installmentsPaid + 1);
+
         info = {
             isGroup: false,
             id: loan.id,

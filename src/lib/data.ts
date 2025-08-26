@@ -127,17 +127,11 @@ const calculateNextDueDate = (loan: Loan): string | undefined => {
     let nextDueDate: Date;
     
     if (loan.collectionFrequency === 'Daily') {
-        const periodsToAdd = installmentsPaid + 1;
-        nextDueDate = addDays(startDate, periodsToAdd);
+        nextDueDate = addDays(startDate, installmentsPaid + 1);
     } else if (loan.collectionFrequency === 'Weekly') {
-        if (installmentsPaid === 0) {
-            nextDueDate = addDays(startDate, 8);
-        } else {
-            nextDueDate = addWeeks(startDate, installmentsPaid + 1);
-        }
+        nextDueDate = addWeeks(startDate, installmentsPaid + 1);
     } else if (loan.collectionFrequency === 'Monthly') {
-        const periodsToAdd = installmentsPaid + 1;
-        nextDueDate = addMonths(startDate, periodsToAdd);
+        nextDueDate = addMonths(startDate, installmentsPaid + 1);
     } else {
         return undefined;
     }
@@ -355,7 +349,6 @@ export const useLoans = () => {
         if (groupId) {
             const tempLoan = currentLoans.find(l => l.id === tempId);
             const tempGroupId = tempLoan?.groupId;
-            const groupName = tempLoan?.groupName?.replace(/\s/g, '') || 'GROUP';
             
             if (!tempGroupId) return false;
 
@@ -363,6 +356,8 @@ export const useLoans = () => {
             const newLedgerIdForGroup = ledgerId.trim();
 
             if (groupLoans.length > 0) loanFound = true;
+            
+            const groupName = groupLoans[0].groupName?.replace(/\s/g, '') || 'GROUP';
 
             const finalLoans: Loan[] = [];
             const otherLoans = currentLoans.filter(l => l.groupId !== tempGroupId);
@@ -586,3 +581,4 @@ export function getLoansByCustomerId(customerId: string): Loan[] {
   const loans = getFromStorage('loans', initialLoans);
   return loans.filter(l => l.customerId === customerId);
 }
+
