@@ -134,6 +134,7 @@ export default function NewCustomerPage() {
       secondaryPhone: '',
       address: '',
       occupation: '',
+      monthlyIncome: undefined,
       idNumber: '',
       idType: 'Aadhaar Card',
       secondaryIdType: 'PAN Card',

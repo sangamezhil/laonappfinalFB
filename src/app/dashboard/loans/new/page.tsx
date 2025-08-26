@@ -1,7 +1,7 @@
 
 'use client'
 
-import React from 'react'
+import React, { useCallback, useMemo } from 'react'
 import { useForm, useWatch, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -152,9 +152,9 @@ export default function NewLoanPage() {
       collectionFrequency: 'Weekly',
       interestRate: 30,
       repaymentTerm: 40,
-      loanAmount: '' as any,
-      docCharges: '' as any,
-      insuranceCharges: '' as any,
+      loanAmount: undefined,
+      docCharges: undefined,
+      insuranceCharges: undefined,
     }
   });
 
@@ -165,9 +165,9 @@ export default function NewLoanPage() {
       groupSize: '5',
       interestRate: 30,
       repaymentTerm: 40,
-      loanAmount: '' as any,
-      docCharges: '' as any,
-      insuranceCharges: '' as any,
+      loanAmount: undefined,
+      docCharges: undefined,
+      insuranceCharges: undefined,
     }
    });
 
@@ -180,12 +180,12 @@ export default function NewLoanPage() {
   const selectedMembers = useWatch({ control: groupForm.control, name: 'members' });
   const groupLeaderId = useWatch({ control: groupForm.control, name: 'groupLeaderId' });
 
-  const eligibleCustomers = React.useMemo(() => {
+  const eligibleCustomers = useMemo(() => {
     const activeLoanCustomerIds = new Set(loans.filter(l => l.status === 'Active' || l.status === 'Overdue').map(l => l.customerId));
     return customers.filter(c => !activeLoanCustomerIds.has(c.id));
   }, [customers, loans]);
   
-  const getAvailableMembers = React.useCallback((currentIndex: number): Customer[] => {
+  const getAvailableMembers = useCallback((currentIndex: number): Customer[] => {
       const selectedMemberIds = new Set(selectedMembers?.map((m, i) => i === currentIndex ? null : m.customerId).filter(Boolean));
       if (groupLeaderId) selectedMemberIds.add(groupLeaderId);
       
