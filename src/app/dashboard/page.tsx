@@ -2,14 +2,14 @@
 'use client'
 
 import * as React from 'react'
-import { TrendingUp, Users, Landmark, AlertCircle, CheckCircle, Wallet, FileText, IndianRupee, UserCheck } from 'lucide-react'
+import { TrendingUp, Users, Landmark, AlertCircle, CheckCircle, Wallet, FileText, IndianRupee, UserCheck, User, Group } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from 'recharts'
 import type { ChartConfig } from '@/components/ui/chart'
 import { Badge } from '@/components/ui/badge'
-import { useLoans, useCustomers, useCollections, Loan, Customer, User } from '@/lib/data'
+import { useLoans, useCustomers, useCollections, Loan, Customer, User as AuthUser } from '@/lib/data'
 import { format, parseISO, isToday } from 'date-fns'
 import { Skeleton } from '@/components/ui/skeleton'
 import Link from 'next/link'
@@ -81,7 +81,8 @@ function AdminDashboard() {
   const summary = React.useMemo(() => {
     if (!loansLoaded) return {
         totalCustomers: 0,
-        activeLoans: 0,
+        activePersonalLoans: 0,
+        activeGroupLoans: 0,
         overdueLoans: 0,
         closedLoans: 0,
         totalDisbursed: 0,
@@ -91,6 +92,9 @@ function AdminDashboard() {
     };
     
     const activeLoans = loans.filter(l => l.status === 'Active');
+    const activePersonalLoans = activeLoans.filter(l => l.loanType === 'Personal').length;
+    const activeGroupLoans = new Set(activeLoans.filter(l => l.loanType === 'Group').map(l => l.groupId)).size;
+
     const overdueLoans = loans.filter(l => l.status === 'Overdue');
     const closedLoans = loans.filter(l => l.status === 'Closed' || l.status === 'Pre-closed');
     
@@ -104,7 +108,8 @@ function AdminDashboard() {
 
     return {
         totalCustomers: customers.length,
-        activeLoans: activeLoans.length,
+        activePersonalLoans,
+        activeGroupLoans,
         overdueLoans: overdueLoans.length,
         closedLoans: closedLoans.length,
         totalDisbursed,
@@ -118,7 +123,8 @@ function AdminDashboard() {
    if (!loansLoaded || !customersLoaded || !collectionsLoaded) {
     return (
         <div className="space-y-8">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                <Skeleton className="h-28" />
                 <Skeleton className="h-28" />
                 <Skeleton className="h-28" />
                 <Skeleton className="h-28" />
@@ -135,7 +141,7 @@ function AdminDashboard() {
 
   return (
     <div className="space-y-8">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
@@ -147,11 +153,20 @@ function AdminDashboard() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Active Loans</CardTitle>
-            <Landmark className="w-4 h-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Active Personal Loans</CardTitle>
+            <User className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{summary.activeLoans}</div>
+            <div className="text-2xl font-bold">{summary.activePersonalLoans}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-sm font-medium">Active Group Loans</CardTitle>
+            <Group className="w-4 h-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{summary.activeGroupLoans}</div>
           </CardContent>
         </Card>
         <Card>
@@ -286,7 +301,7 @@ function AdminDashboard() {
   )
 }
 
-function AgentDashboard({ user }: { user: User }) {
+function AgentDashboard({ user }: { user: AuthUser }) {
     const { loans, isLoaded: loansLoaded } = useLoans();
     const { customers, isLoaded: customersLoaded } = useCustomers();
 
@@ -458,7 +473,7 @@ function AgentDashboard({ user }: { user: User }) {
 }
 
 export default function DashboardPage() {
-    const [user, setUser] = React.useState<User | null>(null);
+    const [user, setUser] = React.useState<AuthUser | null>(null);
     const [isLoading, setIsLoading] = React.useState(true);
 
     React.useEffect(() => {
