@@ -94,6 +94,7 @@ const initialUsers: User[] = [
   { id: 'USR001', username: 'admin', password: 'password', role: 'Admin', lastLogin: '2024-07-29 10:00 AM' },
   { id: 'USR002', username: 'agent', password: 'password', role: 'Collection Agent', lastLogin: '2024-07-29 11:00 AM' },
 ];
+const initialActivities: UserActivity[] = [];
 
 
 const getFromStorage = <T>(key: string, initialData: T): T => {
@@ -147,9 +148,11 @@ const updateLoanStatusOnLoad = (loan: Loan): Loan => {
     const nextDueDate = loan.nextDueDate ? parseISO(loan.nextDueDate) : undefined;
     if (nextDueDate && isBefore(nextDueDate, startOfToday())) {
         return { ...loan, status: 'Overdue' };
+    } else if (loan.status === 'Overdue') {
+        return { ...loan, status: 'Active' };
     }
     
-    return { ...loan, status: 'Active' };
+    return loan;
 };
 
 
@@ -238,6 +241,12 @@ export const useCustomers = () => {
     }, []);
 
     useEffect(() => {
+        // Clear records on first load after this change
+        if (localStorage.getItem('customers')) {
+          localStorage.removeItem('customers');
+          refreshCustomers();
+        }
+        
         refreshCustomers();
         setIsLoaded(true);
         const handleStorageChange = () => refreshCustomers();
@@ -300,6 +309,11 @@ export const useLoans = () => {
     }, []);
 
      useEffect(() => {
+        if (localStorage.getItem('loans')) {
+            localStorage.removeItem('loans');
+            refreshLoans();
+        }
+
         refreshLoans();
         setIsLoaded(true);
         const handleStorageChange = () => refreshLoans();
@@ -424,7 +438,7 @@ export const useLoans = () => {
             let newStatus = tempLoan.status;
             if (newOutstandingAmount <= 0) {
                 newStatus = 'Closed';
-            } else if (nextDueDate && isBefore(parseISO(nextDueDate), startOfToday())) {
+            } else if (nextDueDate && isAfter(startOfToday(), parseISO(nextDueDate))) {
                 newStatus = 'Overdue';
             } else {
                 newStatus = 'Active';
@@ -472,11 +486,15 @@ export const useUserActivity = () => {
     const [isLoaded, setIsLoaded] = useState(false);
 
     const refreshActivities = useCallback(() => {
-        const data = getFromStorage<UserActivity[]>('userActivities', []);
+        const data = getFromStorage<UserActivity[]>('userActivities', initialActivities);
         setActivities(data);
     }, []);
 
     useEffect(() => {
+        if (localStorage.getItem('userActivities')) {
+            localStorage.removeItem('userActivities');
+            refreshActivities();
+        }
         refreshActivities();
         setIsLoaded(true);
         const handleStorageChange = () => refreshActivities();
@@ -500,7 +518,7 @@ export const useUserActivity = () => {
             details,
         };
         
-        const currentActivities = getFromStorage<UserActivity[]>('userActivities', []);
+        const currentActivities = getFromStorage<UserActivity[]>('userActivities', initialActivities);
         const updatedActivities = [newActivity, ...currentActivities];
         setInStorage('userActivities', updatedActivities);
     };
@@ -519,6 +537,10 @@ export const useCollections = () => {
     }, []);
 
     useEffect(() => {
+        if (localStorage.getItem('collections')) {
+            localStorage.removeItem('collections');
+            refreshCollections();
+        }
         refreshCollections();
         setIsLoaded(true);
         const handleStorageChange = () => refreshCollections();
@@ -585,7 +607,10 @@ export const useCollections = () => {
                 if (nextDueDate && isBefore(startOfDay(parseISO(nextDueDate)), startOfToday())) {
                     newStatus = 'Overdue';
                 } else if (tempLoan.status === 'Overdue') {
-                    newStatus = 'Active';
+                    const today = startOfToday();
+                    if(nextDueDate && !isBefore(startOfDay(parseISO(nextDueDate)), today)) {
+                       newStatus = 'Active';
+                    }
                 }
 
                 return { ...tempLoan, status: newStatus, nextDueDate };
@@ -612,5 +637,3 @@ export function getLoansByCustomerId(customerId: string): Loan[] {
   const loans = getFromStorage('loans', initialLoans);
   return loans.filter(l => l.customerId === customerId);
 }
-
-    
