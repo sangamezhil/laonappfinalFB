@@ -32,6 +32,7 @@ export type Loan = {
   groupLeaderName?: string;
   loanType: 'Personal' | 'Group';
   amount: number;
+  disbursalAmount: number;
   interestRate: number;
   term: number; 
   status: 'Pending' | 'Active' | 'Overdue' | 'Closed' | 'Missed' | 'Pre-closed';
@@ -130,6 +131,7 @@ const calculateNextDueDate = (loan: Loan): string | undefined => {
     if (loan.collectionFrequency === 'Daily') {
         nextDueDate = addDays(startDate, installmentsPaid + 1);
     } else if (loan.collectionFrequency === 'Weekly') {
+        // The first due date is exactly one week from disbursal. Each subsequent payment pushes it another week.
         nextDueDate = addWeeks(startDate, installmentsPaid + 1);
     } else if (loan.collectionFrequency === 'Monthly') {
         nextDueDate = addMonths(startDate, installmentsPaid + 1);
@@ -149,7 +151,10 @@ const updateLoanStatusOnLoad = (loan: Loan): Loan => {
     if (nextDueDate && isBefore(nextDueDate, startOfToday())) {
         return { ...loan, status: 'Overdue' };
     } else if (loan.status === 'Overdue') {
-        return { ...loan, status: 'Active' };
+        // If it was overdue but the date is no longer in the past (e.g. after a payment), set to active
+         if(nextDueDate && !isBefore(nextDueDate, startOfToday())) {
+            return { ...loan, status: 'Active' };
+         }
     }
     
     return loan;
@@ -241,10 +246,9 @@ export const useCustomers = () => {
     }, []);
 
     useEffect(() => {
-        // Clear records on first load after this change
-        if (localStorage.getItem('customers')) {
-          localStorage.removeItem('customers');
-          refreshCustomers();
+        // On first load, if there's no data, use initial data
+        if(localStorage.getItem('customers') === null) {
+          setInStorage('customers', initialCustomers);
         }
         
         refreshCustomers();
@@ -309,9 +313,8 @@ export const useLoans = () => {
     }, []);
 
      useEffect(() => {
-        if (localStorage.getItem('loans')) {
-            localStorage.removeItem('loans');
-            refreshLoans();
+        if (localStorage.getItem('loans') === null) {
+            setInStorage('loans', initialLoans);
         }
 
         refreshLoans();
@@ -353,7 +356,7 @@ export const useLoans = () => {
         setInStorage('loans', updatedLoans);
     };
 
-    const approveLoanWithLedgerId = (tempId: string, ledgerId: string, groupId?: string): boolean => {
+    const approveLoanWithLedgerId = (tempId: string, ledgerId: string): boolean => {
         const currentLoans = getFromStorage('loans', initialLoans);
         
         const trimmedLedgerId = ledgerId.trim();
@@ -365,18 +368,19 @@ export const useLoans = () => {
         let loanFound = false;
         let updatedLoans;
 
-        if (groupId) {
-            const tempLoan = currentLoans.find(l => l.id === tempId);
-            const tempGroupId = tempLoan?.groupId;
-            
-            if (!tempGroupId) return false;
+        const tempLoan = currentLoans.find(l => l.id === tempId);
+        
+        if (!tempLoan) return false;
 
+        // Group Loan Approval
+        if (tempLoan.loanType === 'Group' && tempLoan.groupId) {
+            const tempGroupId = tempLoan.groupId;
             const groupLoans = currentLoans.filter(l => l.groupId === tempGroupId);
             
-            if (groupLoans.length > 0) loanFound = true;
+            if (groupLoans.length === 0) return false;
             
+            loanFound = true;
             const groupName = groupLoans[0].groupName?.replace(/\s/g, '') || 'GROUP';
-
             const finalLoans: Loan[] = [];
             const otherLoans = currentLoans.filter(l => l.groupId !== tempGroupId);
             
@@ -385,7 +389,7 @@ export const useLoans = () => {
                 const activeLoan = {
                     ...l,
                     id: newMemberLoanId,
-                    groupId: trimmedLedgerId,
+                    groupId: trimmedLedgerId, 
                     status: 'Active' as 'Active',
                     disbursalDate: new Date().toISOString().split('T')[0]
                 };
@@ -395,8 +399,7 @@ export const useLoans = () => {
                 });
             });
             updatedLoans = [...otherLoans, ...finalLoans];
-
-        } else {
+        } else { // Personal Loan Approval
             updatedLoans = currentLoans.map(loan => {
                 if (loan.id === tempId) {
                     loanFound = true;
@@ -414,7 +417,6 @@ export const useLoans = () => {
                 return loan;
             });
         }
-
 
         if (loanFound) {
             setInStorage('loans', updatedLoans);
@@ -438,7 +440,7 @@ export const useLoans = () => {
             let newStatus = tempLoan.status;
             if (newOutstandingAmount <= 0) {
                 newStatus = 'Closed';
-            } else if (nextDueDate && isAfter(startOfToday(), parseISO(nextDueDate))) {
+            } else if (nextDueDate && isBefore(startOfDay(parseISO(nextDueDate)), startOfToday())) {
                 newStatus = 'Overdue';
             } else {
                 newStatus = 'Active';
@@ -491,9 +493,8 @@ export const useUserActivity = () => {
     }, []);
 
     useEffect(() => {
-        if (localStorage.getItem('userActivities')) {
-            localStorage.removeItem('userActivities');
-            refreshActivities();
+        if (localStorage.getItem('userActivities') === null) {
+            setInStorage('userActivities', initialActivities);
         }
         refreshActivities();
         setIsLoaded(true);
@@ -537,9 +538,8 @@ export const useCollections = () => {
     }, []);
 
     useEffect(() => {
-        if (localStorage.getItem('collections')) {
-            localStorage.removeItem('collections');
-            refreshCollections();
+        if (localStorage.getItem('collections') === null) {
+            setInStorage('collections', initialCollections);
         }
         refreshCollections();
         setIsLoaded(true);

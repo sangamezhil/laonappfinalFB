@@ -62,7 +62,7 @@ function AdminDashboard() {
           if (!monthlyData[month]) {
             monthlyData[month] = { month: format(parseISO(loan.disbursalDate), 'MMM yyyy'), disbursed: 0, collected: 0 };
           }
-          monthlyData[month].disbursed += loan.amount;
+          monthlyData[month].disbursed += loan.disbursalAmount;
       }
     });
     
@@ -98,7 +98,7 @@ function AdminDashboard() {
     const overdueLoans = loans.filter(l => l.status === 'Overdue');
     const closedLoans = loans.filter(l => l.status === 'Closed' || l.status === 'Pre-closed');
     
-    const totalDisbursed = loans.reduce((acc, loan) => acc + loan.amount, 0);
+    const totalDisbursed = loans.filter(l => l.status !== 'Pending').reduce((acc, loan) => acc + loan.disbursalAmount, 0);
     const totalOutstanding = loans.reduce((acc, loan) => acc + loan.outstandingAmount, 0);
     const totalCollected = loans.reduce((acc, loan) => acc + loan.totalPaid, 0);
 

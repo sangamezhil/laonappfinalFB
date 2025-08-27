@@ -223,12 +223,15 @@ export default function NewLoanPage() {
     const interest = (data.loanAmount * data.interestRate) / 100;
     const totalRepayable = data.loanAmount + interest;
     const repaymentAmount = totalRepayable / data.repaymentTerm;
+    const disbursalAmount = data.loanAmount - (data.docCharges + data.insuranceCharges);
+
 
     const newLoans = addLoan({
         customerId: data.customerId,
         customerName: customer.name,
         loanType: 'Personal',
         amount: data.loanAmount,
+        disbursalAmount: disbursalAmount,
         interestRate: data.interestRate,
         term: data.repaymentTerm,
         status: 'Pending',
@@ -275,6 +278,10 @@ export default function NewLoanPage() {
     const interestPerMember = (perMemberPrincipal * data.interestRate) / 100;
     const totalRepayablePerMember = perMemberPrincipal + interestPerMember;
     const weeklyRepayment = totalRepayablePerMember / data.repaymentTerm;
+    const docsPerMember = data.docCharges / size;
+    const insurancePerMember = data.insuranceCharges / size;
+    const disbursalAmountPerMember = perMemberPrincipal - (docsPerMember + insurancePerMember);
+
 
     const groupId = `GRP_${data.groupName.replace(/\s/g, '')}_${Date.now()}`;
 
@@ -288,6 +295,7 @@ export default function NewLoanPage() {
             groupLeaderName: leader.name,
             loanType: 'Group' as 'Group',
             amount: perMemberPrincipal,
+            disbursalAmount: disbursalAmountPerMember,
             interestRate: data.interestRate,
             term: data.repaymentTerm,
             status: 'Pending' as 'Pending',
@@ -505,5 +513,3 @@ export default function NewLoanPage() {
     </Card>
   )
 }
-
-    
