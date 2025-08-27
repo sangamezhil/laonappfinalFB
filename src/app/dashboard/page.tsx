@@ -2,14 +2,14 @@
 'use client'
 
 import * as React from 'react'
-import { TrendingUp, Users, Landmark, AlertCircle, CheckCircle, Wallet, FileText, IndianRupee, UserCheck, User, Group } from 'lucide-react'
+import { TrendingUp, Users, Landmark, AlertCircle, CheckCircle, Wallet, FileText, IndianRupee, UserCheck, User, Group, PiggyBank, CreditCard, Banknote } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from 'recharts'
 import type { ChartConfig } from '@/components/ui/chart'
 import { Badge } from '@/components/ui/badge'
-import { useLoans, useCustomers, useCollections, Loan, Customer, User as AuthUser } from '@/lib/data'
+import { useLoans, useCustomers, useCollections, useFinancials, Loan, Customer, User as AuthUser } from '@/lib/data'
 import { format, parseISO, isToday } from 'date-fns'
 import { Skeleton } from '@/components/ui/skeleton'
 import Link from 'next/link'
@@ -50,6 +50,7 @@ function AdminDashboard() {
   const { loans, isLoaded: loansLoaded } = useLoans()
   const { customers, isLoaded: customersLoaded } = useCustomers()
   const { collections, isLoaded: collectionsLoaded } = useCollections();
+  const { financials, isLoaded: financialsLoaded } = useFinancials();
 
   const chartData = React.useMemo(() => {
     if (!loansLoaded || !collectionsLoaded) return [];
@@ -79,7 +80,7 @@ function AdminDashboard() {
   }, [loans, collections, loansLoaded, collectionsLoaded]);
 
   const summary = React.useMemo(() => {
-    if (!loansLoaded) return {
+    if (!loansLoaded || !financialsLoaded) return {
         totalCustomers: 0,
         activePersonalLoans: 0,
         activeGroupLoans: 0,
@@ -88,6 +89,9 @@ function AdminDashboard() {
         totalDisbursed: 0,
         totalOutstanding: 0,
         totalCollected: 0,
+        totalInvestment: 0,
+        totalExpenses: 0,
+        availableCash: 0,
         recentLoans: [],
     };
     
@@ -102,6 +106,8 @@ function AdminDashboard() {
     const totalOutstanding = loans.reduce((acc, loan) => acc + loan.outstandingAmount, 0);
     const totalCollected = loans.reduce((acc, loan) => acc + loan.totalPaid, 0);
 
+    const availableCash = (financials.totalInvestment + totalCollected) - (totalDisbursed + financials.totalExpenses);
+
     const recentLoans = [...loans]
         .sort((a,b) => new Date(b.disbursalDate).getTime() - new Date(a.disbursalDate).getTime())
         .slice(0,5);
@@ -115,12 +121,15 @@ function AdminDashboard() {
         totalDisbursed,
         totalOutstanding,
         totalCollected,
+        totalInvestment: financials.totalInvestment,
+        totalExpenses: financials.totalExpenses,
+        availableCash,
         recentLoans,
     }
 
-  }, [loans, customers, loansLoaded])
+  }, [loans, customers, loansLoaded, financials, financialsLoaded])
   
-   if (!loansLoaded || !customersLoaded || !collectionsLoaded) {
+   if (!loansLoaded || !customersLoaded || !collectionsLoaded || !financialsLoaded) {
     return (
         <div className="space-y-8">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -194,7 +203,34 @@ function AdminDashboard() {
           <CardHeader>
             <CardTitle>Financial Summary</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-3">
+          <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+             <div className="flex items-center justify-between p-3 rounded-lg bg-secondary">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-full bg-blue-500/20 text-blue-700"><PiggyBank/></div>
+                    <div>
+                        <p className="text-sm text-muted-foreground">Total Investment</p>
+                        <p className="text-xl font-bold flex items-center"><IndianRupee className="w-5 h-5 mr-1" />{summary.totalInvestment.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+                    </div>
+                </div>
+            </div>
+             <div className="flex items-center justify-between p-3 rounded-lg bg-secondary">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-full bg-orange-500/20 text-orange-700"><CreditCard/></div>
+                    <div>
+                        <p className="text-sm text-muted-foreground">Total Expenses</p>
+                        <p className="text-xl font-bold flex items-center"><IndianRupee className="w-5 h-5 mr-1" />{summary.totalExpenses.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+                    </div>
+                </div>
+            </div>
+             <div className="flex items-center justify-between p-3 rounded-lg bg-secondary">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-full bg-green-500/20 text-green-700"><Banknote/></div>
+                    <div>
+                        <p className="text-sm text-muted-foreground">Total Available Cash</p>
+                        <p className="text-xl font-bold flex items-center"><IndianRupee className="w-5 h-5 mr-1" />{summary.availableCash.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+                    </div>
+                </div>
+            </div>
             <div className="flex items-center justify-between p-3 rounded-lg bg-secondary">
                 <div className="flex items-center gap-3">
                     <div className="p-2 rounded-full bg-primary/20 text-primary"><TrendingUp/></div>

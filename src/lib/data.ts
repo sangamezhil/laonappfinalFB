@@ -80,12 +80,22 @@ export type CompanyProfile = {
   logoUrl?: string;
 };
 
+export type Financials = {
+    totalInvestment: number;
+    totalExpenses: number;
+};
+
 const initialCompanyProfile: CompanyProfile = {
     name: 'LoanTrack Lite',
     address: '123 Business Avenue, Suite 100, City, State 12345',
     phone: '1234567890',
     email: 'contact@loantracklite.com',
     logoUrl: ''
+}
+
+const initialFinancials: Financials = {
+    totalInvestment: 0,
+    totalExpenses: 0,
 }
 
 const initialCustomers: Customer[] = [];
@@ -233,6 +243,32 @@ export const useCompanyProfile = () => {
     };
 
     return { profile, updateProfile, isLoaded };
+};
+
+export const useFinancials = () => {
+    const [financials, setFinancials] = useState<Financials>(initialFinancials);
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    const refreshFinancials = useCallback(() => {
+        const data = getFromStorage('financials', initialFinancials);
+        setFinancials(data);
+    }, []);
+
+    useEffect(() => {
+        refreshFinancials();
+        setIsLoaded(true);
+        const handleStorageChange = () => refreshFinancials();
+        window.addEventListener('local-storage-updated', handleStorageChange);
+        return () => window.removeEventListener('local-storage-updated', handleStorageChange);
+    }, [refreshFinancials]);
+
+    const updateFinancials = (newFinancials: Partial<Financials>) => {
+        const currentFinancials = getFromStorage('financials', initialFinancials);
+        const updatedFinancials = { ...currentFinancials, ...newFinancials };
+        setInStorage('financials', updatedFinancials);
+    };
+
+    return { financials, updateFinancials, isLoaded };
 };
 
 
