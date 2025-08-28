@@ -285,14 +285,14 @@ export const useFinancials = () => {
         };
         const updatedFinancials = {
             ...currentFinancials,
-            expenses: [newExpense, ...currentFinancials.expenses]
+            expenses: [newExpense, ...(currentFinancials.expenses || [])]
         };
         setInStorage('financials', updatedFinancials);
     };
 
     const deleteExpense = (expenseId: string) => {
         const currentFinancials = getFromStorage('financials', initialFinancials);
-        const updatedExpenses = currentFinancials.expenses.filter(exp => exp.id !== expenseId);
+        const updatedExpenses = (currentFinancials.expenses || []).filter(exp => exp.id !== expenseId);
         const updatedFinancials = { ...currentFinancials, expenses: updatedExpenses };
         setInStorage('financials', updatedFinancials);
     };
