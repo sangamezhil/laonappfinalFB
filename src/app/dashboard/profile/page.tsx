@@ -151,11 +151,18 @@ export default function CompanyProfilePage() {
 
     updateFinancials(financialData);
 
-    logActivity('Update Financials', `Added expense of ${newExpenseAmount}. New total expenses: ${newTotalExpenses}`)
-    toast({
-      title: 'Financials Updated',
-      description: `New expense of ${newExpenseAmount.toLocaleString('en-IN')} added.`,
-    })
+    if (newExpenseAmount > 0) {
+        logActivity('Update Financials', `Added expense of ${newExpenseAmount}. New total expenses: ${newTotalExpenses}`)
+        toast({
+        title: 'Financials Updated',
+        description: `New expense of ${newExpenseAmount.toLocaleString('en-IN')} added.`,
+        })
+    } else {
+         toast({
+            title: 'Financials Updated',
+            description: `Total investment has been updated.`,
+        })
+    }
 
     financialsForm.reset({
         totalInvestment: financialData.totalInvestment,
@@ -318,10 +325,6 @@ export default function CompanyProfilePage() {
                             </FormItem>
                             )}
                         />
-                        <div>
-                            <p className="text-sm font-medium leading-none">Running Total Expenses</p>
-                            <p className="text-2xl font-bold flex items-center mt-2"><IndianRupee className="w-6 h-6 mr-1" />{financials.totalExpenses.toLocaleString('en-IN')}</p>
-                        </div>
                          <FormField
                             control={financialsForm.control}
                             name="newExpense"
@@ -336,6 +339,10 @@ export default function CompanyProfilePage() {
                             </FormItem>
                             )}
                         />
+                         <div className="flex items-center justify-between p-3 rounded-lg bg-secondary md:col-span-2">
+                           <p className="text-sm font-medium">Running Total Expenses:</p>
+                           <p className="text-lg font-bold flex items-center"><IndianRupee className="w-5 h-5 mr-1" />{financials.totalExpenses.toLocaleString('en-IN')}</p>
+                        </div>
                     </div>
                 </CardContent>
                 <CardFooter className="flex justify-end">
