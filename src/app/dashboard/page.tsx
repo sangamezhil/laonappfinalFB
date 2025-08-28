@@ -105,7 +105,7 @@ function AdminDashboard() {
     const totalDisbursed = loans.filter(l => l.status !== 'Pending').reduce((acc, loan) => acc + loan.disbursalAmount, 0);
     const totalOutstanding = loans.reduce((acc, loan) => acc + loan.outstandingAmount, 0);
     const totalCollected = loans.reduce((acc, loan) => acc + loan.totalPaid, 0);
-    const totalExpenses = financials.expenses.reduce((acc, expense) => acc + expense.amount, 0);
+    const totalExpenses = (financials.expenses || []).reduce((acc, expense) => acc + expense.amount, 0);
     
     const availableCash = (financials.totalInvestment + totalCollected) - (totalDisbursed + totalExpenses);
 
