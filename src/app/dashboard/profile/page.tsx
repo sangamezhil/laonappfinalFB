@@ -85,7 +85,7 @@ export default function CompanyProfilePage() {
     }
   })
   
-  const totalExpenses = financials.expenses.reduce((sum, exp) => sum + exp.amount, 0);
+  const totalExpenses = (financials.expenses || []).reduce((sum, exp) => sum + exp.amount, 0);
 
   useEffect(() => {
      if (typeof window !== 'undefined') {
@@ -443,3 +443,5 @@ export default function CompanyProfilePage() {
     </div>
   )
 }
+
+    
