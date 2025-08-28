@@ -260,19 +260,16 @@ export const useCompanyProfile = () => {
 };
 
 export const useFinancials = () => {
-    const [financials, setFinancials] = useState<Financials>(initialFinancials);
+    const [financials, setFinancials] = useState<Financials>({ investments: [], expenses: [] });
     const [isLoaded, setIsLoaded] = useState(false);
 
     const refreshFinancials = useCallback(() => {
         const data = getFromStorage('financials', initialFinancials);
-        // Ensure investments and expenses are always arrays
-        if (!Array.isArray(data.investments)) {
-            data.investments = [];
-        }
-        if (!Array.isArray(data.expenses)) {
-            data.expenses = [];
-        }
-        setFinancials(data);
+        const safeData = {
+            investments: Array.isArray(data.investments) ? data.investments : [],
+            expenses: Array.isArray(data.expenses) ? data.expenses : [],
+        };
+        setFinancials(safeData);
     }, []);
 
     useEffect(() => {
@@ -297,12 +294,6 @@ export const useFinancials = () => {
         };
         setInStorage('financials', updatedFinancials);
     };
-
-    const updateFinancials = (data: Partial<Financials>) => {
-        const currentFinancials = getFromStorage('financials', initialFinancials);
-        const updatedFinancials = { ...currentFinancials, ...data };
-        setInStorage('financials', updatedFinancials);
-    }
     
     const resetFinancials = (data: Partial<Financials>) => {
         const currentFinancials = getFromStorage('financials', initialFinancials);
@@ -332,7 +323,7 @@ export const useFinancials = () => {
         setInStorage('financials', updatedFinancials);
     };
 
-    return { financials, addInvestment, updateFinancials, resetFinancials, addExpense, deleteExpense, isLoaded };
+    return { financials, addInvestment, resetFinancials, addExpense, deleteExpense, isLoaded };
 };
 
 
@@ -733,3 +724,19 @@ export function getLoansByCustomerId(customerId: string): Loan[] {
   const loans = getFromStorage('loans', initialLoans);
   return loans.filter(l => l.customerId === customerId);
 }
+
+// Function to clear all data from local storage
+export const resetAllData = () => {
+    if (typeof window === 'undefined') return;
+    setInStorage('customers', initialCustomers);
+    setInStorage('loans', initialLoans);
+    setInStorage('collections', initialCollections);
+    setInStorage('userActivities', initialActivities);
+    setInStorage('companyProfile', initialCompanyProfile);
+    setInStorage('financials', initialFinancials);
+    // We don't reset users, but you could add it here if needed:
+    // setInStorage('users', initialUsers);
+    
+    // Trigger a refresh
+    window.dispatchEvent(new Event('local-storage-updated'));
+};

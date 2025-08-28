@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { PlusCircle, MoreHorizontal, FileDown, Calendar as CalendarIcon, UserCog } from 'lucide-react'
+import { PlusCircle, MoreHorizontal, FileDown, Calendar as CalendarIcon, UserCog, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -66,7 +66,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { useUserActivity, useCustomers, useLoans, useCollections, useCompanyProfile, useUsers, useFinancials } from '@/lib/data'
+import { useUserActivity, useCustomers, useLoans, useCollections, useCompanyProfile, useUsers, useFinancials, resetAllData } from '@/lib/data'
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format, isWithinInterval, parseISO } from 'date-fns'
@@ -143,6 +143,7 @@ export default function UsersPage() {
   const { profile: companyProfile } = useCompanyProfile();
   const { financials } = useFinancials();
   const router = useRouter();
+  const [isResetDataOpen, setResetDataOpen] = useState(false);
 
 
   const { toast } = useToast();
@@ -412,6 +413,15 @@ export default function UsersPage() {
     setHistoryInStorage(updatedHistory);
     setDateRange(undefined);
   };
+  
+  const handleConfirmReset = () => {
+    resetAllData();
+    toast({
+        title: 'Data Reset Successfully',
+        description: 'All dashboard records have been cleared.'
+    });
+    setResetDataOpen(false);
+  }
 
   if (!isLoaded || !loggedInUser || loggedInUser.role !== 'Admin') {
     return (
@@ -619,6 +629,15 @@ export default function UsersPage() {
                   <p className="text-sm text-muted-foreground">No download history yet.</p>
               )}
             </div>
+
+            <div className="pt-6 border-t border-destructive/50">
+                <h3 className="text-lg font-semibold text-destructive mb-2">Danger Zone</h3>
+                 <Button variant="destructive" onClick={() => setResetDataOpen(true)}>
+                    <AlertTriangle className="w-4 h-4 mr-2" />
+                    Reset All Dashboard Records
+                </Button>
+                <p className="text-sm text-muted-foreground mt-2">This will permanently delete all customers, loans, collections, and financial records. This action cannot be undone.</p>
+            </div>
           </div>
       </CardFooter>
     </Card>
@@ -714,6 +733,21 @@ export default function UsersPage() {
             <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteUser} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    
+    <AlertDialog open={isResetDataOpen} onOpenChange={setResetDataOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This will permanently delete all customers, loans, collections, and financial data. This action is irreversible. User accounts will not be deleted.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleConfirmReset} className="bg-destructive hover:bg-destructive/90">Yes, Reset All Data</AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
