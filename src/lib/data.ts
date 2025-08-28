@@ -80,9 +80,16 @@ export type CompanyProfile = {
   logoUrl?: string;
 };
 
+export type Expense = {
+    id: string;
+    date: string;
+    description: string;
+    amount: number;
+}
+
 export type Financials = {
     totalInvestment: number;
-    totalExpenses: number;
+    expenses: Expense[];
 };
 
 const initialCompanyProfile: CompanyProfile = {
@@ -95,7 +102,7 @@ const initialCompanyProfile: CompanyProfile = {
 
 const initialFinancials: Financials = {
     totalInvestment: 0,
-    totalExpenses: 0,
+    expenses: [],
 }
 
 const initialCustomers: Customer[] = [];
@@ -262,13 +269,35 @@ export const useFinancials = () => {
         return () => window.removeEventListener('local-storage-updated', handleStorageChange);
     }, [refreshFinancials]);
 
-    const updateFinancials = (newFinancials: Partial<Financials>) => {
+    const updateFinancials = (newFinancials: Partial<Omit<Financials, 'expenses'>>) => {
         const currentFinancials = getFromStorage('financials', initialFinancials);
         const updatedFinancials = { ...currentFinancials, ...newFinancials };
         setInStorage('financials', updatedFinancials);
     };
+    
+    const addExpense = (description: string, amount: number) => {
+        const currentFinancials = getFromStorage('financials', initialFinancials);
+        const newExpense: Expense = {
+            id: `EXP-${Date.now()}`,
+            date: new Date().toISOString(),
+            description,
+            amount
+        };
+        const updatedFinancials = {
+            ...currentFinancials,
+            expenses: [newExpense, ...currentFinancials.expenses]
+        };
+        setInStorage('financials', updatedFinancials);
+    };
 
-    return { financials, updateFinancials, isLoaded };
+    const deleteExpense = (expenseId: string) => {
+        const currentFinancials = getFromStorage('financials', initialFinancials);
+        const updatedExpenses = currentFinancials.expenses.filter(exp => exp.id !== expenseId);
+        const updatedFinancials = { ...currentFinancials, expenses: updatedExpenses };
+        setInStorage('financials', updatedFinancials);
+    };
+
+    return { financials, updateFinancials, addExpense, deleteExpense, isLoaded };
 };
 
 

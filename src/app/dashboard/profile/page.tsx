@@ -6,15 +6,27 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import Image from 'next/image'
-import { useCompanyProfile, useFinancials, useUserActivity } from '@/lib/data'
+import { useCompanyProfile, useFinancials, useUserActivity, Expense } from '@/lib/data'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Upload, Trash2, IndianRupee } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { format } from 'date-fns'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 const companyProfileSchema = z.object({
   name: z.string().min(3, { message: "Company name must be at least 3 characters." }),
@@ -26,11 +38,17 @@ const companyProfileSchema = z.object({
 
 const financialsSchema = z.object({
   totalInvestment: z.coerce.number().min(0, { message: "Investment must be a positive number." }).optional(),
-  newExpense: z.coerce.number().min(0, { message: "Expense must be a positive number." }).optional(),
 })
+
+const expenseSchema = z.object({
+  description: z.string().min(3, 'Description is required.'),
+  amount: z.coerce.number().positive('Amount must be a positive number.'),
+})
+
 
 type CompanyProfileFormValues = z.infer<typeof companyProfileSchema>
 type FinancialsFormValues = z.infer<typeof financialsSchema>
+type ExpenseFormValues = z.infer<typeof expenseSchema>
 
 type User = {
   username: string;
@@ -39,12 +57,13 @@ type User = {
 
 export default function CompanyProfilePage() {
   const { profile, updateProfile, isLoaded: profileLoaded } = useCompanyProfile()
-  const { financials, updateFinancials, isLoaded: financialsLoaded } = useFinancials()
+  const { financials, updateFinancials, addExpense, deleteExpense, isLoaded: financialsLoaded } = useFinancials()
   const { logActivity } = useUserActivity()
   const { toast } = useToast()
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
 
   const profileForm = useForm<CompanyProfileFormValues>({
     resolver: zodResolver(companyProfileSchema),
@@ -55,9 +74,18 @@ export default function CompanyProfilePage() {
     resolver: zodResolver(financialsSchema),
     defaultValues: {
         totalInvestment: financials.totalInvestment,
-        newExpense: undefined,
     },
   })
+
+  const expenseForm = useForm<ExpenseFormValues>({
+    resolver: zodResolver(expenseSchema),
+    defaultValues: {
+        description: '',
+        amount: undefined,
+    }
+  })
+  
+  const totalExpenses = financials.expenses.reduce((sum, exp) => sum + exp.amount, 0);
 
   useEffect(() => {
      if (typeof window !== 'undefined') {
@@ -138,36 +166,26 @@ export default function CompanyProfilePage() {
         window.location.reload();
     }, 1000)
   }
+  
+  function onInvestmentSubmit(data: FinancialsFormValues) {
+    updateFinancials({ totalInvestment: data.totalInvestment });
+    logActivity('Update Investment', `Set total investment to ${data.totalInvestment?.toLocaleString('en-IN')}`);
+    toast({ title: 'Investment Updated', description: 'Total investment amount has been saved.'});
+  }
 
-  function onFinancialsSubmit(data: FinancialsFormValues) {
-    const currentFinancials = financials;
-    const newExpenseAmount = data.newExpense || 0;
-    const newTotalExpenses = currentFinancials.totalExpenses + newExpenseAmount;
-    
-    const financialData = {
-        totalInvestment: data.totalInvestment ?? currentFinancials.totalInvestment,
-        totalExpenses: newTotalExpenses
-    }
+  function onAddExpense(data: ExpenseFormValues) {
+    addExpense(data.description, data.amount);
+    logActivity('Add Expense', `Added expense: ${data.description} - ${data.amount.toLocaleString('en-IN')}`);
+    toast({ title: 'Expense Added', description: `${data.description} has been added to expenses.`});
+    expenseForm.reset();
+  }
 
-    updateFinancials(financialData);
-
-    if (newExpenseAmount > 0) {
-        logActivity('Update Financials', `Added expense of ${newExpenseAmount}. New total expenses: ${newTotalExpenses}`)
-        toast({
-        title: 'Financials Updated',
-        description: `New expense of ${newExpenseAmount.toLocaleString('en-IN')} added.`,
-        })
-    } else {
-         toast({
-            title: 'Financials Updated',
-            description: `Total investment has been updated.`,
-        })
-    }
-
-    financialsForm.reset({
-        totalInvestment: financialData.totalInvestment,
-        newExpense: undefined,
-    });
+  const handleDeleteExpense = () => {
+    if(!expenseToDelete) return;
+    deleteExpense(expenseToDelete.id);
+    logActivity('Delete Expense', `Deleted expense: ${expenseToDelete.description}`);
+    toast({ title: 'Expense Deleted', description: `${expenseToDelete.description} has been removed.`});
+    setExpenseToDelete(null);
   }
 
   if (!profileLoaded || !financialsLoaded || !user || user.role !== 'Admin') {
@@ -292,7 +310,7 @@ export default function CompanyProfilePage() {
                             )}
                         </div>
                         </div>
-                        <FormDescription>Upload a logo for your company (PNG, JPG, GIF, max 1MB).</FormDescription>
+                        <FormMessage />
                     </FormItem>
                 </div>
             </CardContent>
@@ -303,16 +321,15 @@ export default function CompanyProfilePage() {
         </form>
         </Form>
         
-        <Form {...financialsForm}>
-        <form onSubmit={financialsForm.handleSubmit(onFinancialsSubmit)}>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Financials</CardTitle>
-                    <CardDescription>Manage investment and expense figures.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8">
-                        <FormField
+        <Card>
+            <CardHeader>
+                <CardTitle>Financials</CardTitle>
+                <CardDescription>Manage investment and expense figures.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                 <Form {...financialsForm}>
+                    <form onSubmit={financialsForm.handleSubmit(onInvestmentSubmit)} className="space-y-4">
+                         <FormField
                             control={financialsForm.control}
                             name="totalInvestment"
                             render={({ field }) => (
@@ -325,32 +342,104 @@ export default function CompanyProfilePage() {
                             </FormItem>
                             )}
                         />
-                         <FormField
-                            control={financialsForm.control}
-                            name="newExpense"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel className="flex items-center gap-1">Add New Expense <IndianRupee className="w-4 h-4" /></FormLabel>
-                                <FormControl>
-                                <Input type="number" placeholder="Enter new expense amount" {...field} value={field.value ?? ''} />
-                                </FormControl>
-                                <FormDescription>This amount will be added to the running total.</FormDescription>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                         <div className="flex items-center justify-between p-3 rounded-lg bg-secondary md:col-span-2">
-                           <p className="text-sm font-medium">Running Total Expenses:</p>
-                           <p className="text-lg font-bold flex items-center"><IndianRupee className="w-5 h-5 mr-1" />{financials.totalExpenses.toLocaleString('en-IN')}</p>
+                        <div className="flex justify-end">
+                             <Button type="submit">Save</Button>
                         </div>
+                    </form>
+                 </Form>
+
+                <div className="mt-6 pt-6 border-t">
+                    <Form {...expenseForm}>
+                        <form onSubmit={expenseForm.handleSubmit(onAddExpense)} className="space-y-4">
+                             <h3 className="text-lg font-medium">Log Expense</h3>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormField
+                                    control={expenseForm.control}
+                                    name="description"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Expense Description</FormLabel>
+                                        <FormControl>
+                                        <Input placeholder="e.g., Office Rent, Salaries" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={expenseForm.control}
+                                    name="amount"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="flex items-center gap-1">Amount <IndianRupee className="w-4 h-4" /></FormLabel>
+                                        <FormControl>
+                                        <Input type="number" placeholder="Enter amount" {...field} value={field.value ?? ''}/>
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                             </div>
+                             <div className="flex justify-end">
+                                <Button type="submit">Add Expense</Button>
+                             </div>
+                        </form>
+                    </Form>
+                </div>
+                 <div className="mt-6 pt-6 border-t">
+                    <h3 className="text-lg font-medium mb-2">Expense History</h3>
+                    <div className="flex items-baseline justify-between p-2 mb-4 rounded-lg bg-secondary">
+                        <p className="text-sm font-medium">Running Total Expenses:</p>
+                        <p className="text-lg font-bold flex items-center"><IndianRupee className="w-5 h-5 mr-1" />{totalExpenses.toLocaleString('en-IN')}</p>
                     </div>
-                </CardContent>
-                <CardFooter className="flex justify-end">
-                    <Button type="submit">Save</Button>
-                </CardFooter>
-            </Card>
-        </form>
-        </Form>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Date</TableHead>
+                                <TableHead>Description</TableHead>
+                                <TableHead className="text-right">Amount</TableHead>
+                                <TableHead className="text-right"><span className="sr-only">Actions</span></TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {financials.expenses.length > 0 ? (
+                                financials.expenses.map(exp => (
+                                    <TableRow key={exp.id}>
+                                        <TableCell>{format(new Date(exp.date), 'dd MMM, yyyy')}</TableCell>
+                                        <TableCell>{exp.description}</TableCell>
+                                        <TableCell className="text-right flex items-center justify-end gap-1"><IndianRupee className="w-4 h-4"/>{exp.amount.toLocaleString('en-IN')}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="ghost" size="icon" onClick={() => setExpenseToDelete(exp)}>
+                                                <Trash2 className="w-4 h-4 text-destructive" />
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="text-center text-muted-foreground">No expenses recorded yet.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                 </div>
+            </CardContent>
+        </Card>
+
+        <AlertDialog open={!!expenseToDelete} onOpenChange={() => setExpenseToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This will permanently delete the expense: <span className="font-semibold">{expenseToDelete?.description}</span> for <span className="font-semibold">{expenseToDelete?.amount.toLocaleString('en-IN')}</span>. This action cannot be undone.
+                </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteExpense} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   )
 }

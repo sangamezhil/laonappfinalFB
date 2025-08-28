@@ -105,8 +105,9 @@ function AdminDashboard() {
     const totalDisbursed = loans.filter(l => l.status !== 'Pending').reduce((acc, loan) => acc + loan.disbursalAmount, 0);
     const totalOutstanding = loans.reduce((acc, loan) => acc + loan.outstandingAmount, 0);
     const totalCollected = loans.reduce((acc, loan) => acc + loan.totalPaid, 0);
-
-    const availableCash = (financials.totalInvestment + totalCollected) - (totalDisbursed + financials.totalExpenses);
+    const totalExpenses = financials.expenses.reduce((acc, expense) => acc + expense.amount, 0);
+    
+    const availableCash = (financials.totalInvestment + totalCollected) - (totalDisbursed + totalExpenses);
 
     const recentLoans = [...loans]
         .sort((a,b) => new Date(b.disbursalDate).getTime() - new Date(a.disbursalDate).getTime())
@@ -122,7 +123,7 @@ function AdminDashboard() {
         totalOutstanding,
         totalCollected,
         totalInvestment: financials.totalInvestment,
-        totalExpenses: financials.totalExpenses,
+        totalExpenses,
         availableCash,
         recentLoans,
     }
