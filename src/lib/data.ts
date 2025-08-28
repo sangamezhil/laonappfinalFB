@@ -95,7 +95,7 @@ export type Expense = {
 }
 
 export type Financials = {
-    investments: Investment[];
+    totalInvestment: number;
     expenses: Expense[];
 };
 
@@ -108,7 +108,7 @@ const initialCompanyProfile: CompanyProfile = {
 }
 
 const initialFinancials: Financials = {
-    investments: [],
+    totalInvestment: 0,
     expenses: [],
 }
 
@@ -275,28 +275,10 @@ export const useFinancials = () => {
         window.addEventListener('local-storage-updated', handleStorageChange);
         return () => window.removeEventListener('local-storage-updated', handleStorageChange);
     }, [refreshFinancials]);
-
-    const addInvestment = (description: string, amount: number) => {
+    
+    const updateFinancials = (data: Partial<Financials>) => {
         const currentFinancials = getFromStorage('financials', initialFinancials);
-        const newInvestment: Investment = {
-            id: `INV-${Date.now()}`,
-            date: new Date().toISOString(),
-            description,
-            amount
-        };
-        const updatedFinancials = {
-            ...currentFinancials,
-            investments: [newInvestment, ...(currentFinancials.investments || [])]
-        };
-        setInStorage('financials', updatedFinancials);
-    };
-
-    const updateInvestment = (investmentId: string, updatedData: { description: string, amount: number }) => {
-        const currentFinancials = getFromStorage('financials', initialFinancials);
-        const updatedInvestments = (currentFinancials.investments || []).map(inv => 
-            inv.id === investmentId ? { ...inv, ...updatedData } : inv
-        );
-        const updatedFinancials = { ...currentFinancials, investments: updatedInvestments };
+        const updatedFinancials = { ...currentFinancials, ...data };
         setInStorage('financials', updatedFinancials);
     };
     
@@ -322,7 +304,7 @@ export const useFinancials = () => {
         setInStorage('financials', updatedFinancials);
     };
 
-    return { financials, addInvestment, updateInvestment, addExpense, deleteExpense, isLoaded };
+    return { financials, updateFinancials, addExpense, deleteExpense, isLoaded };
 };
 
 

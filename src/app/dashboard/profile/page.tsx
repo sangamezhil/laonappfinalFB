@@ -34,7 +34,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 
 
@@ -46,10 +45,10 @@ const companyProfileSchema = z.object({
   logoUrl: z.string().optional().or(z.literal('')),
 })
 
-const investmentSchema = z.object({
-  description: z.string().min(3, 'Description is required.'),
-  amount: z.coerce.number().positive('Amount must be a positive number.'),
-})
+const financialsSchema = z.object({
+  totalInvestment: z.coerce.number().min(0, "Investment must be a positive number.").optional(),
+});
+
 
 const expenseSchema = z.object({
   description: z.string().min(3, 'Description is required.'),
@@ -58,7 +57,7 @@ const expenseSchema = z.object({
 
 
 type CompanyProfileFormValues = z.infer<typeof companyProfileSchema>
-type InvestmentFormValues = z.infer<typeof investmentSchema>
+type FinancialsFormValues = z.infer<typeof financialsSchema>
 type ExpenseFormValues = z.infer<typeof expenseSchema>
 
 type User = {
@@ -68,28 +67,22 @@ type User = {
 
 export default function CompanyProfilePage() {
   const { profile, updateProfile, isLoaded: profileLoaded } = useCompanyProfile()
-  const { financials, addInvestment, updateInvestment, addExpense, deleteExpense, isLoaded: financialsLoaded } = useFinancials()
+  const { financials, updateFinancials, addExpense, deleteExpense, isLoaded: financialsLoaded } = useFinancials()
   const { logActivity } = useUserActivity()
   const { toast } = useToast()
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
-  const [investmentToEdit, setInvestmentToEdit] = useState<Investment | null>(null);
-  const [isEditInvestmentOpen, setEditInvestmentOpen] = useState(false);
 
   const profileForm = useForm<CompanyProfileFormValues>({
     resolver: zodResolver(companyProfileSchema),
     defaultValues: profile,
   })
 
-  const investmentForm = useForm<InvestmentFormValues>({
-    resolver: zodResolver(investmentSchema),
-    defaultValues: { description: '', amount: undefined }
-  })
-  
-  const editInvestmentForm = useForm<InvestmentFormValues>({
-    resolver: zodResolver(investmentSchema),
+  const financialsForm = useForm<FinancialsFormValues>({
+    resolver: zodResolver(financialsSchema),
+    defaultValues: { totalInvestment: financials.totalInvestment || 0 },
   });
 
 
@@ -99,7 +92,6 @@ export default function CompanyProfilePage() {
   })
   
   const totalExpenses = (financials.expenses || []).reduce((sum, exp) => sum + exp.amount, 0);
-  const totalInvestments = (financials.investments || []).reduce((sum, inv) => sum + inv.amount, 0);
 
   useEffect(() => {
      if (typeof window !== 'undefined') {
@@ -128,17 +120,10 @@ export default function CompanyProfilePage() {
           setLogoPreview(profile.logoUrl)
       }
     }
-  }, [profile, profileLoaded, profileForm])
-  
-  useEffect(() => {
-    if (investmentToEdit) {
-      editInvestmentForm.reset({
-        description: investmentToEdit.description,
-        amount: investmentToEdit.amount
-      });
-      setEditInvestmentOpen(true);
+    if (financialsLoaded) {
+      financialsForm.reset({ totalInvestment: financials.totalInvestment || 0 });
     }
-  }, [investmentToEdit, editInvestmentForm]);
+  }, [profile, profileLoaded, profileForm, financials, financialsLoaded, financialsForm])
 
 
   const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -188,21 +173,11 @@ export default function CompanyProfilePage() {
         window.location.reload();
     }, 1000)
   }
-  
-  function onAddInvestment(data: InvestmentFormValues) {
-    addInvestment(data.description, data.amount);
-    logActivity('Add Investment', `Added investment: ${data.description} - ${data.amount.toLocaleString('en-IN')}`);
-    toast({ title: 'Investment Added', description: `${data.description} has been added.`});
-    investmentForm.reset();
-  }
 
-  function onEditInvestment(data: InvestmentFormValues) {
-    if (!investmentToEdit) return;
-    updateInvestment(investmentToEdit.id, data);
-    logActivity('Update Investment', `Updated investment: ${data.description} - ${data.amount.toLocaleString('en-IN')}`);
-    toast({ title: 'Investment Updated', description: 'Investment record has been updated.' });
-    setInvestmentToEdit(null);
-    setEditInvestmentOpen(false);
+  function onFinancialsSubmit(data: FinancialsFormValues) {
+    updateFinancials({ totalInvestment: data.totalInvestment });
+    logActivity('Update Financials', `Total investment set to ${data.totalInvestment?.toLocaleString('en-IN')}`);
+    toast({ title: 'Financials Updated', description: 'Total investment has been saved.' });
   }
 
   function onAddExpense(data: ExpenseFormValues) {
@@ -362,78 +337,27 @@ export default function CompanyProfilePage() {
                  <div className="grid md:grid-cols-2 gap-8">
                      {/* Investments Section */}
                      <div className="space-y-6">
-                        <Form {...investmentForm}>
-                            <form onSubmit={investmentForm.handleSubmit(onAddInvestment)} className="space-y-4">
-                                <h3 className="text-lg font-medium">Log Investment</h3>
-                                <FormField
-                                    control={investmentForm.control}
-                                    name="description"
+                        <Form {...financialsForm}>
+                            <form onSubmit={financialsForm.handleSubmit(onFinancialsSubmit)} className="space-y-4">
+                                <h3 className="text-lg font-medium">Total Investment</h3>
+                                 <FormField
+                                    control={financialsForm.control}
+                                    name="totalInvestment"
                                     render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Investment Description</FormLabel>
+                                        <FormLabel className="flex items-center gap-1">Total Investment Amount <IndianRupee className="w-4 h-4" /></FormLabel>
                                         <FormControl>
-                                        <Input placeholder="e.g., Initial Capital, Personal Fund" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={investmentForm.control}
-                                    name="amount"
-                                    render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="flex items-center gap-1">Amount <IndianRupee className="w-4 h-4" /></FormLabel>
-                                        <FormControl>
-                                        <Input type="number" placeholder="Enter amount" {...field} value={field.value ?? ''}/>
+                                        <Input type="number" placeholder="Enter total investment" {...field} value={field.value ?? ''}/>
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                     )}
                                 />
                                 <div className="flex justify-end">
-                                    <Button type="submit">Add Investment</Button>
+                                    <Button type="submit">Save</Button>
                                 </div>
                             </form>
                         </Form>
-
-                        <div className="pt-6 border-t">
-                            <h3 className="text-lg font-medium mb-2">Investment History</h3>
-                            <div className="flex items-baseline justify-between p-2 mb-4 rounded-lg bg-secondary">
-                                <p className="text-sm font-medium">Total Investments:</p>
-                                <p className="text-lg font-bold flex items-center"><IndianRupee className="w-5 h-5 mr-1" />{totalInvestments.toLocaleString('en-IN')}</p>
-                            </div>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Date</TableHead>
-                                        <TableHead>Description</TableHead>
-                                        <TableHead className="text-right">Amount</TableHead>
-                                        <TableHead className="text-right"><span className="sr-only">Actions</span></TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {(financials.investments || []).length > 0 ? (
-                                        (financials.investments || []).map(inv => (
-                                            <TableRow key={inv.id}>
-                                                <TableCell>{format(new Date(inv.date), 'dd MMM, yyyy')}</TableCell>
-                                                <TableCell>{inv.description}</TableCell>
-                                                <TableCell className="text-right flex items-center justify-end gap-1"><IndianRupee className="w-4 h-4"/>{inv.amount.toLocaleString('en-IN')}</TableCell>
-                                                <TableCell className="text-right">
-                                                    <Button variant="ghost" size="icon" onClick={() => setInvestmentToEdit(inv)}>
-                                                        <Edit className="w-4 h-4" />
-                                                    </Button>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : (
-                                        <TableRow>
-                                            <TableCell colSpan={4} className="text-center text-muted-foreground">No investments recorded yet.</TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
                      </div>
 
                      {/* Expenses Section */}
@@ -513,54 +437,6 @@ export default function CompanyProfilePage() {
                  </div>
             </CardContent>
         </Card>
-
-        {/* Edit Investment Dialog */}
-        <Dialog open={isEditInvestmentOpen} onOpenChange={setEditInvestmentOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit Investment</DialogTitle>
-              <DialogDescription>
-                Update the details for this investment record.
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...editInvestmentForm}>
-              <form onSubmit={editInvestmentForm.handleSubmit(onEditInvestment)} className="space-y-4 py-4">
-                <FormField
-                  control={editInvestmentForm.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Investment Description</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editInvestmentForm.control}
-                  name="amount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Amount</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} value={field.value ?? ''} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setEditInvestmentOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit">Save Changes</Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
 
         <AlertDialog open={!!expenseToDelete} onOpenChange={() => setExpenseToDelete(null)}>
             <AlertDialogContent>
