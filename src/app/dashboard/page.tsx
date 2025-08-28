@@ -2,7 +2,7 @@
 'use client'
 
 import * as React from 'react'
-import { TrendingUp, Users, Landmark, AlertCircle, CheckCircle, Wallet, FileText, IndianRupee, UserCheck, User, Group, PiggyBank, CreditCard, Banknote } from 'lucide-react'
+import { TrendingUp, Users, Landmark, AlertCircle, CheckCircle, Wallet, FileText, IndianRupee, UserCheck, User, Group, PiggyBank, CreditCard, Banknote, RotateCcw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
@@ -14,6 +14,17 @@ import { format, parseISO, isToday } from 'date-fns'
 import { Skeleton } from '@/components/ui/skeleton'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { useToast } from '@/hooks/use-toast'
 
 
 const chartConfig = {
@@ -50,7 +61,10 @@ function AdminDashboard() {
   const { loans, isLoaded: loansLoaded } = useLoans()
   const { customers, isLoaded: customersLoaded } = useCustomers()
   const { collections, isLoaded: collectionsLoaded } = useCollections();
-  const { financials, isLoaded: financialsLoaded } = useFinancials();
+  const { financials, resetFinancials, isLoaded: financialsLoaded } = useFinancials();
+  const { toast } = useToast();
+
+  const [resetType, setResetType] = React.useState<'investment' | 'expenses' | null>(null);
 
   const chartData = React.useMemo(() => {
     if (!loansLoaded || !collectionsLoaded) return [];
@@ -131,6 +145,19 @@ function AdminDashboard() {
 
   }, [loans, customers, loansLoaded, financials, financialsLoaded])
   
+  const handleReset = () => {
+    if (!resetType) return;
+
+    if (resetType === 'investment') {
+      resetFinancials({ totalInvestment: 0 });
+      toast({ title: 'Total Investment Reset', description: 'Your total investment has been reset to zero.' });
+    } else if (resetType === 'expenses') {
+      resetFinancials({ expenses: [] });
+      toast({ title: 'Expenses Reset', description: 'All expense records have been cleared.' });
+    }
+    setResetType(null);
+  };
+  
    if (!loansLoaded || !customersLoaded || !collectionsLoaded || !financialsLoaded) {
     return (
         <div className="space-y-8">
@@ -151,6 +178,7 @@ function AdminDashboard() {
   }
 
   return (
+    <>
     <div className="space-y-8">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <Card>
@@ -214,6 +242,9 @@ function AdminDashboard() {
                         <p className="text-xl font-bold flex items-center"><IndianRupee className="w-5 h-5 mr-1" />{summary.totalInvestment.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
                     </div>
                 </div>
+                <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => setResetType('investment')}>
+                  <RotateCcw className="w-4 h-4 text-muted-foreground"/>
+                </Button>
             </div>
              <div className="flex items-center justify-between p-3 rounded-lg bg-secondary">
                 <div className="flex items-center gap-3">
@@ -223,6 +254,9 @@ function AdminDashboard() {
                         <p className="text-xl font-bold flex items-center"><IndianRupee className="w-5 h-5 mr-1" />{summary.totalExpenses.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
                     </div>
                 </div>
+                 <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => setResetType('expenses')}>
+                  <RotateCcw className="w-4 h-4 text-muted-foreground"/>
+                </Button>
             </div>
             <div className="flex items-center justify-between p-3 rounded-lg bg-secondary">
                 <div className="flex items-center gap-3">
@@ -336,6 +370,24 @@ function AdminDashboard() {
         </CardContent>
       </Card>
     </div>
+    <AlertDialog open={!!resetType} onOpenChange={() => setResetType(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {resetType === 'investment' && 'This will reset your total investment to zero. This action cannot be undone.'}
+            {resetType === 'expenses' && 'This will delete all expense records. This action cannot be undone.'}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setResetType(null)}>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleReset} className="bg-destructive hover:bg-destructive/90">
+            Yes, Reset
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   )
 }
 

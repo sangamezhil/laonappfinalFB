@@ -282,6 +282,12 @@ export const useFinancials = () => {
         setInStorage('financials', updatedFinancials);
     }
 
+    const resetFinancials = (data: Partial<Financials>) => {
+        const currentFinancials = getFromStorage('financials', initialFinancials);
+        const updatedFinancials = { ...currentFinancials, ...data };
+        setInStorage('financials', updatedFinancials);
+    }
+
     const addExpense = (description: string, amount: number) => {
         const currentFinancials = getFromStorage('financials', initialFinancials);
         const newExpense: Expense = {
@@ -304,7 +310,7 @@ export const useFinancials = () => {
         setInStorage('financials', updatedFinancials);
     };
 
-    return { financials, updateFinancials, addExpense, deleteExpense, isLoaded };
+    return { financials, updateFinancials, resetFinancials, addExpense, deleteExpense, isLoaded };
 };
 
 
