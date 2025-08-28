@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { notFound, useParams } from 'next/navigation';
-import { getCustomerById, getLoansByCustomerId, Customer, Loan, useCollections, Collection, useCompanyProfile } from '@/lib/data'
+import { getCustomerById, getLoansByCustomerId, Customer, Loan, useCollections, Collection, useCompanyProfile, useFinancials, useLoans } from '@/lib/data'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -29,6 +29,8 @@ export default function CustomerProfilePage() {
   const [customer, setCustomer] = useState<Customer | null | undefined>(undefined);
   const [loansWithDetails, setLoansWithDetails] = useState<LoanWithDetails[]>([]);
   const { collections } = useCollections();
+  const { financials } = useFinancials();
+  const { loans } = useLoans();
   
   useEffect(() => {
     if (customerId) {
@@ -136,6 +138,34 @@ export default function CustomerProfilePage() {
     doc.text(`Page : 1`, 195, 25, { align: 'right' });
 
     let finalY = startY + 8;
+    
+    // Financial Summary calculation
+    const totalInvestment = financials.investments.reduce((sum, item) => sum + item.amount, 0);
+    const totalExpenses = financials.expenses.reduce((sum, item) => sum + item.amount, 0);
+    const totalDisbursed = loans.filter(l => l.status !== 'Pending').reduce((acc, loan) => acc + loan.disbursalAmount, 0);
+    const totalCollected = collections.reduce((acc, collection) => acc + collection.amount, 0);
+    const availableCash = totalInvestment - totalExpenses - totalDisbursed + totalCollected;
+
+    autoTable(doc, {
+        startY: finalY,
+        body: [
+            [
+                { content: 'Total Investment:', styles: { fontStyle: 'bold' } }, `Rs. ${totalInvestment.toLocaleString('en-IN')}`,
+                { content: 'Total Expenses:', styles: { fontStyle: 'bold' } }, `Rs. ${totalExpenses.toLocaleString('en-IN')}`,
+                { content: 'Available Cash:', styles: { fontStyle: 'bold' } }, `Rs. ${availableCash.toLocaleString('en-IN')}`
+            ]
+        ],
+        theme: 'plain',
+        styles: { fontSize: 8, cellPadding: 1, halign: 'center' },
+        columnStyles: { 0: { halign: 'left' }, 2: { halign: 'left' }, 4: { halign: 'left' } },
+        didDrawPage: (data) => {
+            doc.setDrawColor(200);
+            doc.rect(data.settings.margin.left, data.cursor.y, doc.internal.pageSize.width - data.settings.margin.left - data.settings.margin.right, data.table.height);
+        }
+    });
+
+    finalY = (doc as any).lastAutoTable.finalY + 8;
+
 
     autoTable(doc, {
         startY: finalY,
@@ -434,5 +464,3 @@ export default function CustomerProfilePage() {
     </div>
   )
 }
-
-    

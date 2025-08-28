@@ -66,7 +66,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { useUserActivity, useCustomers, useLoans, useCollections, useCompanyProfile, useUsers } from '@/lib/data'
+import { useUserActivity, useCustomers, useLoans, useCollections, useCompanyProfile, useUsers, useFinancials } from '@/lib/data'
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format, isWithinInterval, parseISO } from 'date-fns'
@@ -141,6 +141,7 @@ export default function UsersPage() {
   const { loans } = useLoans();
   const { collections } = useCollections();
   const { profile: companyProfile } = useCompanyProfile();
+  const { financials } = useFinancials();
   const router = useRouter();
 
 
@@ -287,6 +288,9 @@ export default function UsersPage() {
     const filteredCustomers = range ? customers.filter(c => isWithinInterval(parseISO(c.registrationDate), range)) : customers;
     const filteredLoans = range ? loans.filter(l => isWithinInterval(parseISO(l.disbursalDate), range)) : loans;
     const filteredCollections = range ? collections.filter(c => isWithinInterval(parseISO(c.date), range)) : collections;
+    const filteredInvestments = range ? financials.investments.filter(i => isWithinInterval(parseISO(i.date), range)) : financials.investments;
+    const filteredExpenses = range ? financials.expenses.filter(e => isWithinInterval(parseISO(e.date), range)) : financials.expenses;
+
 
     let headerCursorY = 20;
 
@@ -307,53 +311,64 @@ export default function UsersPage() {
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
         doc.text('Consolidated Data Report', doc.internal.pageSize.getWidth() / 2, finalY, { align: 'center' });
-        finalY += 10;
+        finalY += 8;
+        
         doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
+        doc.text(`Date Range: ${range ? `${format(range.start!, 'dd/MM/yyyy')} to ${format(range.end!, 'dd/MM/yyyy')}`: 'All Time'}`, doc.internal.pageSize.getWidth() / 2, finalY, { align: 'center' });
+        finalY += 10;
+        
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Financial Summary', 14, finalY);
+        finalY += 5;
 
-        if (filteredCustomers.length > 0) {
-            doc.setFontSize(12);
-            doc.text('Customers', 14, finalY);
-            finalY += 5;
-            autoTable(doc, {
-                startY: finalY,
-                head: [['ID', 'Name', 'Mobile', 'ID Type', 'ID Number', 'Registered On']],
-                body: filteredCustomers.map(c => [c.id, c.name, c.phone, c.idType, c.idNumber, c.registrationDate]),
-                theme: 'striped',
-                headStyles: { fillColor: [41, 128, 185], textColor: 255, fontSize: 8 },
-                styles: { fontSize: 8 },
-            });
-            finalY = (doc as any).lastAutoTable.finalY + 10;
-        }
+        // Financial Summary calculation
+        const totalInvestment = filteredInvestments.reduce((sum, item) => sum + item.amount, 0);
+        const totalExpenses = filteredExpenses.reduce((sum, item) => sum + item.amount, 0);
+        const totalDisbursed = filteredLoans.filter(l => l.status !== 'Pending').reduce((acc, loan) => acc + loan.disbursalAmount, 0);
+        const totalCollected = filteredCollections.reduce((acc, collection) => acc + collection.amount, 0);
+        const availableCash = totalInvestment - totalExpenses - totalDisbursed + totalCollected;
 
-        if (filteredLoans.length > 0) {
-            doc.setFontSize(12);
-            doc.text('Loans', 14, finalY);
-            finalY += 5;
-            autoTable(doc, {
-                startY: finalY,
-                head: [['ID', 'Customer', 'Type', 'Amount (Rs)', 'Status', 'Date']],
-                body: filteredLoans.map(l => [l.id, l.customerName, l.loanType, l.amount.toLocaleString('en-IN'), l.status, l.disbursalDate]),
-                theme: 'striped',
-                headStyles: { fillColor: [41, 128, 185], textColor: 255, fontSize: 8 },
-                styles: { fontSize: 8 },
-            });
-            finalY = (doc as any).lastAutoTable.finalY + 10;
-        }
+        autoTable(doc, {
+            startY: finalY,
+            body: [
+                ['Total Investment:', `Rs. ${totalInvestment.toLocaleString('en-IN')}`],
+                ['Total Expenses:', `Rs. ${totalExpenses.toLocaleString('en-IN')}`],
+                ['Total Disbursed:', `Rs. ${totalDisbursed.toLocaleString('en-IN')}`],
+                ['Total Collected:', `Rs. ${totalCollected.toLocaleString('en-IN')}`],
+                ['Available Cash:', `Rs. ${availableCash.toLocaleString('en-IN')}`],
+            ],
+            theme: 'striped',
+            headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold' },
+            styles: { fontSize: 8, cellPadding: 2 },
+            columnStyles: { 0: { fontStyle: 'bold' } },
+        });
 
-        if (filteredCollections.length > 0) {
-            doc.setFontSize(12);
-            doc.text('Collections', 14, finalY);
-            finalY += 5;
-            autoTable(doc, {
-                startY: finalY,
-                head: [['Loan ID', 'Customer', 'Amount (Rs)', 'Method', 'Date']],
-                body: filteredCollections.map(c => [c.loanId, c.customer, c.amount.toLocaleString('en-IN'), c.paymentMethod, c.date]),
-                theme: 'striped',
-                headStyles: { fillColor: [41, 128, 185], textColor: 255, fontSize: 8 },
-                styles: { fontSize: 8 },
-            });
-        }
+        finalY = (doc as any).lastAutoTable.finalY + 10;
+        
+        const addSectionToPdf = (title: string, head: string[][], body: any[][]) => {
+            if (body.length > 0) {
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text(title, 14, finalY);
+                finalY += 5;
+                autoTable(doc, {
+                    startY: finalY,
+                    head: head,
+                    body: body,
+                    theme: 'striped',
+                    headStyles: { fillColor: [41, 128, 185], textColor: 255, fontSize: 8 },
+                    styles: { fontSize: 8 },
+                });
+                finalY = (doc as any).lastAutoTable.finalY + 10;
+            }
+        };
+
+        addSectionToPdf('Investments', [['Date', 'Description', 'Amount (Rs)']], filteredInvestments.map(i => [format(parseISO(i.date), 'dd/MM/yyyy'), i.description, i.amount.toLocaleString('en-IN')]));
+        addSectionToPdf('Expenses', [['Date', 'Description', 'Amount (Rs)']], filteredExpenses.map(e => [format(parseISO(e.date), 'dd/MM/yyyy'), e.description, e.amount.toLocaleString('en-IN')]));
+        addSectionToPdf('Customers', [['ID', 'Name', 'Mobile', 'ID Type', 'ID Number', 'Registered On']], filteredCustomers.map(c => [c.id, c.name, c.phone, c.idType, c.idNumber, c.registrationDate]));
+        addSectionToPdf('Loans', [['ID', 'Customer', 'Type', 'Amount (Rs)', 'Status', 'Date']], filteredLoans.map(l => [l.id, l.customerName, l.loanType, l.amount.toLocaleString('en-IN'), l.status, l.disbursalDate]));
+        addSectionToPdf('Collections', [['Loan ID', 'Customer', 'Amount (Rs)', 'Method', 'Date']], filteredCollections.map(c => [c.loanId, c.customer, c.amount.toLocaleString('en-IN'), c.paymentMethod, c.date]));
     };
     
     const fromDate = range ? format(range.start, 'yyyy-MM-dd') : 'start';
