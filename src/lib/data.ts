@@ -95,7 +95,6 @@ export type Expense = {
 }
 
 export type Financials = {
-    totalInvestment: number;
     investments: Investment[];
     expenses: Expense[];
 };
@@ -109,7 +108,6 @@ const initialCompanyProfile: CompanyProfile = {
 }
 
 const initialFinancials: Financials = {
-    totalInvestment: 0,
     investments: [],
     expenses: [],
 }
