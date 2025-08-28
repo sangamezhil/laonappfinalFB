@@ -97,6 +97,7 @@ export type Expense = {
 export type Financials = {
     investments: Investment[];
     expenses: Expense[];
+    totalInvestment: number;
 };
 
 const initialCompanyProfile: CompanyProfile = {
@@ -110,6 +111,7 @@ const initialCompanyProfile: CompanyProfile = {
 const initialFinancials: Financials = {
     investments: [],
     expenses: [],
+    totalInvestment: 0,
 }
 
 const initialCustomers: Customer[] = [];
@@ -260,7 +262,7 @@ export const useCompanyProfile = () => {
 };
 
 export const useFinancials = () => {
-    const [financials, setFinancials] = useState<Financials>({ investments: [], expenses: [] });
+    const [financials, setFinancials] = useState<Financials>(initialFinancials);
     const [isLoaded, setIsLoaded] = useState(false);
 
     const refreshFinancials = useCallback(() => {
@@ -268,6 +270,7 @@ export const useFinancials = () => {
         const safeData = {
             investments: Array.isArray(data.investments) ? data.investments : [],
             expenses: Array.isArray(data.expenses) ? data.expenses : [],
+            totalInvestment: data.totalInvestment || 0,
         };
         setFinancials(safeData);
     }, []);
@@ -280,26 +283,11 @@ export const useFinancials = () => {
         return () => window.removeEventListener('local-storage-updated', handleStorageChange);
     }, [refreshFinancials]);
     
-    const addInvestment = (description: string, amount: number) => {
-        const currentFinancials = getFromStorage('financials', initialFinancials);
-        const newInvestment: Investment = {
-            id: `INV-${Date.now()}`,
-            date: new Date().toISOString(),
-            description,
-            amount
-        };
-        const updatedFinancials = {
-            ...currentFinancials,
-            investments: [newInvestment, ...(currentFinancials.investments || [])]
-        };
-        setInStorage('financials', updatedFinancials);
-    };
-    
-    const resetFinancials = (data: Partial<Financials>) => {
+    const updateFinancials = (data: Partial<Financials>) => {
         const currentFinancials = getFromStorage('financials', initialFinancials);
         const updatedFinancials = { ...currentFinancials, ...data };
         setInStorage('financials', updatedFinancials);
-    }
+    };
 
     const addExpense = (description: string, amount: number) => {
         const currentFinancials = getFromStorage('financials', initialFinancials);
@@ -323,7 +311,7 @@ export const useFinancials = () => {
         setInStorage('financials', updatedFinancials);
     };
 
-    return { financials, addInvestment, resetFinancials, addExpense, deleteExpense, isLoaded };
+    return { financials, updateFinancials, addExpense, deleteExpense, isLoaded };
 };
 
 
@@ -740,3 +728,4 @@ export const resetAllData = () => {
     // Trigger a refresh
     window.dispatchEvent(new Event('local-storage-updated'));
 };
+
