@@ -9,7 +9,7 @@ import Image from 'next/image'
 import { useCompanyProfile, useFinancials, useUserActivity, Expense, Investment } from '@/lib/data'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -36,9 +36,8 @@ const companyProfileSchema = z.object({
   logoUrl: z.string().optional().or(z.literal('')),
 })
 
-const investmentSchema = z.object({
-  description: z.string().min(3, 'Description is required.'),
-  amount: z.coerce.number().positive('Amount must be a positive number.'),
+const financialsSchema = z.object({
+  totalInvestment: z.coerce.number().positive('Amount must be a positive number.'),
 })
 
 const expenseSchema = z.object({
@@ -48,7 +47,7 @@ const expenseSchema = z.object({
 
 
 type CompanyProfileFormValues = z.infer<typeof companyProfileSchema>
-type InvestmentFormValues = z.infer<typeof investmentSchema>
+type FinancialsFormValues = z.infer<typeof financialsSchema>
 type ExpenseFormValues = z.infer<typeof expenseSchema>
 
 type User = {
@@ -58,7 +57,7 @@ type User = {
 
 export default function CompanyProfilePage() {
   const { profile, updateProfile, isLoaded: profileLoaded } = useCompanyProfile()
-  const { financials, addInvestment, addExpense, deleteExpense, isLoaded: financialsLoaded } = useFinancials()
+  const { financials, updateFinancials, addExpense, deleteExpense, isLoaded: financialsLoaded } = useFinancials()
   const { logActivity } = useUserActivity()
   const { toast } = useToast()
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -70,18 +69,17 @@ export default function CompanyProfilePage() {
     resolver: zodResolver(companyProfileSchema),
     defaultValues: profile,
   })
-  
-  const investmentForm = useForm<InvestmentFormValues>({
-    resolver: zodResolver(investmentSchema),
-    defaultValues: { description: '', amount: undefined }
-  })
 
+  const financialsForm = useForm<FinancialsFormValues>({
+    resolver: zodResolver(financialsSchema),
+    defaultValues: { totalInvestment: financials.totalInvestment || 0 }
+  })
+  
   const expenseForm = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
     defaultValues: { description: '', amount: undefined }
   })
   
-  const totalInvestments = (financials.investments || []).reduce((sum, inv) => sum + inv.amount, 0);
   const totalExpenses = (financials.expenses || []).reduce((sum, exp) => sum + exp.amount, 0);
 
   useEffect(() => {
@@ -111,7 +109,10 @@ export default function CompanyProfilePage() {
           setLogoPreview(profile.logoUrl)
       }
     }
-  }, [profile, profileLoaded, profileForm])
+    if (financialsLoaded) {
+        financialsForm.reset({ totalInvestment: financials.totalInvestment || 0 })
+    }
+  }, [profile, profileLoaded, profileForm, financials, financialsLoaded, financialsForm])
 
 
   const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -162,11 +163,10 @@ export default function CompanyProfilePage() {
     }, 1000)
   }
 
-  function onAddInvestment(data: InvestmentFormValues) {
-    addInvestment(data.description, data.amount);
-    logActivity('Add Investment', `Added investment: ${data.description} - ${data.amount.toLocaleString('en-IN')}`);
-    toast({ title: 'Investment Added', description: `${data.description} has been added.`});
-    investmentForm.reset();
+  function onFinancialsSubmit(data: FinancialsFormValues) {
+    updateFinancials({ totalInvestment: data.totalInvestment });
+    logActivity('Update Financials', `Total investment updated to ${data.totalInvestment.toLocaleString('en-IN')}`);
+    toast({ title: 'Financials Updated', description: 'Total investment has been updated.' });
   }
 
   function onAddExpense(data: ExpenseFormValues) {
@@ -323,74 +323,31 @@ export default function CompanyProfilePage() {
                 <CardDescription>Manage investment and expense records.</CardDescription>
             </CardHeader>
             <CardContent>
-                 <div className="grid md:grid-cols-2 gap-8">
-                     {/* Investments Section */}
-                     <div className="space-y-6">
-                        <Form {...investmentForm}>
-                            <form onSubmit={investmentForm.handleSubmit(onAddInvestment)} className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-8">
+                    {/* Investments Section */}
+                    <div className="space-y-6">
+                        <Form {...financialsForm}>
+                            <form onSubmit={financialsForm.handleSubmit(onFinancialsSubmit)} className="space-y-4">
                                 <h3 className="text-lg font-medium">Log Investment</h3>
                                 <FormField
-                                    control={investmentForm.control}
-                                    name="description"
+                                    control={financialsForm.control}
+                                    name="totalInvestment"
                                     render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Investment Description</FormLabel>
+                                        <FormLabel className="flex items-center gap-1">Total Investment <IndianRupee className="w-4 h-4" /></FormLabel>
                                         <FormControl>
-                                        <Input placeholder="e.g., Initial Capital, Shareholder funds" {...field} />
+                                            <Input type="number" placeholder="Enter total investment" {...field} value={field.value ?? ''} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={investmentForm.control}
-                                    name="amount"
-                                    render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="flex items-center gap-1">Amount <IndianRupee className="w-4 h-4" /></FormLabel>
-                                        <FormControl>
-                                        <Input type="number" placeholder="Enter amount" {...field} value={field.value ?? ''}/>
-                                        </FormControl>
+                                        <FormDescription>This value will overwrite the previous total investment.</FormDescription>
                                         <FormMessage />
                                     </FormItem>
                                     )}
                                 />
                                 <div className="flex justify-end">
-                                    <Button type="submit">Add Investment</Button>
+                                    <Button type="submit">Save Investment</Button>
                                 </div>
                             </form>
                         </Form>
-                        <div className="pt-6 border-t">
-                            <h3 className="text-lg font-medium mb-2">Investment History</h3>
-                            <div className="flex items-baseline justify-between p-2 mb-4 rounded-lg bg-secondary">
-                                <p className="text-sm font-medium">Total Investments:</p>
-                                <p className="text-lg font-bold flex items-center"><IndianRupee className="w-5 h-5 mr-1" />{totalInvestments.toLocaleString('en-IN')}</p>
-                            </div>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Date</TableHead>
-                                        <TableHead>Description</TableHead>
-                                        <TableHead className="text-right">Amount</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {(financials.investments || []).length > 0 ? (
-                                        (financials.investments || []).map(inv => (
-                                            <TableRow key={inv.id}>
-                                                <TableCell>{format(new Date(inv.date), 'dd MMM, yyyy')}</TableCell>
-                                                <TableCell>{inv.description}</TableCell>
-                                                <TableCell className="text-right flex items-center justify-end gap-1"><IndianRupee className="w-4 h-4"/>{inv.amount.toLocaleString('en-IN')}</TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : (
-                                        <TableRow>
-                                            <TableCell colSpan={3} className="text-center text-muted-foreground">No investments recorded yet.</TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
                      </div>
 
                      {/* Expenses Section */}
