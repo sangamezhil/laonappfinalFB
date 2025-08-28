@@ -95,6 +95,7 @@ export type Expense = {
 }
 
 export type Financials = {
+    totalInvestment: number;
     investments: Investment[];
     expenses: Expense[];
 };
@@ -108,6 +109,7 @@ const initialCompanyProfile: CompanyProfile = {
 }
 
 const initialFinancials: Financials = {
+    totalInvestment: 0,
     investments: [],
     expenses: [],
 }
@@ -265,6 +267,13 @@ export const useFinancials = () => {
 
     const refreshFinancials = useCallback(() => {
         const data = getFromStorage('financials', initialFinancials);
+        // Ensure investments and expenses are always arrays
+        if (!Array.isArray(data.investments)) {
+            data.investments = [];
+        }
+        if (!Array.isArray(data.expenses)) {
+            data.expenses = [];
+        }
         setFinancials(data);
     }, []);
 
@@ -291,6 +300,12 @@ export const useFinancials = () => {
         setInStorage('financials', updatedFinancials);
     };
 
+    const updateFinancials = (data: Partial<Financials>) => {
+        const currentFinancials = getFromStorage('financials', initialFinancials);
+        const updatedFinancials = { ...currentFinancials, ...data };
+        setInStorage('financials', updatedFinancials);
+    }
+    
     const resetFinancials = (data: Partial<Financials>) => {
         const currentFinancials = getFromStorage('financials', initialFinancials);
         const updatedFinancials = { ...currentFinancials, ...data };
@@ -319,7 +334,7 @@ export const useFinancials = () => {
         setInStorage('financials', updatedFinancials);
     };
 
-    return { financials, addInvestment, resetFinancials, addExpense, deleteExpense, isLoaded };
+    return { financials, addInvestment, updateFinancials, resetFinancials, addExpense, deleteExpense, isLoaded };
 };
 
 
@@ -684,23 +699,19 @@ export const useCollections = () => {
                     outstandingAmount: newOutstandingAmount,
                 };
                 
-                const nextDueDate = calculateNextDueDate(tempLoan);
-                let newStatus = tempLoan.status;
+                const nextDueDateString = calculateNextDueDate(tempLoan);
+                tempLoan.nextDueDate = nextDueDateString;
                 
-                if (tempLoan.status === 'Closed' && newOutstandingAmount > 0) {
-                   newStatus = 'Active';
-                }
-
-                if (nextDueDate && isBefore(startOfDay(parseISO(nextDueDate)), startOfToday())) {
+                let newStatus = tempLoan.status;
+                if (newOutstandingAmount <= 0) {
+                  newStatus = 'Closed';
+                } else if (nextDueDateString && isBefore(startOfDay(parseISO(nextDueDateString)), startOfToday())) {
                     newStatus = 'Overdue';
-                } else if (tempLoan.status === 'Overdue') {
-                    const today = startOfToday();
-                    if(nextDueDate && !isBefore(startOfDay(parseISO(nextDueDate)), today)) {
-                       newStatus = 'Active';
-                    }
+                } else {
+                    newStatus = 'Active';
                 }
-
-                return { ...tempLoan, status: newStatus, nextDueDate };
+                
+                return { ...tempLoan, status: newStatus };
             }
             return loan;
         });

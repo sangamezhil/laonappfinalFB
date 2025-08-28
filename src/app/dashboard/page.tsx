@@ -119,7 +119,7 @@ function AdminDashboard() {
     const totalDisbursed = loans.filter(l => l.status !== 'Pending').reduce((acc, loan) => acc + loan.disbursalAmount, 0);
     const totalOutstanding = loans.reduce((acc, loan) => acc + loan.outstandingAmount, 0);
     const totalCollected = loans.reduce((acc, loan) => acc + loan.totalPaid, 0);
-    const totalInvestment = (financials.investments || []).reduce((acc, inv) => acc + inv.amount, 0);
+    const totalInvestment = financials.totalInvestment;
     const totalExpenses = (financials.expenses || []).reduce((acc, expense) => acc + expense.amount, 0);
     
     const availableCash = (totalInvestment + totalCollected) - (totalDisbursed + totalExpenses);
@@ -149,8 +149,8 @@ function AdminDashboard() {
     if (!resetType) return;
 
     if (resetType === 'investment') {
-      resetFinancials({ investments: [] });
-      toast({ title: 'Total Investment Reset', description: 'All investment records have been cleared.' });
+      resetFinancials({ totalInvestment: 0 });
+      toast({ title: 'Total Investment Reset', description: 'Total investment has been cleared.' });
     } else if (resetType === 'expenses') {
       resetFinancials({ expenses: [] });
       toast({ title: 'Expenses Reset', description: 'All expense records have been cleared.' });
@@ -375,7 +375,7 @@ function AdminDashboard() {
         <AlertDialogHeader>
           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            {resetType === 'investment' && 'This will delete all investment records. This action cannot be undone.'}
+            {resetType === 'investment' && 'This will reset the Total Investment amount to zero. This action cannot be undone.'}
             {resetType === 'expenses' && 'This will delete all expense records. This action cannot be undone.'}
           </AlertDialogDescription>
         </AlertDialogHeader>
