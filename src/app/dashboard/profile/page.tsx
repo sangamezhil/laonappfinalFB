@@ -402,8 +402,8 @@ export default function CompanyProfilePage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {financials.expenses.length > 0 ? (
-                                financials.expenses.map(exp => (
+                            {(financials.expenses || []).length > 0 ? (
+                                (financials.expenses || []).map(exp => (
                                     <TableRow key={exp.id}>
                                         <TableCell>{format(new Date(exp.date), 'dd MMM, yyyy')}</TableCell>
                                         <TableCell>{exp.description}</TableCell>
@@ -443,5 +443,3 @@ export default function CompanyProfilePage() {
     </div>
   )
 }
-
-    
