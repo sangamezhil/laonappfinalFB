@@ -181,7 +181,7 @@ export default function NewLoanPage() {
   const groupLeaderId = useWatch({ control: groupForm.control, name: 'groupLeaderId' });
 
   const eligibleCustomers = useMemo(() => {
-    const activeLoanCustomerIds = new Set(loans.filter(l => l.status === 'Active' || l.status === 'Overdue').map(l => l.customerId));
+    const activeLoanCustomerIds = new Set(loans.filter(l => l.status === 'Active' || l.status === 'Overdue' || l.status === 'Pending').map(l => l.customerId));
     return customers.filter(c => !activeLoanCustomerIds.has(c.id));
   }, [customers, loans]);
   
@@ -214,9 +214,9 @@ export default function NewLoanPage() {
         return;
     }
 
-    const existingLoan = loans.find(l => l.customerId === data.customerId && l.status !== 'Closed');
+    const existingLoan = loans.find(l => l.customerId === data.customerId && (l.status === 'Active' || l.status === 'Overdue' || l.status === 'Pending'));
     if (existingLoan) {
-        toast({ variant: 'destructive', title: "Loan Exists", description: `${customer.name} already has an active loan (${existingLoan.id}).` });
+        toast({ variant: 'destructive', title: "Loan Exists", description: `${customer.name} already has an active, overdue, or pending loan (${existingLoan.id}).` });
         return;
     }
 
@@ -260,7 +260,7 @@ export default function NewLoanPage() {
       return;
     }
   
-    const activeLoanCustomerIds = new Set(loans.filter(l => l.status === 'Active' || l.status === 'Overdue').map(l => l.customerId));
+    const activeLoanCustomerIds = new Set(loans.filter(l => l.status === 'Active' || l.status === 'Overdue' || l.status === 'Pending').map(l => l.customerId));
     const membersWithActiveLoans = allMemberIds.filter(id => activeLoanCustomerIds.has(id));
 
     if(membersWithActiveLoans.length > 0) {
