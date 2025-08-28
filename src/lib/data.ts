@@ -80,6 +80,13 @@ export type CompanyProfile = {
   logoUrl?: string;
 };
 
+export type Investment = {
+    id: string;
+    date: string;
+    description: string;
+    amount: number;
+}
+
 export type Expense = {
     id: string;
     date: string;
@@ -88,7 +95,7 @@ export type Expense = {
 }
 
 export type Financials = {
-    totalInvestment: number;
+    investments: Investment[];
     expenses: Expense[];
 };
 
@@ -101,7 +108,7 @@ const initialCompanyProfile: CompanyProfile = {
 }
 
 const initialFinancials: Financials = {
-    totalInvestment: 0,
+    investments: [],
     expenses: [],
 }
 
@@ -269,9 +276,27 @@ export const useFinancials = () => {
         return () => window.removeEventListener('local-storage-updated', handleStorageChange);
     }, [refreshFinancials]);
 
-    const updateFinancials = (newFinancials: Partial<Omit<Financials, 'expenses'>>) => {
+    const addInvestment = (description: string, amount: number) => {
         const currentFinancials = getFromStorage('financials', initialFinancials);
-        const updatedFinancials = { ...currentFinancials, ...newFinancials };
+        const newInvestment: Investment = {
+            id: `INV-${Date.now()}`,
+            date: new Date().toISOString(),
+            description,
+            amount
+        };
+        const updatedFinancials = {
+            ...currentFinancials,
+            investments: [newInvestment, ...(currentFinancials.investments || [])]
+        };
+        setInStorage('financials', updatedFinancials);
+    };
+
+    const updateInvestment = (investmentId: string, updatedData: { description: string, amount: number }) => {
+        const currentFinancials = getFromStorage('financials', initialFinancials);
+        const updatedInvestments = (currentFinancials.investments || []).map(inv => 
+            inv.id === investmentId ? { ...inv, ...updatedData } : inv
+        );
+        const updatedFinancials = { ...currentFinancials, investments: updatedInvestments };
         setInStorage('financials', updatedFinancials);
     };
     
@@ -297,7 +322,7 @@ export const useFinancials = () => {
         setInStorage('financials', updatedFinancials);
     };
 
-    return { financials, updateFinancials, addExpense, deleteExpense, isLoaded };
+    return { financials, addInvestment, updateInvestment, addExpense, deleteExpense, isLoaded };
 };
 
 
