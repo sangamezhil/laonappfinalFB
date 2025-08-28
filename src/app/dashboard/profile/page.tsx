@@ -492,19 +492,21 @@ export default function CompanyProfilePage() {
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>Confirm Investment</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        Please review the details before adding the investment.
-                        <div className="py-4 space-y-2 text-foreground">
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Description:</span>
-                                <span className="font-semibold text-right">{investmentToConfirm?.description}</span>
+                    <AlertDialogDescription asChild>
+                        <div>
+                            Please review the details before adding the investment.
+                            <div className="py-4 space-y-2 text-foreground">
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Description:</span>
+                                    <span className="font-semibold text-right">{investmentToConfirm?.description}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Amount:</span>
+                                    <span className="font-semibold flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{investmentToConfirm?.amount.toLocaleString('en-IN')}</span>
+                                </div>
                             </div>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Amount:</span>
-                                <span className="font-semibold flex items-center"><IndianRupee className="w-4 h-4 mr-1" />{investmentToConfirm?.amount.toLocaleString('en-IN')}</span>
-                            </div>
+                            This action cannot be undone.
                         </div>
-                         This action cannot be undone.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
