@@ -15,7 +15,6 @@ import { useToast } from '@/hooks/use-toast'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Upload, Trash2, IndianRupee } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { Separator } from '@/components/ui/separator'
 
 const companyProfileSchema = z.object({
   name: z.string().min(3, { message: "Company name must be at least 3 characters." }),
@@ -27,7 +26,7 @@ const companyProfileSchema = z.object({
 
 const financialsSchema = z.object({
   totalInvestment: z.coerce.number().min(0, { message: "Investment must be a positive number." }).optional(),
-  totalExpenses: z.coerce.number().min(0, { message: "Expenses must be a positive number." }).optional(),
+  newExpense: z.coerce.number().min(0, { message: "Expense must be a positive number." }).optional(),
 })
 
 type CompanyProfileFormValues = z.infer<typeof companyProfileSchema>
@@ -54,7 +53,10 @@ export default function CompanyProfilePage() {
 
   const financialsForm = useForm<FinancialsFormValues>({
     resolver: zodResolver(financialsSchema),
-    defaultValues: financials,
+    defaultValues: {
+        totalInvestment: financials.totalInvestment,
+        newExpense: undefined,
+    },
   })
 
   useEffect(() => {
@@ -85,7 +87,7 @@ export default function CompanyProfilePage() {
       }
     }
      if (financialsLoaded) {
-      financialsForm.reset(financials)
+      financialsForm.setValue('totalInvestment', financials.totalInvestment)
     }
   }, [profile, financials, profileLoaded, financialsLoaded, profileForm, financialsForm])
 
@@ -138,18 +140,27 @@ export default function CompanyProfilePage() {
   }
 
   function onFinancialsSubmit(data: FinancialsFormValues) {
+    const currentFinancials = financials;
+    const newExpenseAmount = data.newExpense || 0;
+    const newTotalExpenses = currentFinancials.totalExpenses + newExpenseAmount;
+    
     const financialData = {
-        totalInvestment: data.totalInvestment || 0,
-        totalExpenses: data.totalExpenses || 0
+        totalInvestment: data.totalInvestment ?? currentFinancials.totalInvestment,
+        totalExpenses: newTotalExpenses
     }
 
     updateFinancials(financialData);
 
-    logActivity('Update Financials', 'Updated financial details.')
+    logActivity('Update Financials', `Added expense of ${newExpenseAmount}. New total expenses: ${newTotalExpenses}`)
     toast({
       title: 'Financials Updated',
-      description: 'Your company financial information has been successfully updated.',
+      description: `New expense of ${newExpenseAmount.toLocaleString('en-IN')} added.`,
     })
+
+    financialsForm.reset({
+        totalInvestment: financialData.totalInvestment,
+        newExpense: undefined,
+    });
   }
 
   if (!profileLoaded || !financialsLoaded || !user || user.role !== 'Admin') {
@@ -290,10 +301,10 @@ export default function CompanyProfilePage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Financials</CardTitle>
-                    <CardDescription>Enter total investment and expense figures.</CardDescription>
+                    <CardDescription>Manage investment and expense figures.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8">
                         <FormField
                             control={financialsForm.control}
                             name="totalInvestment"
@@ -307,15 +318,20 @@ export default function CompanyProfilePage() {
                             </FormItem>
                             )}
                         />
-                        <FormField
+                        <div>
+                            <p className="text-sm font-medium leading-none">Running Total Expenses</p>
+                            <p className="text-2xl font-bold flex items-center mt-2"><IndianRupee className="w-6 h-6 mr-1" />{financials.totalExpenses.toLocaleString('en-IN')}</p>
+                        </div>
+                         <FormField
                             control={financialsForm.control}
-                            name="totalExpenses"
+                            name="newExpense"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="flex items-center gap-1">Total Expenses <IndianRupee className="w-4 h-4" /></FormLabel>
+                                <FormLabel className="flex items-center gap-1">Add New Expense <IndianRupee className="w-4 h-4" /></FormLabel>
                                 <FormControl>
-                                <Input type="number" placeholder="Enter total expense amount" {...field} value={field.value ?? ''} />
+                                <Input type="number" placeholder="Enter new expense amount" {...field} value={field.value ?? ''} />
                                 </FormControl>
+                                <FormDescription>This amount will be added to the running total.</FormDescription>
                                 <FormMessage />
                             </FormItem>
                             )}
