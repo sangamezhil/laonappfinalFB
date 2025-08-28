@@ -105,7 +105,7 @@ function AdminDashboard() {
     const totalDisbursed = loans.filter(l => l.status !== 'Pending').reduce((acc, loan) => acc + loan.disbursalAmount, 0);
     const totalOutstanding = loans.reduce((acc, loan) => acc + loan.outstandingAmount, 0);
     const totalCollected = loans.reduce((acc, loan) => acc + loan.totalPaid, 0);
-    const totalInvestment = financials.totalInvestment || 0;
+    const totalInvestment = (financials.investments || []).reduce((acc, inv) => acc + inv.amount, 0);
     const totalExpenses = (financials.expenses || []).reduce((acc, expense) => acc + expense.amount, 0);
     
     const availableCash = (totalInvestment + totalCollected) - (totalDisbursed + totalExpenses);
@@ -206,7 +206,7 @@ function AdminDashboard() {
             <CardTitle>Financial Summary</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="flex items-center justify-between p-3 rounded-lg bg-secondary">
+             <div className="flex items-center justify-between p-3 rounded-lg bg-secondary">
                 <div className="flex items-center gap-3">
                     <div className="p-2 rounded-full bg-blue-500/20 text-blue-700"><PiggyBank/></div>
                     <div>
