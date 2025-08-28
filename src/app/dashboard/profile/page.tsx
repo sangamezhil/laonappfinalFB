@@ -36,8 +36,9 @@ const profileSchema = z.object({
   logoUrl: z.string().optional().or(z.literal('')),
 })
 
-const financialsSchema = z.object({
-    totalInvestment: z.coerce.number().min(0, 'Total investment must be a positive number.'),
+const investmentSchema = z.object({
+  description: z.string().min(3, 'Description is required.'),
+  amount: z.coerce.number().positive('Amount must be a positive number.'),
 })
 
 const expenseSchema = z.object({
@@ -46,7 +47,7 @@ const expenseSchema = z.object({
 })
 
 type ProfileFormValues = z.infer<typeof profileSchema>
-type FinancialsFormValues = z.infer<typeof financialsSchema>
+type InvestmentFormValues = z.infer<typeof investmentSchema>
 type ExpenseFormValues = z.infer<typeof expenseSchema>
 
 type User = {
@@ -56,22 +57,27 @@ type User = {
 
 export default function CompanyProfilePage() {
   const { profile, updateProfile, isLoaded: profileLoaded } = useCompanyProfile()
-  const { financials, updateFinancials, addExpense, deleteExpense, isLoaded: financialsLoaded } = useFinancials()
+  const { financials, addInvestment, addExpense, deleteExpense, isLoaded: financialsLoaded } = useFinancials()
   const { logActivity } = useUserActivity()
   const { toast } = useToast()
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const [investmentToConfirm, setInvestmentToConfirm] = useState<InvestmentFormValues | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
+  
+  const totalInvestments = (financials.investments || []).reduce((sum, inv) => sum + inv.amount, 0);
+  const totalExpenses = (financials.expenses || []).reduce((sum, exp) => sum + exp.amount, 0);
+
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: profile,
   })
 
-  const financialsForm = useForm<FinancialsFormValues>({
-    resolver: zodResolver(financialsSchema),
-    defaultValues: { totalInvestment: 0 }
+  const investmentForm = useForm<InvestmentFormValues>({
+    resolver: zodResolver(investmentSchema),
+    defaultValues: { description: '', amount: undefined }
   })
   
   const expenseForm = useForm<ExpenseFormValues>({
@@ -79,7 +85,6 @@ export default function CompanyProfilePage() {
     defaultValues: { description: '', amount: undefined }
   })
   
-  const totalExpenses = (financials.expenses || []).reduce((sum, exp) => sum + exp.amount, 0);
 
   useEffect(() => {
      if (typeof window !== 'undefined') {
@@ -108,10 +113,7 @@ export default function CompanyProfilePage() {
           setLogoPreview(profile.logoUrl)
       }
     }
-    if (financialsLoaded) {
-        financialsForm.reset({ totalInvestment: financials.totalInvestment });
-    }
-  }, [profile, profileLoaded, profileForm, financials, financialsLoaded, financialsForm])
+  }, [profile, profileLoaded, profileForm])
 
 
   const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -158,10 +160,17 @@ export default function CompanyProfilePage() {
     })
   }
 
-  function onFinancialsSubmit(data: FinancialsFormValues) {
-    updateFinancials({ totalInvestment: data.totalInvestment });
-    logActivity('Update Total Investment', `Set total investment to ${data.totalInvestment.toLocaleString('en-IN')}`);
-    toast({ title: 'Total Investment Updated', description: `Investment has been set to ${data.totalInvestment.toLocaleString('en-IN')}.`});
+  function onAddInvestment(data: InvestmentFormValues) {
+    setInvestmentToConfirm(data);
+  }
+  
+  function handleConfirmInvestment() {
+    if(!investmentToConfirm) return;
+    addInvestment(investmentToConfirm.description, investmentToConfirm.amount);
+    logActivity('Add Investment', `Added investment: ${investmentToConfirm.description} - ${investmentToConfirm.amount.toLocaleString('en-IN')}`);
+    toast({ title: 'Investment Added', description: `${investmentToConfirm.description} has been added.`});
+    investmentForm.reset();
+    setInvestmentToConfirm(null);
   }
   
   function onAddExpense(data: ExpenseFormValues) {
@@ -321,27 +330,71 @@ export default function CompanyProfilePage() {
                 <div className="grid md:grid-cols-2 gap-8">
                      {/* Investments Section */}
                     <div className="space-y-6">
-                        <Form {...financialsForm}>
-                            <form onSubmit={financialsForm.handleSubmit(onFinancialsSubmit)} className="space-y-4">
-                                <h3 className="text-lg font-medium">Total Investment</h3>
-                                 <FormField
-                                    control={financialsForm.control}
-                                    name="totalInvestment"
+                        <Form {...investmentForm}>
+                            <form onSubmit={investmentForm.handleSubmit(onAddInvestment)} className="space-y-4">
+                                <h3 className="text-lg font-medium">Log Investment</h3>
+                                <FormField
+                                    control={investmentForm.control}
+                                    name="description"
                                     render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="flex items-center gap-1">Total Investment Amount <IndianRupee className="w-4 h-4" /></FormLabel>
+                                        <FormLabel>Investment Description</FormLabel>
                                         <FormControl>
-                                        <Input type="number" placeholder="Enter total investment" {...field} value={field.value ?? ''}/>
+                                        <Input placeholder="e.g., Initial Capital, Investor Funding" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={investmentForm.control}
+                                    name="amount"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="flex items-center gap-1">Amount <IndianRupee className="w-4 h-4" /></FormLabel>
+                                        <FormControl>
+                                        <Input type="number" placeholder="Enter amount" {...field} value={field.value ?? ''}/>
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                     )}
                                 />
                                 <div className="flex justify-end">
-                                    <Button type="submit">Save Investment</Button>
+                                    <Button type="submit">Add Investment</Button>
                                 </div>
                             </form>
                         </Form>
+                         <div className="pt-6 border-t">
+                            <h3 className="text-lg font-medium mb-2">Investment History</h3>
+                            <div className="flex items-baseline justify-between p-2 mb-4 rounded-lg bg-secondary">
+                                <p className="text-sm font-medium">Total Investments:</p>
+                                <p className="text-lg font-bold flex items-center"><IndianRupee className="w-5 h-5 mr-1" />{totalInvestments.toLocaleString('en-IN')}</p>
+                            </div>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Description</TableHead>
+                                        <TableHead className="text-right">Amount</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {(financials.investments || []).length > 0 ? (
+                                        financials.investments.map(inv => (
+                                            <TableRow key={inv.id}>
+                                                <TableCell>{format(new Date(inv.date), 'dd MMM, yyyy')}</TableCell>
+                                                <TableCell>{inv.description}</TableCell>
+                                                <TableCell className="text-right flex items-center justify-end gap-1"><IndianRupee className="w-4 h-4"/>{inv.amount.toLocaleString('en-IN')}</TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={3} className="text-center text-muted-foreground">No investments recorded yet.</TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
                      </div>
 
                      {/* Expenses Section */}
@@ -397,7 +450,7 @@ export default function CompanyProfilePage() {
                                 </TableHeader>
                                 <TableBody>
                                     {(financials.expenses || []).length > 0 ? (
-                                        (financials.expenses || []).map(exp => (
+                                        financials.expenses.map(exp => (
                                             <TableRow key={exp.id}>
                                                 <TableCell>{format(new Date(exp.date), 'dd MMM, yyyy')}</TableCell>
                                                 <TableCell>{exp.description}</TableCell>
@@ -421,6 +474,34 @@ export default function CompanyProfilePage() {
                  </div>
             </CardContent>
         </Card>
+        
+        <AlertDialog open={!!investmentToConfirm} onOpenChange={() => setInvestmentToConfirm(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Confirm Investment</AlertDialogTitle>
+                     <AlertDialogDescription asChild>
+                        <div>
+                            Please review the details before adding the investment.
+                            <div className="py-4 space-y-2 text-foreground">
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Description:</span>
+                                    <span className="font-semibold text-right">{investmentToConfirm?.description}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Amount:</span>
+                                    <span className="font-semibold flex items-center"><IndianRupee className="w-4 h-4 mr-1" /> {investmentToConfirm?.amount.toLocaleString('en-IN')}</span>
+                                </div>
+                            </div>
+                            This action cannot be undone.
+                        </div>
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleConfirmInvestment}>Confirm & Add</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
 
         <AlertDialog open={!!expenseToDelete} onOpenChange={() => setExpenseToDelete(null)}>
             <AlertDialogContent>

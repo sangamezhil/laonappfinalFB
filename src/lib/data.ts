@@ -97,7 +97,6 @@ export type Expense = {
 export type Financials = {
     investments: Investment[];
     expenses: Expense[];
-    totalInvestment: number;
 };
 
 const initialCompanyProfile: CompanyProfile = {
@@ -111,7 +110,6 @@ const initialCompanyProfile: CompanyProfile = {
 const initialFinancials: Financials = {
     investments: [],
     expenses: [],
-    totalInvestment: 0,
 }
 
 const initialCustomers: Customer[] = [];
@@ -270,7 +268,6 @@ export const useFinancials = () => {
         const safeData = {
             investments: Array.isArray(data.investments) ? data.investments : [],
             expenses: Array.isArray(data.expenses) ? data.expenses : [],
-            totalInvestment: data.totalInvestment ?? 0,
         };
         setFinancials(safeData);
     }, []);
@@ -283,9 +280,18 @@ export const useFinancials = () => {
         return () => window.removeEventListener('local-storage-updated', handleStorageChange);
     }, [refreshFinancials]);
     
-    const updateFinancials = (data: Partial<Financials>) => {
+    const addInvestment = (description: string, amount: number) => {
         const currentFinancials = getFromStorage('financials', initialFinancials);
-        const updatedFinancials = { ...currentFinancials, ...data };
+        const newInvestment: Investment = {
+            id: `INV-${Date.now()}`,
+            date: new Date().toISOString(),
+            description,
+            amount
+        };
+        const updatedFinancials = {
+            ...currentFinancials,
+            investments: [newInvestment, ...(currentFinancials.investments || [])]
+        };
         setInStorage('financials', updatedFinancials);
     };
 
@@ -317,7 +323,7 @@ export const useFinancials = () => {
         setInStorage('financials', updatedFinancials);
     };
 
-    return { financials, updateFinancials, addExpense, deleteExpense, resetFinancials, isLoaded };
+    return { financials, addInvestment, addExpense, deleteExpense, resetFinancials, isLoaded };
 };
 
 
