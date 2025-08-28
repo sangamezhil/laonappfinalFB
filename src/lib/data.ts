@@ -270,7 +270,7 @@ export const useFinancials = () => {
         const safeData = {
             investments: Array.isArray(data.investments) ? data.investments : [],
             expenses: Array.isArray(data.expenses) ? data.expenses : [],
-            totalInvestment: data.totalInvestment || 0,
+            totalInvestment: data.totalInvestment ?? 0,
         };
         setFinancials(safeData);
     }, []);
@@ -311,7 +311,13 @@ export const useFinancials = () => {
         setInStorage('financials', updatedFinancials);
     };
 
-    return { financials, updateFinancials, addExpense, deleteExpense, isLoaded };
+    const resetFinancials = (data: Partial<Financials>) => {
+        const currentFinancials = getFromStorage('financials', initialFinancials);
+        const updatedFinancials = { ...currentFinancials, ...data };
+        setInStorage('financials', updatedFinancials);
+    };
+
+    return { financials, updateFinancials, addExpense, deleteExpense, resetFinancials, isLoaded };
 };
 
 
@@ -728,4 +734,3 @@ export const resetAllData = () => {
     // Trigger a refresh
     window.dispatchEvent(new Event('local-storage-updated'));
 };
-
