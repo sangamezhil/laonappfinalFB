@@ -111,7 +111,7 @@ export default function CompanyProfilePage() {
     profileForm.setValue('logoUrl', '', { shouldValidate: true });
     toast({
         title: "Logo Removed",
-        description: "The logo has been cleared. Click 'Save Changes' to confirm.",
+        description: "The logo has been cleared. Click 'Save' to confirm.",
     });
   }
 
@@ -279,7 +279,7 @@ export default function CompanyProfilePage() {
                 </div>
             </CardContent>
             <CardFooter className="flex justify-end">
-                <Button type="submit">Save Changes</Button>
+                <Button type="submit">Save</Button>
             </CardFooter>
             </Card>
         </form>
@@ -323,7 +323,7 @@ export default function CompanyProfilePage() {
                     </div>
                 </CardContent>
                 <CardFooter className="flex justify-end">
-                    <Button type="submit">Save Changes</Button>
+                    <Button type="submit">Save</Button>
                 </CardFooter>
             </Card>
         </form>
