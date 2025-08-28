@@ -94,7 +94,7 @@ function AdminDashboard() {
   }, [loans, collections, loansLoaded, collectionsLoaded]);
 
   const summary = React.useMemo(() => {
-    if (!loansLoaded || !financialsLoaded) return {
+    if (!loansLoaded || !financialsLoaded || !collectionsLoaded || !customersLoaded) return {
         totalCustomers: 0,
         activePersonalLoans: 0,
         activeGroupLoans: 0,
@@ -109,6 +109,7 @@ function AdminDashboard() {
         recentLoans: [],
     };
     
+    const nonPendingLoans = loans.filter(l => l.status !== 'Pending');
     const activeLoans = loans.filter(l => l.status === 'Active');
     const activePersonalLoans = activeLoans.filter(l => l.loanType === 'Personal').length;
     const activeGroupLoans = new Set(activeLoans.filter(l => l.loanType === 'Group').map(l => l.groupId)).size;
@@ -116,11 +117,19 @@ function AdminDashboard() {
     const overdueLoans = loans.filter(l => l.status === 'Overdue');
     const closedLoans = loans.filter(l => l.status === 'Closed' || l.status === 'Pre-closed');
     
-    const totalDisbursed = loans.filter(l => l.status !== 'Pending').reduce((acc, loan) => acc + loan.disbursalAmount, 0);
-    const totalOutstanding = loans.reduce((acc, loan) => acc + loan.outstandingAmount, 0);
-    const totalCollected = collections.reduce((acc, collection) => acc + collection.amount, 0);
-    const totalInvestment = financials.investments.reduce((acc, inv) => acc + inv.amount, 0);
-    const totalExpenses = financials.expenses.reduce((acc, expense) => acc + expense.amount, 0);
+    const totalDisbursed = nonPendingLoans.reduce((acc, loan) => acc + (loan.disbursalAmount || 0), 0);
+    const totalCollected = collections.reduce((acc, collection) => acc + (collection.amount || 0), 0);
+    
+    const totalRepayable = nonPendingLoans.reduce((acc, loan) => {
+        const principal = loan.amount || 0;
+        const interest = (principal * (loan.interestRate || 0)) / 100;
+        return acc + principal + interest;
+    }, 0);
+
+    const totalOutstanding = totalRepayable - totalCollected;
+
+    const totalInvestment = financials.investments.reduce((acc, inv) => acc + (inv.amount || 0), 0);
+    const totalExpenses = financials.expenses.reduce((acc, expense) => acc + (expense.amount || 0), 0);
     
     const availableCash = totalInvestment - totalExpenses - totalDisbursed + totalCollected;
 
@@ -143,7 +152,7 @@ function AdminDashboard() {
         recentLoans,
     }
 
-  }, [loans, customers, collections, loansLoaded, financials, financialsLoaded])
+  }, [loans, customers, collections, loansLoaded, financials, financialsLoaded, collectionsLoaded])
   
   const handleReset = () => {
     if (!resetType) return;
