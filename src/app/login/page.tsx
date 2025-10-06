@@ -43,7 +43,7 @@ export default function LoginPage() {
     setTimeout(() => {
       const foundUser = users.find(user => user.username.toLowerCase() === username.toLowerCase());
 
-      if (foundUser && (password === foundUser.password || password === foundUser.username)) {
+      if (foundUser && password === foundUser.password) {
         const userToSave = {
           ...foundUser,
           lastLogin: new Date().toISOString(),
