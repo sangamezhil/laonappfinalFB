@@ -143,7 +143,6 @@ export default function UsersPage() {
   const { profile: companyProfile } = useCompanyProfile();
   const { financials } = useFinancials();
   const router = useRouter();
-  const [isResetDataOpen, setResetDataOpen] = useState(false);
 
 
   const { toast } = useToast();
@@ -414,15 +413,6 @@ export default function UsersPage() {
     setDateRange(undefined);
   };
   
-  const handleConfirmReset = () => {
-    resetAllData();
-    toast({
-        title: 'Data Reset Successfully',
-        description: 'All dashboard records have been cleared.'
-    });
-    setResetDataOpen(false);
-  }
-
   if (!isLoaded || !loggedInUser || loggedInUser.role !== 'Admin') {
     return (
         <Card>
@@ -630,14 +620,6 @@ export default function UsersPage() {
               )}
             </div>
 
-            <div className="pt-6 border-t border-destructive/50">
-                <h3 className="text-lg font-semibold text-destructive mb-2">Danger Zone</h3>
-                 <Button variant="destructive" onClick={() => setResetDataOpen(true)}>
-                    <AlertTriangle className="w-4 h-4 mr-2" />
-                    Reset All Dashboard Records
-                </Button>
-                <p className="text-sm text-muted-foreground mt-2">This will permanently delete all customers, loans, collections, and financial records. This action cannot be undone.</p>
-            </div>
           </div>
       </CardFooter>
     </Card>
@@ -737,20 +719,8 @@ export default function UsersPage() {
         </AlertDialogContent>
     </AlertDialog>
     
-    <AlertDialog open={isResetDataOpen} onOpenChange={setResetDataOpen}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    This will permanently delete all customers, loans, collections, and financial data. This action is irreversible. User accounts will not be deleted.
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleConfirmReset} className="bg-destructive hover:bg-destructive/90">Yes, Reset All Data</AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-    </AlertDialog>
     </>
   )
 }
+
+    
