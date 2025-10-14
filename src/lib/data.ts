@@ -116,7 +116,7 @@ const initialCustomers: Customer[] = [];
 const initialLoans: Loan[] = [];
 const initialCollections: Collection[] = [];
 const initialUsers: User[] = [
-  { id: 'USR001', username: 'admin', password: 'password', role: 'Admin', lastLogin: '2024-07-29 10:00 AM' },
+  { id: 'USR001', username: 'admin', password: 'admin', role: 'Admin', lastLogin: '2024-07-29 10:00 AM' },
   { id: 'USR002', username: 'agent', password: 'password', role: 'Collection Agent', lastLogin: '2024-07-29 11:00 AM' },
 ];
 const initialActivities: UserActivity[] = [];
