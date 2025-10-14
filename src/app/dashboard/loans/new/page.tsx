@@ -21,7 +21,7 @@ const personalLoanSchema = z.object({
   customerId: z.string().nonempty({ message: 'Please select a customer.' }),
   loanAmount: z.coerce.number().positive(),
   collectionFrequency: z.enum(['Weekly']),
-  repaymentTerm: z.literal(40),
+  repaymentTerm: z.coerce.number().positive({ message: "Repayment term must be a positive number." }),
   interestRate: z.literal(30),
   docCharges: z.coerce.number().positive({ message: 'Documentation charges are required.' }),
   insuranceCharges: z.coerce.number().positive({ message: 'Insurance charges are required.' }),
@@ -33,7 +33,7 @@ const groupLoanSchema = z.object({
   groupSize: z.enum(['5', '10', '15', '20']),
   loanAmount: z.coerce.number().positive(),
   interestRate: z.literal(30),
-  repaymentTerm: z.literal(40),
+  repaymentTerm: z.coerce.number().positive({ message: "Repayment term must be a positive number." }),
   docCharges: z.coerce.number().positive({ message: 'Documentation charges are required.' }),
   insuranceCharges: z.coerce.number().positive({ message: 'Insurance charges are required.' }),
   members: z.array(z.object({ customerId: z.string().nonempty("Please select a member") })).min(1, 'Please add members'),
@@ -384,11 +384,20 @@ export default function NewLoanPage() {
                   )} />
                    <FormField control={personalForm.control} name="repaymentTerm" render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Repayment Term (Weeks)</FormLabel>
-                        <FormControl>
-                            <Input readOnly value="40 Weeks" className="bg-muted" />
-                        </FormControl>
-                        <FormMessage />
+                      <FormLabel>Repayment Term (Weeks)</FormLabel>
+                      <Select onValueChange={(value) => field.onChange(Number(value))} defaultValue={String(field.value)}>
+                          <FormControl>
+                              <SelectTrigger>
+                                  <SelectValue placeholder="Select a term" />
+                              </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                              {[10, 20, 30, 40, 50].map(term => (
+                                  <SelectItem key={term} value={String(term)}>{term} Weeks</SelectItem>
+                              ))}
+                          </SelectContent>
+                      </Select>
+                      <FormMessage />
                     </FormItem>
                   )} />
                   <FormField control={personalForm.control} name="interestRate" render={({ field }) => (
@@ -445,13 +454,22 @@ export default function NewLoanPage() {
                       </FormItem>
                     )} />
                     <FormField control={groupForm.control} name="repaymentTerm" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Repayment Term (Weeks)</FormLabel>
+                      <FormItem>
+                        <FormLabel>Repayment Term (Weeks)</FormLabel>
+                        <Select onValueChange={(value) => field.onChange(Number(value))} defaultValue={String(field.value)}>
                             <FormControl>
-                                <Input readOnly value="40 Weeks" className="bg-muted" />
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a term" />
+                                </SelectTrigger>
                             </FormControl>
-                            <FormMessage />
-                        </FormItem>
+                            <SelectContent>
+                                {[10, 20, 30, 40, 50].map(term => (
+                                    <SelectItem key={term} value={String(term)}>{term} Weeks</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
                     )} />
                      <FormField control={groupForm.control} name="docCharges" render={({ field }) => (
                         <FormItem><FormLabel className="flex items-center gap-1">Documentation Charges <IndianRupee className="w-4 h-4" /></FormLabel><FormControl><Input type="number" placeholder="Enter doc charges" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
@@ -513,3 +531,5 @@ export default function NewLoanPage() {
     </Card>
   )
 }
+
+    
