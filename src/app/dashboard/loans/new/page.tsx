@@ -21,7 +21,7 @@ const personalLoanSchema = z.object({
   customerId: z.string().nonempty({ message: 'Please select a customer.' }),
   loanAmount: z.coerce.number().positive(),
   collectionFrequency: z.enum(['Weekly']),
-  repaymentTerm: z.coerce.number().positive({ message: "Repayment term must be a positive number." }),
+  repaymentTerm: z.literal(40),
   interestRate: z.literal(30),
   docCharges: z.coerce.number().positive({ message: 'Documentation charges are required.' }),
   insuranceCharges: z.coerce.number().positive({ message: 'Insurance charges are required.' }),
@@ -30,10 +30,10 @@ const personalLoanSchema = z.object({
 const groupLoanSchema = z.object({
   groupName: z.string().min(3, { message: 'Group name is required.' }),
   groupLeaderId: z.string().nonempty({ message: 'Please select a group leader.' }),
-  groupSize: z.enum(['5', '10', '15', '20']),
+  groupSize: z.coerce.number().int().min(2, { message: 'Group size must be at least 2.' }).max(200, { message: 'Group size too large.' }),
   loanAmount: z.coerce.number().positive(),
   interestRate: z.literal(30),
-  repaymentTerm: z.coerce.number().positive({ message: "Repayment term must be a positive number." }),
+  repaymentTerm: z.literal(40),
   docCharges: z.coerce.number().positive({ message: 'Documentation charges are required.' }),
   insuranceCharges: z.coerce.number().positive({ message: 'Insurance charges are required.' }),
   members: z.array(z.object({ customerId: z.string().nonempty("Please select a member") })).min(1, 'Please add members'),
@@ -62,7 +62,7 @@ const DisbursalCalculator = ({ control, loanType }: { control: any; loanType: 'p
   const term = parseInt(repaymentTerm) || 1;
 
   if (loanType === 'group') {
-    const size = parseInt(groupSize) || 1;
+    const size = Number(groupSize) || 1;
     const perMemberPrincipal = principal / size;
     const docsPerMember = (parseFloat(docCharges) || 0) / size;
     const insurancePerMember = (parseFloat(insuranceCharges) || 0) / size;
@@ -162,7 +162,7 @@ export default function NewLoanPage() {
     resolver: zodResolver(groupLoanSchema),
     defaultValues: {
       members: [],
-      groupSize: '5',
+      groupSize: 5,
       interestRate: 30,
       repaymentTerm: 40,
       loanAmount: undefined,
@@ -194,7 +194,7 @@ export default function NewLoanPage() {
 
 
   React.useEffect(() => {
-    const size = parseInt(groupSize) -1; // -1 because leader is separate
+    const size = Math.max(0, (Number(groupSize) || 1) - 1); // -1 because leader is separate
     if (fields.length > size) {
       for (let i = fields.length - 1; i >= size; i--) {
         remove(i);
@@ -273,7 +273,12 @@ export default function NewLoanPage() {
         return;
     }
 
-    const size = parseInt(data.groupSize);
+    const size = Number(data.groupSize);
+    // Ensure selected members match the requested group size (leader + members)
+    if (data.members.length !== Math.max(0, size - 1)) {
+      toast({ variant: 'destructive', title: 'Member Count Mismatch', description: `Group size is ${size} so you must select ${Math.max(0, size - 1)} member(s) excluding the leader.` });
+      return;
+    }
     const perMemberPrincipal = data.loanAmount / size;
     const interestPerMember = (perMemberPrincipal * data.interestRate) / 100;
     const totalRepayablePerMember = perMemberPrincipal + interestPerMember;
@@ -384,27 +389,18 @@ export default function NewLoanPage() {
                   )} />
                    <FormField control={personalForm.control} name="repaymentTerm" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Repayment Term (Weeks)</FormLabel>
-                      <Select onValueChange={(value) => field.onChange(Number(value))} defaultValue={String(field.value)}>
-                          <FormControl>
-                              <SelectTrigger>
-                                  <SelectValue placeholder="Select a term" />
-                              </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                              {[10, 20, 30, 40, 50].map(term => (
-                                  <SelectItem key={term} value={String(term)}>{term} Weeks</SelectItem>
-                              ))}
-                          </SelectContent>
-                      </Select>
-                      <FormMessage />
+                        <FormLabel>Repayment Term (Weeks)</FormLabel>
+                        <FormControl>
+                            <Input readOnly value="40 Weeks" className="bg-muted" />
+                        </FormControl>
+                        <FormMessage />
                     </FormItem>
                   )} />
                   <FormField control={personalForm.control} name="interestRate" render={({ field }) => (
                     <FormItem>
                         <FormLabel>Interest Rate (%)</FormLabel>
                         <FormControl>
-                            <Input readOnly value="30%" className="bg-muted" />
+                            <Input type="number" min={0} max={100} {...field} value={field.value ?? ''} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -431,45 +427,34 @@ export default function NewLoanPage() {
                         <FormItem><FormLabel>Group Name</FormLabel><FormControl><Input placeholder="Enter group name" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={groupForm.control} name="groupSize" render={({ field }) => (
-                        <FormItem><FormLabel>Group Size</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select group size" /></SelectTrigger></FormControl>
-                        <SelectContent>
-                            <SelectItem value="5">5 Members</SelectItem>
-                            <SelectItem value="10">10 Members</SelectItem>
-                            <SelectItem value="15">15 Members</SelectItem>
-                            <SelectItem value="20">20 Members</SelectItem>
-                        </SelectContent>
-                        </Select><FormMessage /></FormItem>
+                        <FormItem>
+                          <FormLabel>Group Size</FormLabel>
+                          <FormControl>
+                            <Input type="number" min={2} max={200} placeholder="Enter group size" {...field} value={field.value ?? ''} onChange={(e) => field.onChange(Number(e.target.value))} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
                     )} />
                     <FormField control={groupForm.control} name="loanAmount" render={({ field }) => (
                         <FormItem><FormLabel className="flex items-center gap-1">Total Group Loan Amount <IndianRupee className="w-4 h-4" /></FormLabel><FormControl><Input type="number" placeholder="e.g., 200000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={groupForm.control} name="interestRate" render={({ field }) => (
-                      <FormItem>
-                          <FormLabel>Interest Rate (%)</FormLabel>
-                          <FormControl>
-                              <Input readOnly value="30%" className="bg-muted" />
-                          </FormControl>
-                          <FormMessage />
-                      </FormItem>
+            <FormItem>
+              <FormLabel>Interest Rate (%)</FormLabel>
+              <FormControl>
+                <Input type="number" min={0} max={100} {...field} value={field.value ?? ''} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
                     )} />
                     <FormField control={groupForm.control} name="repaymentTerm" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Repayment Term (Weeks)</FormLabel>
-                        <Select onValueChange={(value) => field.onChange(Number(value))} defaultValue={String(field.value)}>
+                        <FormItem>
+                            <FormLabel>Repayment Term (Weeks)</FormLabel>
                             <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select a term" />
-                                </SelectTrigger>
+                                <Input readOnly value="40 Weeks" className="bg-muted" />
                             </FormControl>
-                            <SelectContent>
-                                {[10, 20, 30, 40, 50].map(term => (
-                                    <SelectItem key={term} value={String(term)}>{term} Weeks</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
+                            <FormMessage />
+                        </FormItem>
                     )} />
                      <FormField control={groupForm.control} name="docCharges" render={({ field }) => (
                         <FormItem><FormLabel className="flex items-center gap-1">Documentation Charges <IndianRupee className="w-4 h-4" /></FormLabel><FormControl><Input type="number" placeholder="Enter doc charges" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
