@@ -21,8 +21,8 @@ const personalLoanSchema = z.object({
   customerId: z.string().nonempty({ message: 'Please select a customer.' }),
   loanAmount: z.coerce.number().positive(),
   collectionFrequency: z.enum(['Weekly']),
-  repaymentTerm: z.literal(40),
-  interestRate: z.literal(30),
+    repaymentTerm: z.coerce.number().int().min(1).max(520),
+    interestRate: z.coerce.number().min(0).max(100),
   docCharges: z.coerce.number().positive({ message: 'Documentation charges are required.' }),
   insuranceCharges: z.coerce.number().positive({ message: 'Insurance charges are required.' }),
 });
@@ -32,8 +32,8 @@ const groupLoanSchema = z.object({
   groupLeaderId: z.string().nonempty({ message: 'Please select a group leader.' }),
   groupSize: z.coerce.number().int().min(2, { message: 'Group size must be at least 2.' }).max(200, { message: 'Group size too large.' }),
   loanAmount: z.coerce.number().positive(),
-  interestRate: z.literal(30),
-  repaymentTerm: z.literal(40),
+  interestRate: z.coerce.number().min(0).max(100),
+  repaymentTerm: z.coerce.number().int().min(1).max(520),
   docCharges: z.coerce.number().positive({ message: 'Documentation charges are required.' }),
   insuranceCharges: z.coerce.number().positive({ message: 'Insurance charges are required.' }),
   members: z.array(z.object({ customerId: z.string().nonempty("Please select a member") })).min(1, 'Please add members'),
@@ -387,15 +387,15 @@ export default function NewLoanPage() {
                       <FormMessage />
                     </FormItem>
                   )} />
-                   <FormField control={personalForm.control} name="repaymentTerm" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Repayment Term (Weeks)</FormLabel>
-                        <FormControl>
-                            <Input readOnly value="40 Weeks" className="bg-muted" />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                  )} />
+           <FormField control={personalForm.control} name="repaymentTerm" render={({ field }) => (
+          <FormItem>
+            <FormLabel>Repayment Term (Weeks)</FormLabel>
+            <FormControl>
+              <Input type="number" min={1} max={520} {...field} value={field.value ?? ''} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+          )} />
                   <FormField control={personalForm.control} name="interestRate" render={({ field }) => (
                     <FormItem>
                         <FormLabel>Interest Rate (%)</FormLabel>
@@ -447,15 +447,15 @@ export default function NewLoanPage() {
               <FormMessage />
             </FormItem>
                     )} />
-                    <FormField control={groupForm.control} name="repaymentTerm" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Repayment Term (Weeks)</FormLabel>
-                            <FormControl>
-                                <Input readOnly value="40 Weeks" className="bg-muted" />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
+          <FormField control={groupForm.control} name="repaymentTerm" render={({ field }) => (
+            <FormItem>
+              <FormLabel>Repayment Term (Weeks)</FormLabel>
+              <FormControl>
+                <Input type="number" min={1} max={520} {...field} value={field.value ?? ''} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )} />
                      <FormField control={groupForm.control} name="docCharges" render={({ field }) => (
                         <FormItem><FormLabel className="flex items-center gap-1">Documentation Charges <IndianRupee className="w-4 h-4" /></FormLabel><FormControl><Input type="number" placeholder="Enter doc charges" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                     )} />
