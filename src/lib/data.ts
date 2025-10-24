@@ -431,24 +431,45 @@ export const useLoans = () => {
     const [isLoaded, setIsLoaded] = useState(false);
 
     const refreshLoans = useCallback(() => {
-        let data = getFromStorage('loans', initialLoans);
-        let loansNeedUpdate = false;
-        data = data.map(loan => {
-            const loanWithCalculatedDueDate = {
-                ...loan,
-                nextDueDate: calculateNextDueDate(loan)
-            };
-            const updatedLoan = updateLoanStatusOnLoad(loanWithCalculatedDueDate);
-            if (updatedLoan.status !== loan.status) {
-                loansNeedUpdate = true;
-            }
-            return updatedLoan;
-        });
-
-        setLoans(data);
-        if (loansNeedUpdate) {
-            setInStorage('loans', data);
+        // Try server API first, fall back to localStorage
+        if (typeof window === 'undefined') {
+            let data = getFromStorage('loans', initialLoans);
+            let loansNeedUpdate = false;
+            data = data.map(loan => {
+                const loanWithCalculatedDueDate = { ...loan, nextDueDate: calculateNextDueDate(loan) };
+                const updatedLoan = updateLoanStatusOnLoad(loanWithCalculatedDueDate);
+                if (updatedLoan.status !== loan.status) loansNeedUpdate = true;
+                return updatedLoan;
+            });
+            setLoans(data);
+            if (loansNeedUpdate) setInStorage('loans', data);
+            return;
         }
+
+        fetch('/api/loans')
+            .then(async (res) => {
+                if (!res.ok) throw new Error('API not available')
+                const json = await res.json()
+                if (Array.isArray(json)) {
+                    let loansNeedUpdate = false;
+                    const data = json.map((loan: Loan) => {
+                        const loanWithCalculatedDueDate = { ...loan, nextDueDate: calculateNextDueDate(loan) };
+                        const updatedLoan = updateLoanStatusOnLoad(loanWithCalculatedDueDate);
+                        if (updatedLoan.status !== loan.status) loansNeedUpdate = true;
+                        return updatedLoan;
+                    })
+                    setLoans(data)
+                    // update local cache
+                    setInStorage('loans', data)
+                    return
+                }
+                const data = getFromStorage('loans', initialLoans)
+                setLoans(data)
+            })
+            .catch(() => {
+                const data = getFromStorage('loans', initialLoans)
+                setLoans(data)
+            })
     }, []);
 
      useEffect(() => {
