@@ -331,10 +331,33 @@ export const useCustomers = () => {
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
 
-    const refreshCustomers = useCallback(() => {
-        const data = getFromStorage('customers', initialCustomers);
-        setCustomers(data);
-    }, []);
+        const refreshCustomers = useCallback(() => {
+                // Try server API first. If unavailable, fall back to localStorage.
+                if (typeof window === 'undefined') {
+                    const data = getFromStorage('customers', initialCustomers);
+                    setCustomers(data);
+                    return;
+                }
+
+                fetch('/api/customers')
+                    .then(async (res) => {
+                        if (!res.ok) throw new Error('API not available')
+                        const json = await res.json()
+                        if (Array.isArray(json)) {
+                            setCustomers(json)
+                            // also update local cache
+                            setInStorage('customers', json)
+                            return
+                        }
+                        // fallback to local
+                        const data = getFromStorage('customers', initialCustomers);
+                        setCustomers(data);
+                    })
+                    .catch(() => {
+                        const data = getFromStorage('customers', initialCustomers);
+                        setCustomers(data);
+                    })
+        }, []);
 
     useEffect(() => {
         // On first load, if there's no data, use initial data
@@ -351,23 +374,48 @@ export const useCustomers = () => {
         }
     }, [refreshCustomers]);
 
-    const addCustomer = (customer: Omit<Customer, 'id' | 'registrationDate' | 'profilePicture' | 'addedBy'>): Customer => {
-        if (typeof window === 'undefined') return customer as Customer;
-        const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
-        
-        const currentCustomers = getFromStorage('customers', initialCustomers);
-        const newIdNumber = (currentCustomers.length > 0 ? Math.max(...currentCustomers.map(c => parseInt(c.id.replace('CUST','')))) : 0) + 1;
-        const newCustomer: Customer = {
-            ...customer,
-            id: `CUST${String(newIdNumber).padStart(3, '0')}`,
-            registrationDate: new Date().toISOString().split('T')[0],
-            profilePicture: 'https://placehold.co/100x100',
-            addedBy: loggedInUser.username || 'unknown'
+        const addCustomer = (customer: Omit<Customer, 'id' | 'registrationDate' | 'profilePicture' | 'addedBy'>): Customer => {
+                if (typeof window === 'undefined') return customer as Customer;
+                const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+
+                const currentCustomers = getFromStorage('customers', initialCustomers);
+                const newIdNumber = (currentCustomers.length > 0 ? Math.max(...currentCustomers.map(c => parseInt(c.id.replace('CUST','')))) : 0) + 1;
+                const newCustomer: Customer = {
+                        ...customer,
+                        id: `CUST${String(newIdNumber).padStart(3, '0')}`,
+                        registrationDate: new Date().toISOString().split('T')[0],
+                        profilePicture: 'https://placehold.co/100x100',
+                        addedBy: loggedInUser.username || 'unknown'
+                };
+                const updatedCustomers = [...currentCustomers, newCustomer];
+                // Update local cache immediately so UI is responsive
+                setInStorage('customers', updatedCustomers);
+
+                // Fire-and-forget: attempt to persist to server API. If API is available
+                // it will accept client-provided id (server will generate a different id if conflict).
+                fetch('/api/customers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newCustomer),
+                }).then(async (res) => {
+                    if (!res.ok) return
+                    try {
+                        const created = await res.json()
+                        // If server returned a different id, reconcile local cache (replace by server id)
+                        if (created && created.id && created.id !== newCustomer.id) {
+                            const curr = getFromStorage('customers', initialCustomers);
+                            const replaced = curr.map(c => c.id === newCustomer.id ? created : c);
+                            setInStorage('customers', replaced);
+                        }
+                    } catch (e) {
+                        // ignore
+                    }
+                }).catch(() => {
+                    // API not available - we'll continue using localStorage only
+                })
+
+                return newCustomer;
         };
-        const updatedCustomers = [...currentCustomers, newCustomer];
-        setInStorage('customers', updatedCustomers);
-        return newCustomer;
-    };
 
     const deleteCustomer = (customerId: string) => {
         const currentCustomers = getFromStorage('customers', initialCustomers);

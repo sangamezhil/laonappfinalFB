@@ -1,0 +1,21 @@
+[
+  {
+    "id": "CUST001",
+    "registrationDate": "2025-10-24",
+    "profilePicture": "https://placehold.co/100x100",
+    "name": "Automated Test 1761287396135",
+    "dob": "1990-01-01",
+    "gender": "Male",
+    "email": "test1761287396135@example.com",
+    "phone": "9999999999",
+    "secondaryPhone": "8888888888",
+    "address": "123 Test Street, Testville",
+    "idType": "Aadhaar Card",
+    "idNumber": "123412341234",
+    "secondaryIdType": "PAN Card",
+    "secondaryIdNumber": "PAN12345",
+    "occupation": "",
+    "monthlyIncome": 10000,
+    "addedBy": "admin"
+  }
+]
