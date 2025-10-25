@@ -379,39 +379,40 @@ export default function LoansPage() {
   }, [customers]);
 
   const filteredLoans = React.useMemo(() => {
-    setIsSearching(true);
-    if (!searchQuery) {
-        setIsSearching(false);
-        return [];
-    }
+  // If there's no search query, return all loans for the selected tab so
+  // newly created loans are visible by default.
+  let loansToFilter = loans.filter(loan => 
+    (currentTab === 'personal' && loan.loanType === 'Personal') ||
+    (currentTab === 'group' && loan.loanType === 'Group')
+  );
 
-    let loansToFilter = loans.filter(loan => 
-        (currentTab === 'personal' && loan.loanType === 'Personal') ||
-        (currentTab === 'group' && loan.loanType === 'Group')
-    );
-    
-    const lowercasedQuery = searchQuery.toLowerCase();
-    
-    if (currentTab === 'group') {
-        const groupLoanIds = new Set<string>();
-        loansToFilter.forEach(loan => {
-            if(loan.groupId) {
-                const customer = customerMap.get(loan.customerId);
-                if(customer?.phone.includes(lowercasedQuery) || loan.groupName?.toLowerCase().includes(lowercasedQuery) || loan.groupId.toLowerCase().includes(lowercasedQuery) || loan.id.toLowerCase().includes(lowercasedQuery)) {
-                    groupLoanIds.add(loan.groupId);
-                }
-            }
-        });
-        loansToFilter = loans.filter(loan => loan.groupId && groupLoanIds.has(loan.groupId));
-    } else { // personal
-        loansToFilter = loansToFilter.filter(loan => {
-            const customer = customerMap.get(loan.customerId);
-            return customer?.phone.includes(lowercasedQuery) || customer?.name.toLowerCase().includes(lowercasedQuery) || loan.id.toLowerCase().includes(lowercasedQuery);
-        });
-    }
-    
-    setIsSearching(false);
-    return loansToFilter;
+  const q = (searchQuery || '').trim().toLowerCase();
+  if (!q) return loansToFilter;
+
+  // Only perform searching when a query exists.
+  if (currentTab === 'group') {
+    const groupLoanIds = new Set<string>();
+    loansToFilter.forEach(loan => {
+      if (loan.groupId) {
+        const customer = customerMap.get(loan.customerId);
+        const phoneMatch = customer?.phone?.toLowerCase().includes(q);
+        const groupNameMatch = loan.groupName?.toLowerCase().includes(q);
+        const groupIdMatch = loan.groupId.toLowerCase().includes(q);
+        const idMatch = loan.id.toLowerCase().includes(q);
+        if (phoneMatch || groupNameMatch || groupIdMatch || idMatch) {
+          groupLoanIds.add(loan.groupId);
+        }
+      }
+    });
+    return loans.filter(loan => loan.groupId && groupLoanIds.has(loan.groupId));
+  } else {
+    return loansToFilter.filter(loan => {
+      const customer = customerMap.get(loan.customerId);
+      const phone = customer?.phone?.toLowerCase() || '';
+      const name = customer?.name?.toLowerCase() || '';
+      return phone.includes(q) || name.includes(q) || loan.id.toLowerCase().includes(q);
+    });
+  }
 
   }, [searchQuery, loans, customerMap, currentTab]);
 
