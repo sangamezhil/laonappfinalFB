@@ -49,7 +49,18 @@ export default function LoginPage() {
           lastLogin: new Date().toISOString(),
         }
         updateUser(foundUser.id, { lastLogin: userToSave.lastLogin });
-        localStorage.setItem('loggedInUser', JSON.stringify(userToSave));
+        // Persist a server-side session instead of localStorage so the
+        // authenticated user is available across devices/browsers.
+        fetch('/api/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: foundUser.username, password }),
+        }).then(async (res) => {
+          if (res.ok) {
+            try { const sessUser = await res.json(); (window as any).__currentSession = sessUser } catch (e) {}
+          }
+        }).catch(() => {});
+
         logActivity('User Login', `User ${foundUser.username} logged in.`);
         toast({
           title: "Login Successful",

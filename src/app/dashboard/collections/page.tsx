@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useToast } from '@/hooks/use-toast'
-import { useLoans, Loan, useUserActivity, useCollections, Collection, useCustomers } from '@/lib/data'
+import { useLoans, Loan, useUserActivity, useCollections, Collection, useCustomers, getCurrentUserSync } from '@/lib/data'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { CalendarIcon, IndianRupee, Landmark, Users, Phone, Search, Trash2, X, Group } from 'lucide-react'
 import { Calendar } from '@/components/ui/calendar'
@@ -85,12 +85,16 @@ function CollectionsPageContent() {
   const loanIdFromQuery = searchParams.get('loanId');
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedUser = localStorage.getItem('loggedInUser');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
-    }
+    if (typeof window === 'undefined') return;
+    const u = getCurrentUserSync();
+    if (u) { setUser(u); return }
+    fetch('/api/session').then(async (res) => {
+      if (!res.ok) return;
+      const json = await res.json();
+      if (!json) return;
+      setUser(json);
+      try { (window as any).__currentSession = json } catch (e) {}
+    }).catch(() => {});
   }, []);
 
   const activeAndOverdueLoans = React.useMemo(() => {

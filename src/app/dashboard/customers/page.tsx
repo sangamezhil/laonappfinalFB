@@ -38,7 +38,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { useCustomers, useLoans, Customer } from '@/lib/data'
+import { useCustomers, useLoans, Customer, getCurrentUserSync } from '@/lib/data'
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { getAvatarColor } from '@/lib/utils';
@@ -57,12 +57,16 @@ export default function CustomersPage() {
   const [user, setUser] = React.useState<User | null>(null);
 
   React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedUser = localStorage.getItem('loggedInUser');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
-    }
+    if (typeof window === 'undefined') return;
+    const u = getCurrentUserSync();
+    if (u) { setUser(u); return }
+    fetch('/api/session').then(async (res) => {
+      if (!res.ok) return;
+      const json = await res.json();
+      if (!json) return;
+      setUser(json);
+      try { (window as any).__currentSession = json } catch (e) {}
+    }).catch(() => {});
   }, []);
 
   const handleDeleteClick = (customer: Customer) => {

@@ -66,7 +66,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { useUserActivity, useCustomers, useLoans, useCollections, useCompanyProfile, useUsers, useFinancials, resetAllData } from '@/lib/data'
+import { useUserActivity, useCustomers, useLoans, useCollections, useCompanyProfile, useUsers, useFinancials, resetAllData, getCurrentUserSync } from '@/lib/data'
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format, isWithinInterval, parseISO } from 'date-fns'
@@ -153,25 +153,31 @@ export default function UsersPage() {
 
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('loggedInUser');
-    if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        setLoggedInUser(parsedUser);
-        if (parsedUser.role !== 'Admin') {
-            toast({
-                variant: 'destructive',
-                title: 'Access Denied',
-                description: 'You do not have permission to view this page.'
-            });
-            router.push('/dashboard');
-            return;
-        }
-    } else {
-        router.push('/login');
+    if (typeof window === 'undefined') return;
+    const u = getCurrentUserSync();
+    if (u) {
+      setLoggedInUser(u);
+      if (u.role !== 'Admin') {
+        toast({ variant: 'destructive', title: 'Access Denied', description: 'You do not have permission to view this page.' });
+        router.push('/dashboard');
         return;
+      }
+      setDownloadHistory(getHistoryFromStorage());
+      return;
     }
-    
-    setDownloadHistory(getHistoryFromStorage());
+    fetch('/api/session').then(async (res) => {
+      if (!res.ok) return router.push('/login');
+      const json = await res.json();
+      if (!json) return router.push('/login');
+      setLoggedInUser(json);
+      try { (window as any).__currentSession = json } catch (e) {}
+      if (json.role !== 'Admin') {
+        toast({ variant: 'destructive', title: 'Access Denied', description: 'You do not have permission to view this page.' });
+        router.push('/dashboard');
+        return;
+      }
+      setDownloadHistory(getHistoryFromStorage());
+    }).catch(() => router.push('/login'));
   }, [router, toast]);
   
   const createForm = useForm<z.infer<typeof userSchema>>({

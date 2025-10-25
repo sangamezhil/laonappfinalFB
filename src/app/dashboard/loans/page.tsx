@@ -48,7 +48,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge'
-import { useLoans, useUserActivity, Loan, useCustomers, Customer } from '@/lib/data'
+import { useLoans, useUserActivity, Loan, useCustomers, Customer, getCurrentUserSync } from '@/lib/data'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
 import { useRouter } from 'next/navigation'
@@ -417,12 +417,16 @@ export default function LoansPage() {
 
 
   React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedUser = localStorage.getItem('loggedInUser');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
-    }
+    if (typeof window === 'undefined') return;
+    const u = getCurrentUserSync();
+    if (u) { setUser(u); return }
+    fetch('/api/session').then(async (res) => {
+      if (!res.ok) return;
+      const json = await res.json();
+      if (!json) return;
+      setUser(json);
+      try { (window as any).__currentSession = json } catch (e) {}
+    }).catch(() => {});
   }, []);
 
   const onApproveClick = (loan: Loan) => {

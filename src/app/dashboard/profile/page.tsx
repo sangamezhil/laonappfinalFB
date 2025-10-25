@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import Image from 'next/image'
-import { useCompanyProfile, useFinancials, useUserActivity, Expense } from '@/lib/data'
+import { useCompanyProfile, useFinancials, useUserActivity, Expense, getCurrentUserSync } from '@/lib/data'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
@@ -87,23 +87,27 @@ export default function CompanyProfilePage() {
   
 
   useEffect(() => {
-     if (typeof window !== 'undefined') {
-      const storedUser = localStorage.getItem('loggedInUser');
-      if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        if (parsedUser.role !== 'Admin') {
-            toast({
-                variant: 'destructive',
-                title: 'Access Denied',
-                description: 'You do not have permission to view this page.'
-            });
-            router.push('/dashboard');
-        }
-      } else {
-        router.push('/login');
-      }
-    }
+         if (typeof window === 'undefined') return;
+         const u = getCurrentUserSync();
+         if (u) {
+             setUser(u);
+             if (u.role !== 'Admin') {
+                 toast({ variant: 'destructive', title: 'Access Denied', description: 'You do not have permission to view this page.' });
+                 router.push('/dashboard');
+             }
+             return;
+         }
+         fetch('/api/session').then(async (res) => {
+             if (!res.ok) return router.push('/login');
+             const json = await res.json();
+             if (!json) return router.push('/login');
+             setUser(json);
+             try { (window as any).__currentSession = json } catch (e) {}
+             if (json.role !== 'Admin') {
+                 toast({ variant: 'destructive', title: 'Access Denied', description: 'You do not have permission to view this page.' });
+                 router.push('/dashboard');
+             }
+         }).catch(() => router.push('/login'));
   }, [router, toast]);
   
   useEffect(() => {

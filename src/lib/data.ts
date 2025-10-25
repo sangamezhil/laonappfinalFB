@@ -140,6 +140,17 @@ const setInStorage = <T>(key: string, data: T) => {
     window.dispatchEvent(new Event('local-storage-updated'));
 };
 
+// Synchronous current user accessor. This first checks a window-scoped
+// session (set by useSession) and falls back to the legacy localStorage key.
+export const getCurrentUserSync = (): User | null => {
+    if (typeof window === 'undefined') return null;
+    const w = (window as any).__currentSession;
+    if (w) return w as User;
+    const stored = localStorage.getItem('loggedInUser');
+    if (!stored) return null;
+    try { return JSON.parse(stored) as User } catch (e) { return null }
+}
+
 const calculateNextDueDate = (loan: Loan): string | undefined => {
     if (loan.status === 'Closed' || loan.status === 'Pre-closed' || loan.status === 'Pending') {
         return undefined;
@@ -200,9 +211,9 @@ export const useUsers = () => {
     useEffect(() => {
         refreshData();
         setIsLoaded(true);
-        const handleStorageChange = () => refreshData();
-        window.addEventListener('local-storage-updated', handleStorageChange);
-        return () => window.removeEventListener('local-storage-updated', handleStorageChange);
+        // expose a refresh hook for external callers (e.g., resetAllData)
+        try { (window as any).__refreshUsers = refreshData } catch (e) {}
+        return () => { try { delete (window as any).__refreshUsers } catch (e) {} };
     }, [refreshData]);
 
     const addUser = (user: Omit<User, 'id' | 'lastLogin'>): User => {
@@ -360,23 +371,15 @@ export const useCustomers = () => {
         }, []);
 
     useEffect(() => {
-        // On first load, if there's no data, use initial data
-        if(localStorage.getItem('customers') === null) {
-          setInStorage('customers', initialCustomers);
-        }
-        
         refreshCustomers();
         setIsLoaded(true);
-        const handleStorageChange = () => refreshCustomers();
-        window.addEventListener('local-storage-updated', handleStorageChange);
-        return () => {
-            window.removeEventListener('local-storage-updated', handleStorageChange);
-        }
+        try { (window as any).__refreshCustomers = refreshCustomers } catch (e) {}
+        return () => { try { delete (window as any).__refreshCustomers } catch (e) {} };
     }, [refreshCustomers]);
 
         const addCustomer = (customer: Omit<Customer, 'id' | 'registrationDate' | 'profilePicture' | 'addedBy'>): Customer => {
                 if (typeof window === 'undefined') return customer as Customer;
-                const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+                const loggedInUser = getCurrentUserSync() || { username: 'unknown' };
 
                 const currentCustomers = getFromStorage('customers', initialCustomers);
                 const newIdNumber = (currentCustomers.length > 0 ? Math.max(...currentCustomers.map(c => parseInt(c.id.replace('CUST','')))) : 0) + 1;
@@ -473,17 +476,10 @@ export const useLoans = () => {
     }, []);
 
      useEffect(() => {
-        if (localStorage.getItem('loans') === null) {
-            setInStorage('loans', initialLoans);
-        }
-
         refreshLoans();
         setIsLoaded(true);
-        const handleStorageChange = () => refreshLoans();
-        window.addEventListener('local-storage-updated', handleStorageChange);
-        return () => {
-            window.removeEventListener('local-storage-updated', handleStorageChange);
-        }
+        try { (window as any).__refreshLoans = refreshLoans } catch (e) {}
+        return () => { try { delete (window as any).__refreshLoans } catch (e) {} };
     }, [refreshLoans]);
 
     const addLoan = (loan: Omit<Loan, 'id'> | Omit<Loan, 'id'>[]): Loan[] => {
@@ -653,24 +649,16 @@ export const useUserActivity = () => {
     }, []);
 
     useEffect(() => {
-        if (localStorage.getItem('userActivities') === null) {
-            setInStorage('userActivities', initialActivities);
-        }
         refreshActivities();
         setIsLoaded(true);
-        const handleStorageChange = () => refreshActivities();
-        window.addEventListener('local-storage-updated', handleStorageChange);
-        return () => {
-            window.removeEventListener('local-storage-updated', handleStorageChange);
-        };
+        try { (window as any).__refreshActivities = refreshActivities } catch (e) {}
+        return () => { try { delete (window as any).__refreshActivities } catch (e) {} };
     }, [refreshActivities]);
 
     const logActivity = (action: string, details: string) => {
-        if (typeof window === 'undefined') return;
-        const storedUser = localStorage.getItem('loggedInUser');
-        if (!storedUser) return;
-
-        const user = JSON.parse(storedUser);
+    if (typeof window === 'undefined') return;
+    const user = getCurrentUserSync();
+    if (!user) return;
         const newActivity: UserActivity = {
             id: `ACT_${Date.now()}`,
             timestamp: new Date().toISOString(),
@@ -698,21 +686,15 @@ export const useCollections = () => {
     }, []);
 
     useEffect(() => {
-        if (localStorage.getItem('collections') === null) {
-            setInStorage('collections', initialCollections);
-        }
         refreshCollections();
         setIsLoaded(true);
-        const handleStorageChange = () => refreshCollections();
-        window.addEventListener('local-storage-updated', handleStorageChange);
-        return () => {
-            window.removeEventListener('local-storage-updated', handleStorageChange);
-        }
+        try { (window as any).__refreshCollections = refreshCollections } catch (e) {}
+        return () => { try { delete (window as any).__refreshCollections } catch (e) {} };
     }, [refreshCollections]);
 
     const addCollection = (collection: Omit<Collection, 'id' | 'collectedBy'>): Collection => {
-        if(typeof window === 'undefined') return collection as Collection;
-        const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+    if(typeof window === 'undefined') return collection as Collection;
+    const loggedInUser = getCurrentUserSync() || { username: 'unknown' };
         const currentCollections = getFromStorage('collections', initialCollections);
         const newCollection: Collection = {
             ...collection,

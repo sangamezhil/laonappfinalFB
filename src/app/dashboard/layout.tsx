@@ -39,7 +39,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Logo } from '@/components/logo'
-import { useUserActivity, useCompanyProfile } from '@/lib/data'
+import { useUserActivity, useCompanyProfile, getCurrentUserSync } from '@/lib/data'
 import { Skeleton } from '@/components/ui/skeleton'
 
 
@@ -63,12 +63,16 @@ function DashboardSidebar() {
     const [user, setUser] = React.useState<User | null>(null);
 
     React.useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const storedUser = localStorage.getItem('loggedInUser');
-            if (storedUser) {
-                setUser(JSON.parse(storedUser));
-            }
-        }
+    if (typeof window === 'undefined') return;
+    const u = getCurrentUserSync() || (window as any).__currentSession;
+    if (u) { setUser(u); return }
+    fetch('/api/session').then(async (res) => {
+      if (!res.ok) return;
+      const json = await res.json();
+      if (!json) return;
+      setUser(json);
+      try { (window as any).__currentSession = json } catch (e) {}
+    }).catch(() => {});
     }, []);
     
     const handleLinkClick = () => {
@@ -116,15 +120,21 @@ export default function DashboardLayout({
   const { profile, isLoaded: profileLoaded } = useCompanyProfile();
 
   React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedUser = localStorage.getItem('loggedInUser');
-      if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-      } else {
+    // Ask server for current session. If none, redirect to login.
+    if (typeof window === 'undefined') return;
+    fetch('/api/session').then(async (res) => {
+      if (!res.ok) {
         router.push('/login');
+        return;
       }
-    }
+      const json = await res.json();
+      if (!json) {
+        router.push('/login');
+        return;
+      }
+      setUser(json);
+      try { (window as any).__currentSession = json } catch (e) {}
+    }).catch(() => router.push('/login'));
   }, [router]);
 
   React.useEffect(() => {
@@ -133,9 +143,10 @@ export default function DashboardLayout({
     }
   }, [profile, profileLoaded]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     logActivity('User Logout', `User ${user?.username} logged out.`);
-    localStorage.removeItem('loggedInUser');
+    try { await fetch('/api/session', { method: 'DELETE' }) } catch (e) {}
+    try { (window as any).__currentSession = null } catch (e) {}
     router.push('/login');
   };
 

@@ -9,7 +9,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from 'recharts'
 import type { ChartConfig } from '@/components/ui/chart'
 import { Badge } from '@/components/ui/badge'
-import { useLoans, useCustomers, useCollections, useFinancials, Loan, Customer, User as AuthUser } from '@/lib/data'
+import { useLoans, useCustomers, useCollections, useFinancials, Loan, Customer, User as AuthUser, getCurrentUserSync } from '@/lib/data'
 import { format, parseISO, isToday } from 'date-fns'
 import { Skeleton } from '@/components/ui/skeleton'
 import Link from 'next/link'
@@ -576,13 +576,17 @@ export default function DashboardPage() {
     const [isLoading, setIsLoading] = React.useState(true);
 
     React.useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const storedUser = localStorage.getItem('loggedInUser');
-            if (storedUser) {
-                setUser(JSON.parse(storedUser));
-            }
-            setIsLoading(false);
-        }
+    if (typeof window === 'undefined') return;
+    const u = getCurrentUserSync();
+    if (u) { setUser(u); setIsLoading(false); return }
+    fetch('/api/session').then(async (res) => {
+      if (!res.ok) { setIsLoading(false); return }
+      const json = await res.json();
+      if (!json) { setIsLoading(false); return }
+      setUser(json);
+      try { (window as any).__currentSession = json } catch (e) {}
+      setIsLoading(false);
+    }).catch(() => setIsLoading(false));
     }, []);
 
     if (isLoading) {

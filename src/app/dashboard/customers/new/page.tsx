@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
-import { useCustomers, useUserActivity } from '@/lib/data'
+import { useCustomers, useUserActivity, getCurrentUserSync } from '@/lib/data'
 import { Skeleton } from '@/components/ui/skeleton'
 
 const kycFormSchema = z.object({
@@ -112,14 +112,19 @@ export default function NewCustomerPage() {
   const [user, setUser] = React.useState<User | null>(null);
 
   React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedUser = localStorage.getItem('loggedInUser');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      } else {
-        router.push('/login');
-      }
+    if (typeof window === 'undefined') return;
+    const u = getCurrentUserSync();
+    if (u) {
+      setUser(u);
+      return;
     }
+    fetch('/api/session').then(async (res) => {
+      if (!res.ok) return router.push('/login');
+      const json = await res.json();
+      if (!json) return router.push('/login');
+      setUser(json);
+      try { (window as any).__currentSession = json } catch (e) {}
+    }).catch(() => router.push('/login'));
   }, [router]);
 
 

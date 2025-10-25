@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
-import { useCustomers, useLoans, useUserActivity, Customer } from '@/lib/data'
+import { useCustomers, useLoans, useUserActivity, Customer, getCurrentUserSync } from '@/lib/data'
 import { IndianRupee } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -134,15 +134,16 @@ export default function NewLoanPage() {
   const [user, setUser] = React.useState<User | null>(null);
 
   React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedUser = localStorage.getItem('loggedInUser');
-      if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-      } else {
-        router.push('/login');
-      }
-    }
+    if (typeof window === 'undefined') return;
+    const u = getCurrentUserSync();
+    if (u) { setUser(u); return }
+    fetch('/api/session').then(async (res) => {
+      if (!res.ok) return router.push('/login');
+      const json = await res.json();
+      if (!json) return router.push('/login');
+      setUser(json);
+      try { (window as any).__currentSession = json } catch (e) {}
+    }).catch(() => router.push('/login'));
   }, [router]);
 
 

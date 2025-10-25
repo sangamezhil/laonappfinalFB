@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { useUserActivity } from '@/lib/data'
+import { useUserActivity, getCurrentUserSync } from '@/lib/data'
 import { format } from 'date-fns'
 import { IndianRupee } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -44,23 +44,27 @@ export default function ActivityLogPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedUser = localStorage.getItem('loggedInUser');
-      if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        if (parsedUser.role !== 'Admin') {
-            toast({
-                variant: 'destructive',
-                title: 'Access Denied',
-                description: 'You do not have permission to view this page.'
-            });
-            router.push('/dashboard');
-        }
-      } else {
-        router.push('/login');
+    if (typeof window === 'undefined') return;
+    const u = getCurrentUserSync();
+    if (u) {
+      setUser(u);
+      if (u.role !== 'Admin') {
+        toast({ variant: 'destructive', title: 'Access Denied', description: 'You do not have permission to view this page.' });
+        router.push('/dashboard');
       }
+      return;
     }
+    fetch('/api/session').then(async (res) => {
+      if (!res.ok) return router.push('/login');
+      const json = await res.json();
+      if (!json) return router.push('/login');
+      setUser(json);
+      try { (window as any).__currentSession = json } catch (e) {}
+      if (json.role !== 'Admin') {
+        toast({ variant: 'destructive', title: 'Access Denied', description: 'You do not have permission to view this page.' });
+        router.push('/dashboard');
+      }
+    }).catch(() => router.push('/login'));
   }, [router, toast]);
 
   const sortedActivities = React.useMemo(() => {
