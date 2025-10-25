@@ -122,23 +122,17 @@ const initialUsers: User[] = [
 const initialActivities: UserActivity[] = [];
 
 
-const getFromStorage = <T>(key: string, initialData: T): T => {
-    if (typeof window === 'undefined') return initialData;
-    const stored = localStorage.getItem(key);
-    try {
-        if (stored) return JSON.parse(stored);
-    } catch (e) {
-        console.error(`Error parsing ${key} from localStorage`, e);
-    }
-    setInStorage(key, initialData);
-    return initialData;
+// In-memory caches stored on the window object so synchronous helpers can
+// still access recently-fetched data without relying on browser storage.
+// We intentionally avoid using localStorage as the authoritative source.
+const setWindowCache = (key: string, data: any) => {
+    try { (window as any)[key] = data } catch (e) {}
 };
 
-const setInStorage = <T>(key: string, data: T) => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem(key, JSON.stringify(data));
-    window.dispatchEvent(new Event('local-storage-updated'));
-};
+const getWindowCache = <T>(key: string, initialData: T): T => {
+    if (typeof window === 'undefined') return initialData
+    try { return ((window as any)[key] ?? initialData) as T } catch (e) { return initialData }
+}
 
 // Synchronous current user accessor. This first checks a window-scoped
 // session (set by useSession) and falls back to the legacy localStorage key.
@@ -146,9 +140,7 @@ export const getCurrentUserSync = (): User | null => {
     if (typeof window === 'undefined') return null;
     const w = (window as any).__currentSession;
     if (w) return w as User;
-    const stored = localStorage.getItem('loggedInUser');
-    if (!stored) return null;
-    try { return JSON.parse(stored) as User } catch (e) { return null }
+    return null;
 }
 
 const calculateNextDueDate = (loan: Loan): string | undefined => {
@@ -201,11 +193,28 @@ export const useUsers = () => {
     const [isLoaded, setIsLoaded] = useState(false);
 
     const refreshData = useCallback(() => {
-        const data = getFromStorage('users', initialUsers);
-        if (localStorage.getItem('users') === null) {
-            setInStorage('users', initialUsers);
+        if (typeof window === 'undefined') {
+            setUsers(initialUsers);
+            setWindowCache('__usersCache', initialUsers);
+            return;
         }
-        setUsers(data);
+
+        fetch('/api/users')
+            .then(async (res) => {
+                if (!res.ok) throw new Error('API not available')
+                const json = await res.json()
+                if (Array.isArray(json)) {
+                    setUsers(json)
+                    setWindowCache('__usersCache', json)
+                    return
+                }
+                setUsers(initialUsers)
+                setWindowCache('__usersCache', initialUsers)
+            })
+            .catch(() => {
+                setUsers(initialUsers)
+                setWindowCache('__usersCache', initialUsers)
+            })
     }, []);
 
     useEffect(() => {
@@ -216,30 +225,28 @@ export const useUsers = () => {
         return () => { try { delete (window as any).__refreshUsers } catch (e) {} };
     }, [refreshData]);
 
-    const addUser = (user: Omit<User, 'id' | 'lastLogin'>): User => {
-        const currentUsers = getFromStorage('users', initialUsers);
-        const newIdNumber = (currentUsers.length > 0 ? Math.max(...currentUsers.map(c => parseInt(c.id.replace('USR','')))) : 0) + 1;
-        const newUser: User = {
-            ...user,
-            id: `USR${String(newIdNumber).padStart(3, '0')}`,
-            password: user.password || user.username,
-            lastLogin: 'Never',
-        };
-        const updatedUsers = [...currentUsers, newUser];
-        setInStorage('users', updatedUsers);
-        return newUser;
+    const addUser = async (user: Omit<User, 'id' | 'lastLogin'>): Promise<User | null> => {
+        try {
+            const res = await fetch('/api/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(user) })
+            if (!res.ok) return null
+            const created = await res.json()
+            refreshData()
+            return created
+        } catch (e) { return null }
     };
 
-    const updateUser = (userId: string, updatedData: Partial<Omit<User, 'id'>>) => {
-        const currentUsers = getFromStorage('users', initialUsers);
-        const updatedUsers = currentUsers.map(u => u.id === userId ? { ...u, ...updatedData } : u);
-        setInStorage('users', updatedUsers);
+    const updateUser = async (userId: string, updatedData: Partial<Omit<User, 'id'>>) => {
+        try {
+            await fetch('/api/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: userId, changes: updatedData }) })
+            refreshData()
+        } catch (e) {}
     }
 
-    const deleteUser = (userId: string) => {
-        const currentUsers = getFromStorage('users', initialUsers);
-        const updatedUsers = currentUsers.filter(u => u.id !== userId);
-        setInStorage('users', updatedUsers);
+    const deleteUser = async (userId: string) => {
+        try {
+            await fetch('/api/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: userId, changes: { deleted: true } }) })
+            refreshData()
+        } catch (e) {}
     };
 
     return { users, isLoaded, addUser, updateUser, deleteUser };
@@ -251,8 +258,22 @@ export const useCompanyProfile = () => {
     const [isLoaded, setIsLoaded] = useState(false);
 
     const refreshProfile = useCallback(() => {
-        const data = getFromStorage('companyProfile', initialCompanyProfile);
-        setProfile(data);
+        if (typeof window === 'undefined') {
+            setProfile(initialCompanyProfile)
+            setWindowCache('__companyProfile', initialCompanyProfile)
+            return
+        }
+        fetch('/api/companyProfile')
+            .then(async (res) => {
+                if (!res.ok) throw new Error('API not available')
+                const json = await res.json()
+                setProfile(Object.keys(json || {}).length ? json : initialCompanyProfile)
+                setWindowCache('__companyProfile', Object.keys(json || {}).length ? json : initialCompanyProfile)
+            })
+            .catch(() => {
+                setProfile(initialCompanyProfile)
+                setWindowCache('__companyProfile', initialCompanyProfile)
+            })
     }, []);
 
     useEffect(() => {
@@ -264,7 +285,7 @@ export const useCompanyProfile = () => {
     }, [refreshProfile]);
 
     const updateProfile = (newProfile: CompanyProfile) => {
-        setInStorage('companyProfile', newProfile);
+        fetch('/api/companyProfile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newProfile) }).then(() => refreshProfile()).catch(() => {})
     };
 
     return { profile, updateProfile, isLoaded };
@@ -275,12 +296,26 @@ export const useFinancials = () => {
     const [isLoaded, setIsLoaded] = useState(false);
 
     const refreshFinancials = useCallback(() => {
-        const data = getFromStorage('financials', initialFinancials);
-        const safeData = {
-            investments: Array.isArray(data.investments) ? data.investments : [],
-            expenses: Array.isArray(data.expenses) ? data.expenses : [],
-        };
-        setFinancials(safeData);
+        if (typeof window === 'undefined') {
+            setFinancials(initialFinancials)
+            setWindowCache('__financialsCache', initialFinancials)
+            return
+        }
+        fetch('/api/financials')
+            .then(async (res) => {
+                if (!res.ok) throw new Error('API not available')
+                const json = await res.json()
+                const safeData = {
+                    investments: Array.isArray(json.investments) ? json.investments : [],
+                    expenses: Array.isArray(json.expenses) ? json.expenses : [],
+                }
+                setFinancials(safeData)
+                setWindowCache('__financialsCache', safeData)
+            })
+            .catch(() => {
+                setFinancials(initialFinancials)
+                setWindowCache('__financialsCache', initialFinancials)
+            })
     }, []);
 
     useEffect(() => {
@@ -292,46 +327,29 @@ export const useFinancials = () => {
     }, [refreshFinancials]);
     
     const addInvestment = (description: string, amount: number) => {
-        const currentFinancials = getFromStorage('financials', initialFinancials);
-        const newInvestment: Investment = {
-            id: `INV-${Date.now()}`,
-            date: new Date().toISOString(),
-            description,
-            amount
-        };
-        const updatedFinancials = {
-            ...currentFinancials,
-            investments: [newInvestment, ...(currentFinancials.investments || [])]
-        };
-        setInStorage('financials', updatedFinancials);
+        const newInvestment: Investment = { id: `INV-${Date.now()}`, date: new Date().toISOString(), description, amount }
+        const current = getWindowCache('__financialsCache', initialFinancials)
+        const payload = { investments: [newInvestment, ...(current.investments || [])], expenses: current.expenses || [] }
+        fetch('/api/financials', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).then(() => refreshFinancials()).catch(() => {})
     };
 
     const addExpense = (description: string, amount: number) => {
-        const currentFinancials = getFromStorage('financials', initialFinancials);
-        const newExpense: Expense = {
-            id: `EXP-${Date.now()}`,
-            date: new Date().toISOString(),
-            description,
-            amount
-        };
-        const updatedFinancials = {
-            ...currentFinancials,
-            expenses: [newExpense, ...(currentFinancials.expenses || [])]
-        };
-        setInStorage('financials', updatedFinancials);
+        const newExpense: Expense = { id: `EXP-${Date.now()}`, date: new Date().toISOString(), description, amount }
+        const current = getWindowCache('__financialsCache', initialFinancials)
+        const payload = { investments: current.investments || [], expenses: [newExpense, ...(current.expenses || [])] }
+        fetch('/api/financials', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).then(() => refreshFinancials()).catch(() => {})
     };
 
     const deleteExpense = (expenseId: string) => {
-        const currentFinancials = getFromStorage('financials', initialFinancials);
-        const updatedExpenses = (currentFinancials.expenses || []).filter(exp => exp.id !== expenseId);
-        const updatedFinancials = { ...currentFinancials, expenses: updatedExpenses };
-        setInStorage('financials', updatedFinancials);
+        const current = getWindowCache('__financialsCache', initialFinancials)
+        const updatedExpenses = (current.expenses || []).filter((exp: Expense) => exp.id !== expenseId)
+        fetch('/api/financials', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ investments: current.investments || [], expenses: updatedExpenses }) }).then(() => refreshFinancials()).catch(() => {})
     };
 
     const resetFinancials = (data: Partial<Financials>) => {
-        const currentFinancials = getFromStorage('financials', initialFinancials);
-        const updatedFinancials = { ...currentFinancials, ...data };
-        setInStorage('financials', updatedFinancials);
+        const current = getWindowCache('__financialsCache', initialFinancials)
+        const updated = { ...current, ...data }
+        fetch('/api/financials', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updated) }).then(() => refreshFinancials()).catch(() => {})
     };
 
     return { financials, addInvestment, addExpense, deleteExpense, resetFinancials, isLoaded };
@@ -343,10 +361,11 @@ export const useCustomers = () => {
     const [isLoaded, setIsLoaded] = useState(false);
 
         const refreshCustomers = useCallback(() => {
-                // Try server API first. If unavailable, fall back to localStorage.
+                // Use server API exclusively for authoritative data. Maintain an
+                // in-memory cache for synchronous reads.
                 if (typeof window === 'undefined') {
-                    const data = getFromStorage('customers', initialCustomers);
-                    setCustomers(data);
+                    setCustomers(initialCustomers)
+                    setWindowCache('__customersCache', initialCustomers)
                     return;
                 }
 
@@ -356,17 +375,15 @@ export const useCustomers = () => {
                         const json = await res.json()
                         if (Array.isArray(json)) {
                             setCustomers(json)
-                            // also update local cache
-                            setInStorage('customers', json)
+                            setWindowCache('__customersCache', json)
                             return
                         }
-                        // fallback to local
-                        const data = getFromStorage('customers', initialCustomers);
-                        setCustomers(data);
+                        setCustomers(initialCustomers)
+                        setWindowCache('__customersCache', initialCustomers)
                     })
                     .catch(() => {
-                        const data = getFromStorage('customers', initialCustomers);
-                        setCustomers(data);
+                        setCustomers(initialCustomers)
+                        setWindowCache('__customersCache', initialCustomers)
                     })
         }, []);
 
@@ -381,49 +398,35 @@ export const useCustomers = () => {
                 if (typeof window === 'undefined') return customer as Customer;
                 const loggedInUser = getCurrentUserSync() || { username: 'unknown' };
 
-                const currentCustomers = getFromStorage('customers', initialCustomers);
-                const newIdNumber = (currentCustomers.length > 0 ? Math.max(...currentCustomers.map(c => parseInt(c.id.replace('CUST','')))) : 0) + 1;
-                const newCustomer: Customer = {
-                        ...customer,
-                        id: `CUST${String(newIdNumber).padStart(3, '0')}`,
-                        registrationDate: new Date().toISOString().split('T')[0],
-                        profilePicture: 'https://placehold.co/100x100',
-                        addedBy: loggedInUser.username || 'unknown'
-                };
-                const updatedCustomers = [...currentCustomers, newCustomer];
-                // Update local cache immediately so UI is responsive
-                setInStorage('customers', updatedCustomers);
+                const payload = { ...customer, addedBy: loggedInUser.username || 'unknown' }
+                const tempId = `TEMP_${Date.now()}`
+                const tempCustomer: Customer = { id: tempId, registrationDate: new Date().toISOString().split('T')[0], profilePicture: 'https://placehold.co/100x100', ...payload }
+                const curr = getWindowCache('__customersCache', initialCustomers)
+                const updatedCustomers = [...curr, tempCustomer]
+                setWindowCache('__customersCache', updatedCustomers)
+                setCustomers(updatedCustomers)
 
-                // Fire-and-forget: attempt to persist to server API. If API is available
-                // it will accept client-provided id (server will generate a different id if conflict).
-                fetch('/api/customers', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(newCustomer),
-                }).then(async (res) => {
-                    if (!res.ok) return
-                    try {
-                        const created = await res.json()
-                        // If server returned a different id, reconcile local cache (replace by server id)
-                        if (created && created.id && created.id !== newCustomer.id) {
-                            const curr = getFromStorage('customers', initialCustomers);
-                            const replaced = curr.map(c => c.id === newCustomer.id ? created : c);
-                            setInStorage('customers', replaced);
-                        }
-                    } catch (e) {
-                        // ignore
-                    }
-                }).catch(() => {
-                    // API not available - we'll continue using localStorage only
-                })
+                fetch('/api/customers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(tempCustomer) })
+                    .then(async (res) => {
+                        if (!res.ok) return
+                        try {
+                            const created = await res.json()
+                            const nowCurr = getWindowCache('__customersCache', initialCustomers)
+                            const reconciled = nowCurr.map((c: Customer) => c.id === tempId ? created : c)
+                            setWindowCache('__customersCache', reconciled)
+                            setCustomers(reconciled)
+                        } catch (e) {}
+                    }).catch(() => {})
 
-                return newCustomer;
+                return tempCustomer;
         };
 
     const deleteCustomer = (customerId: string) => {
-        const currentCustomers = getFromStorage('customers', initialCustomers);
-        const updatedCustomers = currentCustomers.filter(c => c.id !== customerId);
-        setInStorage('customers', updatedCustomers);
+        const curr = getWindowCache('__customersCache', initialCustomers)
+        const updated = curr.filter((c: Customer) => c.id !== customerId)
+        setWindowCache('__customersCache', updated)
+        setCustomers(updated)
+        fetch('/api/customers', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: customerId }) }).catch(() => {})
     };
 
     return { customers, addCustomer, deleteCustomer, isLoaded };
@@ -434,19 +437,12 @@ export const useLoans = () => {
     const [isLoaded, setIsLoaded] = useState(false);
 
     const refreshLoans = useCallback(() => {
-        // Try server API first, fall back to localStorage
+        // Use server API as the authoritative store for loans. Keep an in-memory
+        // cache for synchronous helpers and optimistic updates.
         if (typeof window === 'undefined') {
-            let data = getFromStorage('loans', initialLoans);
-            let loansNeedUpdate = false;
-            data = data.map(loan => {
-                const loanWithCalculatedDueDate = { ...loan, nextDueDate: calculateNextDueDate(loan) };
-                const updatedLoan = updateLoanStatusOnLoad(loanWithCalculatedDueDate);
-                if (updatedLoan.status !== loan.status) loansNeedUpdate = true;
-                return updatedLoan;
-            });
-            setLoans(data);
-            if (loansNeedUpdate) setInStorage('loans', data);
-            return;
+            setLoans(initialLoans)
+            setWindowCache('__loansCache', initialLoans)
+            return
         }
 
         fetch('/api/loans')
@@ -454,24 +450,21 @@ export const useLoans = () => {
                 if (!res.ok) throw new Error('API not available')
                 const json = await res.json()
                 if (Array.isArray(json)) {
-                    let loansNeedUpdate = false;
                     const data = json.map((loan: Loan) => {
                         const loanWithCalculatedDueDate = { ...loan, nextDueDate: calculateNextDueDate(loan) };
                         const updatedLoan = updateLoanStatusOnLoad(loanWithCalculatedDueDate);
-                        if (updatedLoan.status !== loan.status) loansNeedUpdate = true;
                         return updatedLoan;
                     })
                     setLoans(data)
-                    // update local cache
-                    setInStorage('loans', data)
+                    setWindowCache('__loansCache', data)
                     return
                 }
-                const data = getFromStorage('loans', initialLoans)
-                setLoans(data)
+                setLoans(initialLoans)
+                setWindowCache('__loansCache', initialLoans)
             })
             .catch(() => {
-                const data = getFromStorage('loans', initialLoans)
-                setLoans(data)
+                setLoans(initialLoans)
+                setWindowCache('__loansCache', initialLoans)
             })
     }, []);
 
@@ -483,157 +476,46 @@ export const useLoans = () => {
     }, [refreshLoans]);
 
     const addLoan = (loan: Omit<Loan, 'id'> | Omit<Loan, 'id'>[]): Loan[] => {
-        const currentLoans = getFromStorage('loans', initialLoans);
         const generateLoanId = () => `TEMP_${Math.floor(1000 + Math.random() * 9000)}`;
-        
-        const loansToAdd: Loan[] = (Array.isArray(loan) ? loan : [loan]).map(l => ({
-            ...l,
-            id: generateLoanId(),
-        }));
-
-        const updatedLoans = [...currentLoans, ...loansToAdd];
-        setInStorage('loans', updatedLoans);
-        return loansToAdd;
+        const loansToAdd: Loan[] = (Array.isArray(loan) ? loan : [loan]).map(l => ({ ...l, id: generateLoanId() }));
+        const curr = getWindowCache('__loansCache', initialLoans)
+        const updated = [...curr, ...loansToAdd]
+        setWindowCache('__loansCache', updated)
+        setLoans(updated)
+        fetch('/api/loans', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(loansToAdd) }).then(() => refreshLoans()).catch(() => {})
+        return loansToAdd
     };
     
-    const updateLoanStatus = (loanId: string, status: Loan['status']) => {
-        const currentLoans = getFromStorage('loans', initialLoans);
-        const updatedLoans = currentLoans.map(loan => {
-            if (loan.id === loanId) {
-                const updatedLoan = { ...loan, status: status };
-                if (status === 'Closed' || status === 'Pre-closed') {
-                    updatedLoan.totalPaid += updatedLoan.outstandingAmount;
-                    updatedLoan.outstandingAmount = 0;
-                }
-                return updatedLoan;
-            }
-            return loan;
-        });
-        setInStorage('loans', updatedLoans);
+    const updateLoanStatus = async (loanId: string, status: Loan['status']) => {
+        try {
+            await fetch('/api/loans', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'update', id: loanId, changes: { status } }) })
+            await refreshLoans()
+        } catch (e) {}
     };
 
-    const approveLoanWithLedgerId = (tempId: string, ledgerId: string): boolean => {
-        const currentLoans = getFromStorage('loans', initialLoans);
-        
-        const trimmedLedgerId = ledgerId.trim();
-
-        if (currentLoans.some(loan => loan.id === trimmedLedgerId || loan.groupId === trimmedLedgerId)) {
-            return false; 
-        }
-
-        let loanFound = false;
-        let updatedLoans;
-
-        const tempLoan = currentLoans.find(l => l.id === tempId);
-        
-        if (!tempLoan) return false;
-
-        // Group Loan Approval
-        if (tempLoan.loanType === 'Group' && tempLoan.groupId) {
-            const tempGroupId = tempLoan.groupId;
-            const groupLoans = currentLoans.filter(l => l.groupId === tempGroupId);
-            
-            if (groupLoans.length === 0) return false;
-            
-            loanFound = true;
-            const groupName = groupLoans[0].groupName?.replace(/\s/g, '') || 'GROUP';
-            const finalLoans: Loan[] = [];
-            const otherLoans = currentLoans.filter(l => l.groupId !== tempGroupId);
-            
-            groupLoans.forEach((l, index) => {
-                const newMemberLoanId = `${trimmedLedgerId}-${groupName}-${index + 1}`;
-                const activeLoan = {
-                    ...l,
-                    id: newMemberLoanId,
-                    groupId: trimmedLedgerId, 
-                    status: 'Active' as 'Active',
-                    disbursalDate: new Date().toISOString().split('T')[0]
-                };
-                finalLoans.push({
-                    ...activeLoan,
-                    nextDueDate: calculateNextDueDate(activeLoan)
-                });
-            });
-            updatedLoans = [...otherLoans, ...finalLoans];
-        } else { // Personal Loan Approval
-            updatedLoans = currentLoans.map(loan => {
-                if (loan.id === tempId) {
-                    loanFound = true;
-                    const activeLoan = { 
-                        ...loan, 
-                        id: trimmedLedgerId,
-                        status: 'Active' as 'Active',
-                        disbursalDate: new Date().toISOString().split('T')[0]
-                    };
-                    return {
-                        ...activeLoan,
-                        nextDueDate: calculateNextDueDate(activeLoan)
-                    };
-                }
-                return loan;
-            });
-        }
-
-        if (loanFound) {
-            setInStorage('loans', updatedLoans);
-        }
-        
-        return loanFound;
+    const approveLoanWithLedgerId = async (tempId: string, ledgerId: string): Promise<boolean> => {
+        try {
+            const res = await fetch('/api/loans', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'approve', tempId, ledgerId }) })
+            if (!res.ok) return false
+            await refreshLoans()
+            return true
+        } catch (e) { return false }
     };
 
-    const updateLoanPayment = (loanId: string | null, amount: number, groupId?: string) => {
-        const currentLoans = getFromStorage('loans', initialLoans);
-
-        const processLoanUpdate = (loan: Loan, paymentAmount: number) => {
-            const newTotalPaid = loan.totalPaid + paymentAmount;
-            const newOutstandingAmount = loan.outstandingAmount - paymentAmount;
-            
-            let tempLoan = { ...loan, totalPaid: newTotalPaid, outstandingAmount: newOutstandingAmount };
-            
-            const nextDueDate = calculateNextDueDate(tempLoan);
-            tempLoan.nextDueDate = nextDueDate;
-
-            let newStatus = tempLoan.status;
-            if (newOutstandingAmount <= 0) {
-                newStatus = 'Closed';
-            } else if (nextDueDate && isBefore(startOfDay(parseISO(nextDueDate)), startOfToday())) {
-                newStatus = 'Overdue';
-            } else {
-                newStatus = 'Active';
-            }
-
-            return { ...tempLoan, status: newStatus };
-        };
-
-        if (groupId) {
-            const groupLoans = currentLoans.filter(l => l.groupId === groupId && (l.status === 'Active' || l.status === 'Overdue'));
-            if (groupLoans.length === 0) return;
-            
-            const amountPerMember = amount / groupLoans.length;
-
-            const updatedLoans = currentLoans.map(loan => {
-                if (loan.groupId === groupId) {
-                    return processLoanUpdate(loan, amountPerMember);
-                }
-                return loan;
-            });
-            setInStorage('loans', updatedLoans);
-
-        } else if (loanId) {
-            const updatedLoans = currentLoans.map(loan => {
-                if (loan.id === loanId) {
-                    return processLoanUpdate(loan, amount);
-                }
-                return loan;
-            });
-            setInStorage('loans', updatedLoans);
-        }
+    const updateLoanPayment = async (loanId: string | null, amount: number, groupId?: string) => {
+        try {
+            await fetch('/api/loans', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'payment', id: loanId, groupId, amount }) })
+            await refreshLoans()
+        } catch (e) {}
     }
     
     const deleteLoan = (loanId: string) => {
-        const currentLoans = getFromStorage('loans', initialLoans);
-        const updatedLoans = currentLoans.filter(loan => loan.id !== loanId);
-        setInStorage('loans', updatedLoans);
+        const curr = getWindowCache('__loansCache', initialLoans)
+        const updated = curr.filter((l: Loan) => l.id !== loanId)
+        setWindowCache('__loansCache', updated)
+        setLoans(updated)
+        // best-effort: mark deleted on server
+        fetch('/api/loans', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'update', id: loanId, changes: { deleted: true } }) }).catch(() => {})
     };
 
     return { loans, addLoan, isLoaded, updateLoanStatus, approveLoanWithLedgerId, updateLoanPayment, deleteLoan };
@@ -644,8 +526,23 @@ export const useUserActivity = () => {
     const [isLoaded, setIsLoaded] = useState(false);
 
     const refreshActivities = useCallback(() => {
-        const data = getFromStorage<UserActivity[]>('userActivities', initialActivities);
-        setActivities(data);
+        if (typeof window === 'undefined') {
+            setActivities(initialActivities)
+            setWindowCache('__activitiesCache', initialActivities)
+            return
+        }
+        fetch('/api/userActivities')
+            .then(async (res) => {
+                if (!res.ok) throw new Error('API not available')
+                const json = await res.json()
+                const data = Array.isArray(json) ? json : initialActivities
+                setActivities(data)
+                setWindowCache('__activitiesCache', data)
+            })
+            .catch(() => {
+                setActivities(initialActivities)
+                setWindowCache('__activitiesCache', initialActivities)
+            })
     }, []);
 
     useEffect(() => {
@@ -659,17 +556,12 @@ export const useUserActivity = () => {
     if (typeof window === 'undefined') return;
     const user = getCurrentUserSync();
     if (!user) return;
-        const newActivity: UserActivity = {
-            id: `ACT_${Date.now()}`,
-            timestamp: new Date().toISOString(),
-            username: user.username,
-            action,
-            details,
-        };
-        
-        const currentActivities = getFromStorage<UserActivity[]>('userActivities', initialActivities);
-        const updatedActivities = [newActivity, ...currentActivities];
-        setInStorage('userActivities', updatedActivities);
+        const newActivity: UserActivity = { id: `ACT_${Date.now()}`, timestamp: new Date().toISOString(), username: user.username, action, details }
+        const curr = getWindowCache('__activitiesCache', initialActivities)
+        const updatedActivities = [newActivity, ...curr]
+        setWindowCache('__activitiesCache', updatedActivities)
+        setActivities(updatedActivities)
+        fetch('/api/userActivities', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newActivity) }).catch(() => {})
     };
 
     return { activities, isLoaded, logActivity };
@@ -680,9 +572,24 @@ export const useCollections = () => {
     const [isLoaded, setIsLoaded] = useState(false);
 
     const refreshCollections = useCallback(() => {
-        const data = getFromStorage('collections', initialCollections);
-        const sortedCollections = data.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setCollections(sortedCollections);
+        if (typeof window === 'undefined') {
+            setCollections(initialCollections)
+            setWindowCache('__collectionsCache', initialCollections)
+            return
+        }
+        fetch('/api/collections')
+            .then(async (res) => {
+                if (!res.ok) throw new Error('API not available')
+                const json = await res.json()
+                const data = Array.isArray(json) ? json : []
+                const sortedCollections = data.sort((a: Collection, b: Collection) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                setCollections(sortedCollections)
+                setWindowCache('__collectionsCache', sortedCollections)
+            })
+            .catch(() => {
+                setCollections(initialCollections)
+                setWindowCache('__collectionsCache', initialCollections)
+            })
     }, []);
 
     useEffect(() => {
@@ -695,71 +602,23 @@ export const useCollections = () => {
     const addCollection = (collection: Omit<Collection, 'id' | 'collectedBy'>): Collection => {
     if(typeof window === 'undefined') return collection as Collection;
     const loggedInUser = getCurrentUserSync() || { username: 'unknown' };
-        const currentCollections = getFromStorage('collections', initialCollections);
-        const newCollection: Collection = {
-            ...collection,
-            id: `COLL${Date.now()}`,
-            collectedBy: loggedInUser.username || 'unknown',
-        };
-        const updatedCollections = [newCollection, ...currentCollections];
-        setInStorage('collections', updatedCollections);
+        const newCollection: Collection = { ...collection, id: `COLL${Date.now()}`, collectedBy: loggedInUser.username || 'unknown' }
+        const curr = getWindowCache('__collectionsCache', initialCollections)
+        const updatedCollections = [newCollection, ...curr]
+        setWindowCache('__collectionsCache', updatedCollections)
+        setCollections(updatedCollections)
+        fetch('/api/collections', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newCollection) }).catch(() => {})
         return newCollection;
     };
 
     const deleteCollection = (collectionId: string) => {
-        const currentCollections = getFromStorage('collections', initialCollections);
-        const collectionToDelete = currentCollections.find(c => c.id === collectionId);
-        if (!collectionToDelete) return;
-
-        const isGroup = collectionToDelete.loanId.startsWith('GRP');
-        const amountToRevert = collectionToDelete.amount;
-
-        const currentLoans = getFromStorage('loans', initialLoans);
-        
-        const updatedLoans = currentLoans.map(loan => {
-            let shouldUpdate = false;
-            let amountPerMember = 0;
-
-            if (isGroup && loan.groupId === collectionToDelete.loanId) {
-                const groupLoans = currentLoans.filter(l => l.groupId === collectionToDelete.loanId);
-                amountPerMember = groupLoans.length > 0 ? amountToRevert / groupLoans.length : 0;
-                shouldUpdate = true;
-            } else if (!isGroup && loan.id === collectionToDelete.loanId) {
-                shouldUpdate = true;
-            }
-
-            if (shouldUpdate) {
-                const revertAmount = isGroup ? amountPerMember : amountToRevert;
-                const newTotalPaid = loan.totalPaid - revertAmount;
-                const newOutstandingAmount = loan.outstandingAmount + revertAmount;
-
-                let tempLoan = {
-                    ...loan,
-                    totalPaid: newTotalPaid,
-                    outstandingAmount: newOutstandingAmount,
-                };
-                
-                const nextDueDateString = calculateNextDueDate(tempLoan);
-                tempLoan.nextDueDate = nextDueDateString;
-                
-                let newStatus = tempLoan.status;
-                if (newOutstandingAmount <= 0) {
-                  newStatus = 'Closed';
-                } else if (nextDueDateString && isBefore(startOfDay(parseISO(nextDueDateString)), startOfToday())) {
-                    newStatus = 'Overdue';
-                } else {
-                    newStatus = 'Active';
-                }
-                
-                return { ...tempLoan, status: newStatus };
-            }
-            return loan;
-        });
-
-        setInStorage('loans', updatedLoans);
-
-        const updatedCollections = currentCollections.filter(c => c.id !== collectionId);
-        setInStorage('collections', updatedCollections);
+        const curr = getWindowCache('__collectionsCache', initialCollections)
+        const collectionToDelete = curr.find((c: Collection) => c.id === collectionId)
+        if (!collectionToDelete) return
+        const updatedCollections = curr.filter((c: Collection) => c.id !== collectionId)
+        setWindowCache('__collectionsCache', updatedCollections)
+        setCollections(updatedCollections)
+        fetch('/api/collections', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: collectionId }) }).then(() => { try { (window as any).__refreshLoans?.() } catch (e) {} }).catch(() => {})
     };
 
 
@@ -767,27 +626,29 @@ export const useCollections = () => {
 }
 
 export function getCustomerById(id: string): Customer | undefined {
-  const customers = getFromStorage('customers', initialCustomers);
-  return customers.find(c => c.id === id);
+    const customers = getWindowCache('__customersCache', initialCustomers);
+    return customers.find((c: Customer) => c.id === id);
 }
 
 export function getLoansByCustomerId(customerId: string): Loan[] {
-  const loans = getFromStorage('loans', initialLoans);
-  return loans.filter(l => l.customerId === customerId);
+    const loans = getWindowCache('__loansCache', initialLoans);
+    return loans.filter((l: Loan) => l.customerId === customerId);
 }
 
 // Function to clear all data from local storage
 export const resetAllData = () => {
     if (typeof window === 'undefined') return;
-    setInStorage('customers', initialCustomers);
-    setInStorage('loans', initialLoans);
-    setInStorage('collections', initialCollections);
-    setInStorage('userActivities', initialActivities);
-    setInStorage('companyProfile', initialCompanyProfile);
-    setInStorage('financials', initialFinancials);
-    // We don't reset users, but you could add it here if needed:
-    // setInStorage('users', initialUsers);
-    
-    // Trigger a refresh
-    window.dispatchEvent(new Event('local-storage-updated'));
+    setWindowCache('__customersCache', initialCustomers);
+    setWindowCache('__loansCache', initialLoans);
+    setWindowCache('__collectionsCache', initialCollections);
+    setWindowCache('__activitiesCache', initialActivities);
+    setWindowCache('__companyProfile', initialCompanyProfile);
+    setWindowCache('__financialsCache', initialFinancials);
+    // Trigger any refresh hooks exposed by hooks
+    try { (window as any).__refreshCustomers?.() } catch (e) {}
+    try { (window as any).__refreshLoans?.() } catch (e) {}
+    try { (window as any).__refreshCollections?.() } catch (e) {}
+    try { (window as any).__refreshActivities?.() } catch (e) {}
+    try { (window as any).__refreshFinancials?.() } catch (e) {}
+    try { (window as any).__refreshProfile?.() } catch (e) {}
 };
