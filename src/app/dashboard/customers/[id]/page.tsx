@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-type LoanWithDetails = Loan & {
+type LoanWithDetails = Omit<Loan, 'nextDueDate'> & {
   nextDueDate: Date | null;
   collections: Collection[];
 };
@@ -158,10 +158,12 @@ export default function CustomerProfilePage() {
         theme: 'plain',
         styles: { fontSize: 8, cellPadding: 1, halign: 'center' },
         columnStyles: { 0: { halign: 'left' }, 2: { halign: 'left' }, 4: { halign: 'left' } },
-        didDrawPage: (data) => {
-            doc.setDrawColor(200);
-            doc.rect(data.settings.margin.left, data.cursor.y, doc.internal.pageSize.width - data.settings.margin.left - data.settings.margin.right, data.table.height);
-        }
+    didDrawPage: (data) => {
+      doc.setDrawColor(200);
+      // typings for autotable data are loose; cast to any to access runtime properties
+      const d: any = data;
+      doc.rect(d.settings.margin.left, d.cursor?.y ?? 0, doc.internal.pageSize.width - d.settings.margin.left - d.settings.margin.right, d.table?.height ?? 0);
+    }
     });
 
     finalY = (doc as any).lastAutoTable.finalY + 8;

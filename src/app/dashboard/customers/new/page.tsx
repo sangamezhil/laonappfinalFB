@@ -128,7 +128,8 @@ export default function NewCustomerPage() {
     defaultValues: {
       fullName: '',
       gender: 'Male',
-      dob: '',
+      // Zod schema transforms the incoming string to a Date. Cast defaults to the inferred type.
+      dob: '' as unknown as KycFormValues['dob'],
       email: '',
       phone: '',
       secondaryPhone: '',
@@ -233,7 +234,14 @@ export default function NewCustomerPage() {
                   <FormItem>
                       <FormLabel>Date of Birth</FormLabel>
                       <FormControl>
-                        <Input placeholder="DDMMYYYY" {...field} />
+                        <Input
+                          placeholder="DDMMYYYY"
+                          value={typeof field.value === 'string' ? field.value : (field.value ? format(field.value as Date, 'ddMMyyyy') : '')}
+                          onChange={(e) => field.onChange(e.target.value)}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref as any}
+                        />
                       </FormControl>
                       <FormMessage />
                   </FormItem>

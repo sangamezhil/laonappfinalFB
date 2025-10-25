@@ -444,7 +444,7 @@ export default function LoansPage() {
     let allSucceeded = true;
     if (loanToApprove.loanType === 'Group' && loanToApprove.groupId) {
         const groupLedgerId = ledgerId.trim();
-        const approvalSuccess = approveLoanWithLedgerId(loanToApprove.id, groupLedgerId, groupLedgerId);
+  const approvalSuccess = approveLoanWithLedgerId(loanToApprove.id, groupLedgerId);
         
         if (approvalSuccess) {
             logActivity('Approve Group Loan', `Approved group loan ${loanToApprove.groupId} with new ID ${groupLedgerId}.`);
